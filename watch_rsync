@@ -1,0 +1,1 @@
+fswatch -o public | while read f; do rsync -ruvzP --delete public/* $1:/var/www/html/sandbox; done
