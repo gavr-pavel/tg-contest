@@ -1,7 +1,7 @@
-import {storeInt, bufferRandom, bufferConcat, debugLogBuffer, pqPrimeFactorization, bigint, bigBytesInt, bigStringInt, longFromInts, longToBytes, bytesToArrayBuffer, bytesCmp, bytesToHex, bytesFromHex, bytesModPow, bytesXor} from './bin.js';
+import {storeInt, bufferRandom, bufferConcat, debugLogBuffer, pqPrimeFactorization, intToUint, bigint, bigBytesInt, bigStringInt, longFromInts, longToBytes, bytesToArrayBuffer, bytesCmp, bytesToHex, bytesFromHex, bytesModPow, bytesXor} from './bin.js';
 import {intRand, Storage, sleep, getDeferred} from './utils.js';
 import {TLSerialization, TLDeserialization} from './tl.js';
-import {selectRsaPublicKey, rsaEncrypt, sha1Hash, sha256Hash, aesIgeDecrypt, aesIgeEncrypt, aesCtrEncrypt, aesCtrDecrypt} from './crypto.js';
+import {selectRsaPublicKey, rsaEncrypt, sha1Hash, sha256Hash, aesIgeDecrypt, aesIgeEncrypt} from './crypto.js';
 import {aesjs} from './ext/aes.js';
 import {HttpTransport, WebSocketTransport} from './transport.js';
 
@@ -155,26 +155,31 @@ export default class MTProto {
   }
 
   wrapMethodCallMessage(method, params = {}, options = {}) {
+    console.log('[MTProto] call method', {method, params});
     const s = new TLSerialization({mtproto: true});
-    console.log('mtproto call', method, params);
-    s.storeMethod(method, params);
+    options.resultType = s.storeMethod(method, params);
+    options.source = method;
+    options.notContentRelated = !this.isContentRelatedConstructor(method);
     return this.prepareMessageFromBuffer(s.getBuffer(), options);
   }
 
-  wrapObjectMessage(constructor, obj, options) {
+  wrapObjectMessage(constructor, obj, options = {}) {
     obj = Object.assign({_: constructor}, obj);
     const s = new TLSerialization({mtproto: true});
     s.storeObject(obj, 'Object');
+    options.source = constructor;
+    options.notContentRelated = !this.isContentRelatedConstructor(constructor);
     return this.prepareMessageFromBuffer(s.getBuffer(), options);
   }
 
-  prepareMessageFromBuffer(buffer, options = {}) {
+  prepareMessageFromBuffer(buffer, options) {
     return {
-      seqNo: options.seqNo || this.genSeqNo(!options.no_content_related),
+      seqNo: options.seqNo || this.genSeqNo(!options.notContentRelated),
       msgId: options.msgId || this.genMsgId(),
       bytes: buffer.byteLength,
       body: buffer,
       api: options.api || false,
+      source: options.source,
       resultType: options.resultType,
     };
   }
@@ -192,22 +197,21 @@ export default class MTProto {
       this.pendingAcks = [];
       const message = this.wrapObjectMessage('msgs_ack', {
         msg_ids: msgIds
-      }, {no_content_related: true});
+      });
       pending.push(message);
     }
 
     return pending;
   }
 
-  async encryptMessage(msg) {
+  async encryptMessages(messages) {
     let seqNo;
     let msgId;
     let buffer;
 
-    const pendingMessages = this.getPendingMessages();
+    messages = [].concat(messages).concat(this.getPendingMessages());
 
-    if (pendingMessages.length) {
-      const messages = [msg].concat(pendingMessages);
+    if (messages.length > 1) {
       const messagesByteLen = messages.reduce((accum, msg) => accum + msg.bytes, 0);
 
       const container = new TLSerialization({mtproto: true, startMaxLength: messagesByteLen + 1024});
@@ -224,16 +228,17 @@ export default class MTProto {
       msgId = this.genMsgId();
       buffer = container.getBuffer();
 
-      console.log('container', {msgId, seqNo, messages});
+      console.log('[MTProto] encrypting container', {msgId, seqNo, messages});
     } else {
+      const msg = messages[0];
       msgId = msg.msgId;
       seqNo = msg.seqNo;
       buffer = msg.body;
-      console.log('single message', {msgId, seqNo, msg});
+      console.log('[MTProto] encrypting single message', {msgId, seqNo, msg});
     }
 
     if (!msgId || !seqNo) {
-      console.warn({msgId, seqNo});
+      console.warn('[MTProto] empty msg_id or seqno', {msgId, seqNo});
     }
 
     const data = new TLSerialization({startMaxLength: buffer.byteLength + 64});
@@ -261,7 +266,7 @@ export default class MTProto {
     const checkMsgKey = await this.getMsgKey(dataWithPadding, false);
 
     if (!bytesCmp(msgKey, checkMsgKey)) {
-      throw new Error('[MT] server msgKey mismatch: ' + bytesToHex(msgKey) + ', ' + bytesToHex(checkMsgKey));
+      throw new Error('[MTProto] server msgKey mismatch: ' + bytesToHex(msgKey) + ', ' + bytesToHex(checkMsgKey));
     }
 
     const data = new TLDeserialization(dataWithPadding, {mtproto: true});
@@ -269,7 +274,7 @@ export default class MTProto {
     const sessionId = data.fetchIntBytes(64, true, 'session_id');
 
     if (!bytesCmp(sessionId, this.sessionId)) {
-      throw new Error('[MT] Invalid server session_id: ' + bytesToHex(sessionId))
+      throw new Error('[MTProto] Invalid server session_id: ' + bytesToHex(sessionId))
     }
 
     const msgId = data.fetchLong('message_id');
@@ -323,12 +328,13 @@ export default class MTProto {
   genMsgId() {
     const now = Date.now();
     const sec = Math.floor(now / 1000) + this.timeOffset;
-    const ms = (now % 1000) << 23 | (intRand(0, 0xFFFF) << 3) | 4;
+    const ms = intToUint((now % 1000) << 23 | (intRand(0, 0xffff) << 3) | 4);
 
     const msgId = [sec, ms];
 
     if (this.lastMsgId) {
-      if (this.lastMsgId[0] > msgId[0] || this.lastMsgId === msgId[0] && this.lastMsgId[1] >= msgId[1]) {
+      const [lastSec, lastMs] = this.lastMsgId;
+      if (lastSec > sec || lastSec === sec && lastMs >= ms) {
         msgId[0] = this.lastMsgId[0];
         msgId[1] = this.lastMsgId[1] + 4;
       }
@@ -339,6 +345,11 @@ export default class MTProto {
   }
 
   genSeqNo(contentRelated = true) {
+    const inc = contentRelated ? 1 : 0;
+    const value = this.seqNo;
+    this.seqNo += inc;
+    return value * 2 + inc;
+
     let seqNo = this.seqNo * 2;
     if (contentRelated) {
       seqNo++;
@@ -351,7 +362,7 @@ export default class MTProto {
     const res = new TLDeserialization(buffer, {mtproto: true});
     const authKeyId = res.fetchIntBytes(64, false, 'auth_key_id');
     if (!bytesCmp(authKeyId, this.authKeyId)) {
-      throw new Error('[MT] Invalid server auth_key_id: ' + bytesToHex(authKeyId));
+      throw new Error('[MTProto] Invalid server auth_key_id: ' + bytesToHex(authKeyId));
     }
 
     const msgKey = res.fetchIntBytes(128, true, 'msg_key');
@@ -369,7 +380,7 @@ export default class MTProto {
           // const sentMessage = self.sentMessages.get(result.req_msg_id);
           const type = resultType || 'Object';
           if (result.req_msg_id && false/* && !sentMessage*/) {
-            console.warn('Result for unknown message', result);
+            console.warn('[MTProto] Result for unknown message', result);
             return;
           }
           result.result = this.fetchObject(type, field + '[result]');
@@ -390,16 +401,27 @@ export default class MTProto {
     return {authKeyId, msgId, msgLen, message};
   }
 
-  async sendRequest(reqMsg) {
-    const [msgKey, encryptedData] = await this.encryptMessage(reqMsg);
+  async sendRequest(messages) {
+    const singleMessage = !Array.isArray(messages);
+    if (singleMessage) {
+      messages = [messages];
+    }
+
+    const [msgKey, encryptedData] = await this.encryptMessages(messages);
     const buffer = await this.wrapEncryptedMessage(msgKey, encryptedData);
 
-    reqMsg.deferred = reqMsg.deferred || getDeferred();
-    this.sentMessages.set(reqMsg.msgId, reqMsg);
+    for (const msg of messages) {
+      msg.deferred = msg.deferred || getDeferred();
+      this.sentMessages.set(msg.msgId, msg);
+    }
 
-    this.transportSend(buffer);
+    await this.transportSend(buffer);
 
-    return reqMsg.deferred.promise;
+    if (singleMessage) {
+      return messages[0].deferred.promise;
+    } else {
+      return Promise.all(messages.map(msg => msg.deferred.promise));
+    }
   }
 
   async sendPlainRequest(buffer) {
@@ -441,10 +463,10 @@ export default class MTProto {
       case 'rpc_result':
         this.ackMessage(msgId);
         this.onRpcResult(object.req_msg_id, object.result);
-        console.log('got rpc_result', msgId, object.result);
+        console.log('[MTProto] got rpc_result', msgId, object.result);
         break;
       case 'bad_server_salt':
-        console.warn('bad_server_salt', object);
+        console.warn('[MTProto] bad_server_salt', object);
         this.ackMessage(msgId);
         this.updateServerSalt(object.new_server_salt);
         if (sentMessage) {
@@ -452,11 +474,11 @@ export default class MTProto {
         }
         return;
       case 'ping':
-        this.sendRequest(this.wrapObjectMessage('pong', {ping_id: object.ping_id}, {no_content_related: true}));
+        this.sendRequest(this.wrapObjectMessage('pong', {ping_id: object.ping_id}));
         break;
       default:
         this.ackMessage(msgId);
-        console.log('got response object', object);
+        console.log('[MTProto] got response object', object);
     }
 
     if (sentMessage) {
@@ -466,6 +488,18 @@ export default class MTProto {
 
   ackMessage(msgId) {
     this.pendingAcks.push(msgId);
+    this.schedulePendingMessagesRequest();
+  }
+
+  schedulePendingMessagesRequest() {
+    if (!this.pendingMessagesRequestTimeout) {
+      this.pendingMessagesRequestTimeout = setTimeout(() => {
+        const pendingMessages = this.getPendingMessages();
+        if (pendingMessages.length) {
+          this.sendRequest(pendingMessages[0]);
+        }
+      }, 5000);
+    }
   }
 
   onRpcResult(reqMsgId, result) {
@@ -485,25 +519,25 @@ export default class MTProto {
     const {message: resPQ} = await this.sendPlainRequest(req);
 
     if (resPQ._ !== 'resPQ') {
-      throw new Error('[MT] resPQ response invalid: ' + resPQ._)
+      throw new Error('[MTProto] resPQ response invalid: ' + resPQ._)
     }
 
     if (!bytesCmp(auth.nonce, resPQ.nonce)) {
-      throw new Error('[MT] resPQ nonce mismatch');
+      throw new Error('[MTProto] resPQ nonce mismatch');
     }
 
     auth.publicKey = selectRsaPublicKey(resPQ.server_public_key_fingerprints);
 
     if (!auth.publicKey) {
-      throw new Error('[MT] No public key found');
+      throw new Error('[MTProto] No public key found');
     }
 
     auth.serverNonce = resPQ.server_nonce;
     auth.pq = resPQ.pq;
 
-    console.time('req_pq_factorize');
+    console.time('[MTProto] req_pq_factorize');
     [auth.p, auth.q] = pqPrimeFactorization(resPQ.pq);
-    console.timeEnd('req_pq_factorize');
+    console.timeEnd('[MTProto] req_pq_factorize');
 
     this.reqDHParams(auth);
   }
@@ -525,9 +559,9 @@ export default class MTProto {
     const pqBuffer = pqData.getBuffer();
     const pqHash = await sha1Hash(pqBuffer);
     const dataWithHash = bufferConcat(pqHash, pqBuffer);
-    console.time('req_dh_params_rsa_encrypt');
+    console.time('[MTProto] req_dh_params_rsa_encrypt');
     const encryptedData = rsaEncrypt(auth.publicKey, dataWithHash);
-    console.timeEnd('req_dh_params_rsa_encrypt');
+    console.timeEnd('[MTProto] req_dh_params_rsa_encrypt');
 
     const req = this.wrapPlainMethodCall('req_DH_params', {
       nonce: auth.nonce,
@@ -540,23 +574,23 @@ export default class MTProto {
     const {message: dhParams} = await this.sendPlainRequest(req);
 
     if (dhParams._ !== 'server_DH_params_ok') {
-      throw new Error('[MT] Server_DH_Params response invalid: ' + dhParams._);
+      throw new Error('[MTProto] Server_DH_Params response invalid: ' + dhParams._);
     }
 
-    console.time('dh_params_sha1');
+    console.time('[MTProto] dh_params_sha1');
     const [hash1, hash2, hash3] = await Promise.all([
       sha1Hash(bufferConcat(auth.newNonce, auth.serverNonce)),
       sha1Hash(bufferConcat(auth.serverNonce, auth.newNonce)),
       sha1Hash(bufferConcat(auth.newNonce, auth.newNonce)),
     ]);
-    console.timeEnd('dh_params_sha1');
+    console.timeEnd('[MTProto] dh_params_sha1');
 
     auth.tmpAesKey = bufferConcat(hash1, hash2.slice(0, 12));
     auth.tmpAesIv = bufferConcat(hash2.slice(12), hash3, auth.newNonce.slice(0, 4));
 
-    console.time('req_dh_params_aes_decrypt');
+    console.time('[MTProto] req_dh_params_aes_decrypt');
     const answerWithHash = bytesToArrayBuffer(aesIgeDecrypt(dhParams.encrypted_answer, auth.tmpAesKey, auth.tmpAesIv));
-    console.timeEnd('req_dh_params_aes_decrypt');
+    console.timeEnd('[MTProto] req_dh_params_aes_decrypt');
     const hash = answerWithHash.slice(0, 20);
     const answerWithPadding = answerWithHash.slice(20);
 
@@ -564,21 +598,21 @@ export default class MTProto {
     const serverDhData = response.fetchObject('Server_DH_inner_data');
 
     if (serverDhData._ !== 'server_DH_inner_data') {
-      throw new Error('[MT] server_DH_inner_data response invalid: ' + serverDhData._);
+      throw new Error('[MTProto] server_DH_inner_data response invalid: ' + serverDhData._);
     }
 
     const answerHashPromise = sha1Hash(answerWithPadding.slice(0, response.getOffset()));
 
     if (!bytesCmp(auth.nonce, serverDhData.nonce)) {
-      throw new Error('[MT] server_DH_inner_data nonce mismatch')
+      throw new Error('[MTProto] server_DH_inner_data nonce mismatch')
     }
 
     if (!bytesCmp(auth.serverNonce, serverDhData.server_nonce)) {
-      throw new Error('[MT] server_DH_inner_data serverNonce mismatch')
+      throw new Error('[MTProto] server_DH_inner_data serverNonce mismatch')
     }
 
     if (!bytesCmp(hash, await answerHashPromise)) {
-      throw new Error('[MT] server_DH_inner_data SHA1-hash mismatch');
+      throw new Error('[MTProto] server_DH_inner_data SHA1-hash mismatch');
     }
 
     if (this.verifyServerDhParams(serverDhData)) {
@@ -595,27 +629,27 @@ export default class MTProto {
     const dhPrimeHex = bytesToHex(dhPrime);
     if (g !== 3 || dhPrimeHex !== 'c71caeb9c6b1c9048e6c522f70f13f73980d40238e3e21c14934d037563d930f48198a0aa7c14058229493d22530f4dbfa336f6e0ac925139543aed44cce7c3720fd51f69458705ac68cd4fe6b6b13abdc9746512969328454f18faf8c595f642477fe96bb2a941d5bcd1d4ac8cc49880708fa9b378e3c4f3a9060bee67cf9a4a4a695811051907e162753b56b0f6b410dba74d8a84b2a14b3144e0ef1284754fd17ed950d5965b4b9dd46582db1178d169c6bc465b0d6ff9ca3928fef5b9ae4e418fc15e83ebea0f87fa9ff5eed70050ded2849f47bf959d956850ce929851f0d8115f635b105ee2e4e15d04b2454bf6f4fadf034b10403119cd8e3b92fcc5b') {
       // The verified value is from https://core.telegram.org/mtproto/security_guidelines
-      throw new Error('[MT] DH params are not verified: unknown dhPrime');
+      throw new Error('[MTProto] DH params are not verified: unknown dhPrime');
     }
 
     const gABigInt = bigBytesInt(gA);
     const dhPrimeBigInt = bigStringInt(dhPrimeHex, 16);
 
     if (gABigInt.compareTo(bigint(1)) <= 0) {
-      throw new Error('[MT] DH params are not verified: gA <= 1');
+      throw new Error('[MTProto] DH params are not verified: gA <= 1');
     }
 
     if (gABigInt.compareTo(dhPrimeBigInt.subtract(bigint(1))) >= 0) {
-      throw new Error('[MT] DH params are not verified: gA >= dhPrime - 1');
+      throw new Error('[MTProto] DH params are not verified: gA >= dhPrime - 1');
     }
 
     const twoPow = bigint(1).shiftLeft(2048 - 64); // 2^{2048-64}
 
     if (gABigInt.compareTo(twoPow) < 0) {
-      throw new Error('[MT] DH params are not verified: gA < 2^{2048-64}')
+      throw new Error('[MTProto] DH params are not verified: gA < 2^{2048-64}')
     }
     if (gABigInt.compareTo(dhPrimeBigInt.subtract(twoPow)) >= 0) {
-      throw new Error('[MT] DH params are not verified: gA > dhPrime - 2^{2048-64}')
+      throw new Error('[MTProto] DH params are not verified: gA > dhPrime - 2^{2048-64}')
     }
 
     return true;
@@ -626,9 +660,9 @@ export default class MTProto {
 
     auth.b = bufferRandom(256);
 
-    console.time('dh_mod_pow');
+    console.time('[MTProto] dh_mod_pow');
     const gB = bytesModPow(gBytes, auth.b, auth.dhPrime);
-    console.timeEnd('dh_mod_pow');
+    console.timeEnd('[MTProto] dh_mod_pow');
 
     var data = new TLSerialization({mtproto: true});
     data.storeObject({
@@ -642,9 +676,9 @@ export default class MTProto {
     const dataHash = await sha1Hash(data.getBuffer());
     const dataWithHash = bufferConcat(dataHash, data.getBuffer());
 
-    console.time('dh_aes_encrypt');
+    console.time('[MTProto] dh_aes_encrypt');
     const encryptedData = aesIgeEncrypt(dataWithHash, auth.tmpAesKey, auth.tmpAesIv);
-    console.timeEnd('dh_aes_encrypt');
+    console.timeEnd('[MTProto] dh_aes_encrypt');
 
     const req = this.wrapPlainMethodCall('set_client_DH_params', {
       nonce: auth.nonce,
@@ -653,9 +687,9 @@ export default class MTProto {
     });
     const answerPromise = this.sendPlainRequest(req);
 
-    console.time('auth key modPow');
+    console.time('[MTProto] auth key modPow');
     const authKey = new Uint8Array(bytesModPow(auth.gA, auth.b, auth.dhPrime));
-    console.timeEnd('auth key modPow');
+    console.timeEnd('[MTProto] auth key modPow');
     const authKeyHash = await sha1Hash(authKey);
     const authKeyAuxHash = authKeyHash.slice(0, 8);
     const authKeyId = authKeyHash.slice(-8);
@@ -663,22 +697,22 @@ export default class MTProto {
     const {message: answer} = await answerPromise;
 
     if (answer._ !== 'dh_gen_ok' && answer._ !== 'dh_gen_retry' && answer._ !== 'dh_gen_fail') {
-      throw new Error('[MT] Set_client_DH_params_answer response invalid: ' + answer._);
+      throw new Error('[MTProto] Set_client_DH_params_answer response invalid: ' + answer._);
     }
 
     if (!bytesCmp(auth.nonce, answer.nonce)) {
-      throw new Error('[MT] Set_client_DH_params_answer nonce mismatch');
+      throw new Error('[MTProto] Set_client_DH_params_answer nonce mismatch');
     }
 
     if (!bytesCmp(auth.serverNonce, answer.server_nonce)) {
-      throw new Error('[MT] Set_client_DH_params_answer server_nonce mismatch');
+      throw new Error('[MTProto] Set_client_DH_params_answer server_nonce mismatch');
     }
 
     switch (answer._) {
       case 'dh_gen_ok': {
         const newNonceHash1 = (await sha1Hash(bufferConcat(auth.newNonce, [1], authKeyAuxHash))).slice(-16);
         if (!bytesCmp(newNonceHash1, answer.new_nonce_hash1)) {
-          throw new Error('[MT] Set_client_DH_params_answer new_nonce_hash1 mismatch');
+          throw new Error('[MTProto] Set_client_DH_params_answer new_nonce_hash1 mismatch');
         }
         const serverSalt = bytesXor(auth.newNonce.slice(0, 8), auth.serverNonce.slice(0, 8));
         auth.authKey = authKey;
@@ -688,10 +722,10 @@ export default class MTProto {
       } break;
 
       case 'dh_gen_retry': {
-        console.log('dh_gen_retry');
+        console.log('[MTProto] dh_gen_retry');
         const newNonceHash2 = (await sha1Hash(bufferConcat(auth.newNonce, [2], authKeyAuxHash))).slice(-16);
         if (!bytesCmp(newNonceHash2, answer.new_nonce_hash2)) {
-          throw new Error('[MT] Set_client_DH_params_answer new_nonce_hash2 mismatch');
+          throw new Error('[MTProto] Set_client_DH_params_answer new_nonce_hash2 mismatch');
         }
         this.setClientDhData(auth);
       } break;
@@ -699,15 +733,15 @@ export default class MTProto {
       case 'dh_gen_fail': {
         var newNonceHash3 = (await sha1Hash(bufferConcat(auth.newNonce, [3], authKeyAuxHash))).slice(-16);
         if (!bytesCmp(newNonceHash3, answer.new_nonce_hash3)) {
-          throw new Error('[MT] Set_client_DH_params_answer new_nonce_hash3 mismatch');
+          throw new Error('[MTProto] Set_client_DH_params_answer new_nonce_hash3 mismatch');
         }
-        throw new Error('[MT] Set_client_DH_params_answer fail');
+        throw new Error('[MTProto] Set_client_DH_params_answer fail');
       }
     }
   }
 
   completeAuth(auth) {
-    console.log('auth completed', auth);
+    console.log('[MTProto] auth completed', auth);
     this.authKey = auth.authKey;
     this.authKeyId = auth.authKeyId;
     this.serverSalt = auth.serverSalt;
@@ -739,26 +773,38 @@ export default class MTProto {
   }
 
   initLongPoll() {
-    const tick = async () => {
-      try {
-        const reqMsg = this.wrapMethodCallMessage('http_wait', {
-          max_delay: 3000,
-          wait_after: 150,
-          max_wait: 25000
+    const tick = () => {
+      const reqMsg = this.wrapMethodCallMessage('http_wait', {
+        max_delay: 3000,
+        wait_after: 150,
+        max_wait: 25000
+      });
+      this.sendRequest(reqMsg)
+        .then(tick)
+        .catch((e) => {
+          console.warn('[MTProto] Long poll error', e);
         });
-        const {message: result} = await this.sendRequest(reqMsg);
-        console.log('Long poll message', result);
-        tick();
-      } catch (e) {
-        console.warn('Long poll error', e);
-      }
     };
+
     tick();
   }
 
-  async ping() {
-    const reqMsg = this.wrapMethodCallMessage('ping', {no_content_related: true});
-    console.log(await this.sendRequest(reqMsg));
+  ping() {
+    const ping_id = longFromInts(...new Uint32Array(bufferRandom(8)));
+    const msg = this.wrapMethodCallMessage('ping', {ping_id, });
+    this.sendRequest(msg);
+  }
+
+  isContentRelatedConstructor(constructor) {
+    const notRelated = [
+      'rpc_drop_answer', 'rpc_answer_unknown', 'rpc_answer_dropped_running', 'rpc_answer_dropped',
+      'get_future_salts', 'future_salt', 'future_salts', 'bad_server_salt',
+      'ping', 'pong', 'ping_delay_disconnect', 'destroy_session', 'destroy_session_ok', 'destroy_session_none',
+      'msg_container', 'msg_copy', 'gzip_packed', 'http_wait', 'msgs_ack', 'bad_msg_notification',
+      'msgs_state_req', 'msgs_state_info', 'msgs_all_info',
+      'msg_detailed_info', 'msg_new_detailed_info', 'msg_resend_req', 'msg_resend_ans_req'
+    ];
+    return !notRelated.includes(constructor);
   }
 
 }

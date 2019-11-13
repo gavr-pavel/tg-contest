@@ -27,7 +27,7 @@ class Api {
       serializer.storeInt(0xda9b0d0d, 'invokeWithLayer');
       serializer.storeInt(Schema.API.layer, 'layer');
       serializer.storeInt(0xc7481da6, 'initConnection');
-      serializer.storeInt(API_ID, 'api_id')
+      serializer.storeInt(API_ID, 'api_id');
       serializer.storeString(getBrowser(), 'device_model');
       serializer.storeString(getOSName(), 'system_version');
       serializer.storeString(APP_VERSION, 'app_version');
@@ -39,7 +39,7 @@ class Api {
 
     const resultType = serializer.storeMethod(method, params);
 
-    const message = this.mtproto.prepareMessageFromBuffer(serializer.getBuffer(), {api: true, resultType});
+    const message = this.mtproto.prepareMessageFromBuffer(serializer.getBuffer(), {api: true, resultType, source: method});
 
     // this.mtproto.pushMessage(message);
 
@@ -47,10 +47,11 @@ class Api {
   }
 
   async callMethod(method, params = {}) {
+    console.log('[API] calling method', {method, params});
     const message = this.wrapCall(method, params);
     const result = await this.mtproto.sendRequest(message);
     if (result._ === 'rpc_error') {
-      throw new Error('rpc_error', result);
+      return Promise.reject(result);
     }
     return result;
   }
@@ -60,16 +61,13 @@ class Api {
   }
 
   async sendCode(phone) {
-    const message = this.wrapCall('auth.sendCode', {
+    console.log(await this.callMethod('auth.sendCode', {
       phone_number: phone,
       api_id: API_ID,
       api_hash: API_HASH,
-    });
-    console.log(await this.mtproto.sendRequest(message));
+    }));
   }
 }
-
-
 
 function getSystemLang() {
   return navigator.language || 'en';

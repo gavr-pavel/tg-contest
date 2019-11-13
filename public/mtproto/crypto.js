@@ -127,25 +127,6 @@ function aesIgeDecrypt(bytes, keyBytes, ivBytes) {
   return bytesFromWords(decryptedWords);
 }
 
-function aesCtrEncrypt(bytes, keyBytes, ivBytes) {
-  // bytes = addPadding(bytes);
-  const encryptedWords = CryptoJS.AES.encrypt(bytesToWords(bytes), bytesToWords(keyBytes), {
-    iv: bytesToWords(ivBytes),
-    padding: CryptoJS.pad.NoPadding,
-    mode: CryptoJS.mode.CTR
-  }).ciphertext;
-  return bytesFromWords(encryptedWords);
-}
-
-function aesCtrDecrypt(bytes, keyBytes, ivBytes) {
-  const encryptedWords = CryptoJS.AES.encrypt(bytesToWords(bytes), bytesToWords(keyBytes), {
-    iv: bytesToWords(ivBytes),
-    padding: CryptoJS.pad.NoPadding,
-    mode: CryptoJS.mode.CTR
-  }).ciphertext;
-  return bytesFromWords(encryptedWords);
-}
-
 function bytesToWords (bytes) {
   if (bytes instanceof ArrayBuffer) {
     bytes = new Uint8Array(bytes);
@@ -176,7 +157,5 @@ export {
   sha1Hash,
   sha256Hash,
   aesIgeEncrypt,
-  aesIgeDecrypt,
-  aesCtrEncrypt,
-  aesCtrDecrypt
+  aesIgeDecrypt
 };

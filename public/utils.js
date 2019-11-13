@@ -55,9 +55,35 @@ export function getSystemLang() {
   return navigator.language || 'en';
 }
 
-
 export function $(selector, parent = document) {
   return parent.querySelector(selector);
+}
+
+export function importTemplate(id) {
+  const template = $('#template_' + id);
+  return document.importNode(template.content, true);
+}
+
+export function getLabeledElements(container) {
+  const result = {
+    container
+  };
+  if (container.childElementCount) {
+    for (const child of container.children) {
+      const label = child.dataset.jsLabel;
+      if (label) {
+        result[child.dataset.jsLabel] = child;
+      }
+      Object.assign(result, getLabeledElements(child, result));
+    }
+  }
+  return result;
+}
+
+export function buildHtmlElement(htmlStr) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = htmlStr;
+  return tmp.firstElementChild;
 }
 
 export function cmpStrNum(a, b) {
