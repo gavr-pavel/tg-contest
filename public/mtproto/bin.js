@@ -1,27 +1,5 @@
 import {BigInteger} from './ext/jsbn_combined.js';
-import * as Leemon from './ext/bigint.js';
-import {Long} from './ext/long.js';
-import {chunkArray} from './utils.js';
-
-function storeByte(value) {
-  return new Uint8Array([value]).buffer;
-}
-
-function storeInt(value) {
-  return new Uint32Array([value]).buffer;
-}
-
-function storeInt64(...ints) { // 2 * int
-  return new Uint32Array(ints).buffer;
-}
-
-function storeInt128(...ints) { // 4 * int
-  return new Uint32Array(ints).buffer;
-}
-
-function storeInt256(...ints) { // 8 * int
-  return new Uint32Array(ints).buffer;
-}
+import {workerTask} from './utils.js';
 
 function intToUint(val) {
   val = parseInt(val);
@@ -56,31 +34,14 @@ function bufferConcat(...buffers) {
   return tmp.buffer;
 }
 
-function addPadding(bytes, blockSize = 16, zeroes = false) {
-  if (!bytes.buffer) {
-    bytes = new Uint8Array(bytes);
+function logBytesHex(buffer, msg = '') {
+  let hexStr = '';
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.length; i++) {
+    hexStr += (bytes[i] < 16 ? '0' :  '') + bytes[i].toString(16);
+    hexStr += i && !((i + 1) % 16) ? '\n' : ' ';
   }
-  const len = bytes.byteLength;
-  const needPadding = blockSize - (len % blockSize);
-  if (needPadding > 0 && needPadding < blockSize) {
-    const padding = new Uint8Array(needPadding);
-    if (!zeroes) {
-      crypto.getRandomValues(padding);
-    }
-    bytes = new Uint8Array(bufferConcat(bytes, padding));
-  }
-
-  return bytes;
-}
-
-function debugLogBuffer(buffer, msg = '') {
-  const hexStr = chunkArray(Array.from(new Uint8Array(buffer)), 16)
-      .map(chunk => {
-        return chunk.map(n => {
-          return n.toString(16).toUpperCase().padStart(2, '0');
-        }).join(' ');
-      }).join('\n');
-
+  hexStr = hexStr.toUpperCase();
   console.log('%s\n%s', msg, hexStr);
 }
 
@@ -159,262 +120,25 @@ function longToBytes(sLong, base = 10) {
   return new Uint8Array(buffer);
 }
 
-function pqPrimeFactorization (pqBytes) {
-  var what = new BigInteger(pqBytes)
-  var result = false
-
-  try {
-    console.time('PQ leemon');
-    result = pqPrimeLeemon(Leemon.str2bigInt(what.toString(16), 16, Math.ceil(64 / Leemon.bpe) + 1))
-    console.timeEnd('PQ leemon');
-  } catch (e) {
-    console.error('Pq leemon Exception', e)
-  }
-
-  if (result === false && what.bitLength() <= 64) {
-    console.time('PQ long')
-    try {
-      result = pqPrimeLong(Long.fromString(what.toString(16), 16))
-    } catch (e) {
-      console.error('Pq long Exception', e)
-    }
-    console.timeEnd('PQ long')
-  }
-
-  if (result === false) {
-    console.time('pq BigInt')
-    result = pqPrimeBigInteger(what)
-    console.timeEnd('pq BigInt')
-  }
-
-  return result
+async function pqPrimeFactorization(pqBytes) {
+  return await workerTask('factorize', {pqBytes});
 }
 
-function pqPrimeBigInteger (what) {
-  var it = 0,
-      g
-  for (var i = 0; i < 3; i++) {
-    var q = (nextRandomInt(128) & 15) + 17
-    var x = bigint(nextRandomInt(1000000000) + 1)
-    var y = x.clone()
-    var lim = 1 << (i + 18)
-
-    for (var j = 1; j < lim; j++) {
-      ++it
-      var a = x.clone()
-      var b = x.clone()
-      var c = bigint(q)
-
-      while (!b.equals(BigInteger.ZERO)) {
-        if (!b.and(BigInteger.ONE).equals(BigInteger.ZERO)) {
-          c = c.add(a)
-          if (c.compareTo(what) > 0) {
-            c = c.subtract(what)
-          }
-        }
-        a = a.add(a)
-        if (a.compareTo(what) > 0) {
-          a = a.subtract(what)
-        }
-        b = b.shiftRight(1)
-      }
-
-      x = c.clone()
-      var z = x.compareTo(y) < 0 ? y.subtract(x) : x.subtract(y)
-      g = z.gcd(what)
-      if (!g.equals(BigInteger.ONE)) {
-        break
-      }
-      if ((j & (j - 1)) == 0) {
-        y = x.clone()
-      }
-    }
-    if (g.compareTo(BigInteger.ONE) > 0) {
-      break
-    }
-  }
-
-  var f = what.divide(g), P, Q
-
-  if (g.compareTo(f) > 0) {
-    P = f
-    Q = g
-  } else {
-    P = g
-    Q = f
-  }
-
-  return [bytesFromBigInt(P), bytesFromBigInt(Q), it]
+async function bytesPowMod(x, y, m) {
+  console.time('pow_mod');
+  const result = await workerTask('pow_mod', [x, y, m]);
+  console.timeEnd('pow_mod');
+  return result;
 }
 
-function gcdLong (a, b) {
-  while (a.notEquals(Long.ZERO) && b.notEquals(Long.ZERO)) {
-    while (b.and(Long.ONE).equals(Long.ZERO)) {
-      b = b.shiftRight(1)
-    }
-    while (a.and(Long.ONE).equals(Long.ZERO)) {
-      a = a.shiftRight(1)
-    }
-    if (a.compare(b) > 0) {
-      a = a.subtract(b)
-    } else {
-      b = b.subtract(a)
-    }
-  }
-  return b.equals(Long.ZERO) ? a : b
+async function bytesMulMod(x, y, m) {
+  console.time('pow_mul');
+  const result = await workerTask('pow_mul', [x, y, m]);
+  console.timeEnd('pow_mul');
+  return result;
 }
 
-function pqPrimeLong (what) {
-  var it = 0,
-      g
-  for (var i = 0; i < 3; i++) {
-    var q = Long.fromInt((nextRandomInt(128) & 15) + 17)
-    var x = Long.fromInt(nextRandomInt(1000000000) + 1)
-    var y = x
-    var lim = 1 << (i + 18)
-
-    for (var j = 1; j < lim; j++) {
-      ++it
-      var a = x
-      var b = x
-      var c = q
-
-      while (b.notEquals(Long.ZERO)) {
-        if (b.and(Long.ONE).notEquals(Long.ZERO)) {
-          c = c.add(a)
-          if (c.compare(what) > 0) {
-            c = c.subtract(what)
-          }
-        }
-        a = a.add(a)
-        if (a.compare(what) > 0) {
-          a = a.subtract(what)
-        }
-        b = b.shiftRight(1)
-      }
-
-      x = c
-      var z = x.compare(y) < 0 ? y.subtract(x) : x.subtract(y)
-      g = gcdLong(z, what)
-      if (g.notEquals(Long.ONE)) {
-        break
-      }
-      if ((j & (j - 1)) == 0) {
-        y = x
-      }
-    }
-    if (g.compare(Long.ONE) > 0) {
-      break
-    }
-  }
-
-  var f = what.div(g), P, Q
-
-  if (g.compare(f) > 0) {
-    P = f
-    Q = g
-  } else {
-    P = g
-    Q = f
-  }
-
-  return [bytesFromHex(P.toString(16)), bytesFromHex(Q.toString(16)), it]
-}
-
-function pqPrimeLeemon (what) {
-  var minBits = 64
-  var minLen = Math.ceil(minBits / Leemon.bpe) + 1
-  var it = 0
-  var i, q
-  var j, lim
-  var g, P
-  var Q
-  var a = new Array(minLen)
-  var b = new Array(minLen)
-  var c = new Array(minLen)
-  var g = new Array(minLen)
-  var z = new Array(minLen)
-  var x = new Array(minLen)
-  var y = new Array(minLen)
-
-  for (i = 0; i < 3; i++) {
-    q = (nextRandomInt(128) & 15) + 17
-    Leemon.copyInt_(x, nextRandomInt(1000000000) + 1)
-    Leemon.copy_(y, x)
-    lim = 1 << (i + 18)
-
-    for (j = 1; j < lim; j++) {
-      ++it
-      Leemon.copy_(a, x)
-      Leemon.copy_(b, x)
-      Leemon.copyInt_(c, q)
-
-      while (!Leemon.isZero(b)) {
-        if (b[0] & 1) {
-          Leemon.add_(c, a)
-          if (Leemon.greater(c, what)) {
-            Leemon.sub_(c, what)
-          }
-        }
-        Leemon.add_(a, a)
-        if (Leemon.greater(a, what)) {
-          Leemon.sub_(a, what)
-        }
-        Leemon.rightShift_(b, 1)
-      }
-
-      Leemon.copy_(x, c)
-      if (Leemon.greater(x, y)) {
-        Leemon.copy_(z, x)
-        Leemon.sub_(z, y)
-      } else {
-        Leemon.copy_(z, y)
-        Leemon.sub_(z, x)
-      }
-      Leemon.eGCD_(z, what, g, a, b)
-      if (!Leemon.equalsInt(g, 1)) {
-        break
-      }
-      if ((j & (j - 1)) == 0) {
-        Leemon.copy_(y, x)
-      }
-    }
-    if (Leemon.greater(g, Leemon.one)) {
-      break
-    }
-  }
-
-  Leemon.divide_(what, g, x, y)
-
-  if (Leemon.greater(g, x)) {
-    P = x
-    Q = g
-  } else {
-    P = g
-    Q = x
-  }
-
-  // console.log(dT(), 'done', bigInt2str(what, 10), bigInt2str(P, 10), bigInt2str(Q, 10))
-
-  return [bytesFromLeemonBigInt(P), bytesFromLeemonBigInt(Q), it]
-}
-
-function bytesModPow (x, y, m) {
-  try {
-    var xBigInt = Leemon.str2bigInt(bytesToHex(x), 16)
-    var yBigInt = Leemon.str2bigInt(bytesToHex(y), 16)
-    var mBigInt = Leemon.str2bigInt(bytesToHex(m), 16)
-    var resBigInt = Leemon.powMod(xBigInt, yBigInt, mBigInt)
-
-    return bytesFromHex(Leemon.bigInt2str(resBigInt, 16))
-  } catch (e) {
-    console.error('mod pow error', e)
-  }
-
-  return bytesFromBigInt(new BigInteger(x).modPow(new BigInteger(y), new BigInteger(m)), 256)
-}
-
-function bytesXor (bytes1, bytes2) {
+function bytesXor(bytes1, bytes2) {
   bytes1 = new Uint8Array(bytes1);
   bytes2 = new Uint8Array(bytes2);
   const len = bytes1.length;
@@ -425,11 +149,7 @@ function bytesXor (bytes1, bytes2) {
   return bytes;
 }
 
-function nextRandomInt (maxValue) {
-  return Math.floor(Math.random() * maxValue)
-}
-
-function bytesFromBigInt (bigInt, len) {
+function bytesFromBigInt(bigInt, len) {
   var bytes = bigInt.toByteArray()
 
   if (len && bytes.length < len) {
@@ -451,11 +171,6 @@ function bytesFromBigInt (bigInt, len) {
   return bytes
 }
 
-function bytesFromLeemonBigInt (bigInt, len) {
-  var str = Leemon.bigInt2str(bigInt, 16)
-  return bytesFromHex(str)
-}
-
 function gzipUncompress(bytes) {
   const label =  'Gzip uncompress ' + bytes.length + ' bytes';
   console.time(label);
@@ -466,18 +181,17 @@ function gzipUncompress(bytes) {
 
 window.bytesToHex = bytesToHex;
 window.bytesFromHex = bytesFromHex;
-window.debugLogBuffer = debugLogBuffer;
+window.logBytesHex = logBytesHex;
 
 export {
-  storeByte,
-  storeInt,
   intToUint,
   uintToInt,
   bytesToHex,
   bytesFromHex,
   bytesToArrayBuffer,
   bytesCmp,
-  bytesModPow,
+  bytesPowMod,
+  bytesMulMod,
   bytesXor,
   bigint,
   bigStringInt,
@@ -488,7 +202,6 @@ export {
   pqPrimeFactorization,
   bufferConcat,
   bufferRandom,
-  addPadding,
-  debugLogBuffer,
+  logBytesHex,
   gzipUncompress
 };

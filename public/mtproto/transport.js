@@ -1,8 +1,89 @@
-const API_HOST = 'venus';
+import {intRand, storage} from './utils.js';
+
+const DC_LIST = ['', 'pluto', 'venus', 'aurora', 'vesta', 'flora'];
+
+function chooseDC(dcId) {
+  const storedDcId = storage.get('auth_dc_id');
+  if (!dcId) {
+    if (storedDcId) {
+      dcId = storedDcId;
+    } else {
+      dcId = intRand(1, 5);
+    }
+  }
+  if (dcId !== storedDcId) {
+    storage.set('auth_dc_id', dcId);
+  }
+  return DC_LIST[dcId];
+}
 
 class Transport {
-  getHost(upload) {
-    return API_HOST + (upload ? '-1' : '');
+  getHost(dcId = 0, upload = false) {
+    return chooseDC(dcId) + (upload ? '-1' : '');
+  }
+}
+
+class WebSocketTransport extends Transport {
+  pending = [];
+
+  constructor({dcId, onMessage, onReconnect} = {}) {
+    super();
+
+    this.url = this.getUrl(dcId);
+
+    this.messageCallback = onMessage;
+    this.onReconnect = onReconnect;
+
+    this.initSocket();
+  }
+
+  getUrl(dcId = 0) {
+    return `wss://${this.getHost(dcId)}.web.telegram.org/apiws`;
+  }
+
+  initSocket() {
+    const socket = new WebSocket(this.url, 'binary');
+
+    this.socketReadyPromise = new Promise((resolve) => {
+      socket.addEventListener('open', (event) => {
+        console.log('ws open');
+        this.socket = socket;
+        resolve(socket);
+      }, {once: true});
+    });
+
+    socket.addEventListener('error', (event) => {
+      console.warn('ws error', event);
+    });
+
+    socket.addEventListener('message', (event) => {
+      this.handleResponse(event.data);
+    });
+
+    socket.addEventListener('close', (event) => {
+      console.log('ws close', event);
+      this.socket = null;
+      this.initSocket()
+        .then(this.onReconnect);
+    });
+
+    return this.socketReadyPromise;
+  }
+
+  async handleResponse(message) {
+    this.messageCallback(await message.arrayBuffer());
+  }
+
+  async send(payload) {
+    if (!this.socket) {
+      await this.socketReadyPromise;
+    }
+    this.socket.send(payload);
+  }
+
+  migrateDC(dcId) {
+    this.url = this.getUrl(dcId);
+    this.socket.close();
   }
 }
 
@@ -27,57 +108,6 @@ class HttpTransport extends Transport {
     }
 
     return res.arrayBuffer();
-  }
-}
-
-class WebSocketTransport extends Transport {
-  pending = [];
-
-  constructor({upload = false, onMessage} = {}) {
-    super();
-
-    const host = this.getHost(upload);
-    this.url = `wss://${host}.web.telegram.org/apiws`;
-
-    this.messageCallback = onMessage;
-
-    const socket = new WebSocket(this.url, 'binary');
-
-    this.socketReadyPromise = new Promise(resolve => {
-      socket.addEventListener('open', (event) => {
-        console.log('ws open');
-        this.socket = socket;
-        resolve(socket);
-      }, {once: true});
-    });
-
-    socket.addEventListener('error', (event) => {
-      console.warn('ws error', event);
-    });
-
-    socket.addEventListener('message', (event) => {
-      this.handleResponse(event.data);
-    });
-
-    socket.addEventListener('close', (event) => {
-      console.warn('ws close', event);
-    });
-  }
-
-  async handleResponse(message) {
-    this.messageCallback(await message.arrayBuffer());
-  }
-
-  async send(payload) {
-    if (!this.socket) {
-      await this.socketReadyPromise;
-    }
-
-    this.socket.send(payload);
-  }
-
-  listen(callback) {
-    this.messageCallback = callback;
   }
 }
 

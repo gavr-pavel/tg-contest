@@ -51,21 +51,22 @@ class Api {
     const message = this.wrapCall(method, params);
     const result = await this.mtproto.sendRequest(message);
     if (result._ === 'rpc_error') {
+      if (result.error_code === 303) {
+        await this.migrateDC(this.getMigrateErrorDcId(result.error_message));
+        return this.callMethod(method, params);
+      }
       return Promise.reject(result);
     }
     return result;
   }
 
-  async getDc() {
-    console.log(await this.callMethod('help.getNearestDc'));
+  migrateDC(dcId) {
+    this.connectionInited = false;
+    return this.mtproto.migrateDC(dcId);
   }
 
-  async sendCode(phone) {
-    console.log(await this.callMethod('auth.sendCode', {
-      phone_number: phone,
-      api_id: API_ID,
-      api_hash: API_HASH,
-    }));
+  getMigrateErrorDcId(errorMessage) {
+    return +errorMessage.match(/\d+$/)[0];
   }
 }
 

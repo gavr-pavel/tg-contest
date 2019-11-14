@@ -1,11 +1,3 @@
-function chunkArray(arr, size) {
-  const result = [];
-  for (let i = 0; i < arr.length; i += size) {
-    result.push(arr.slice(i, i + size));
-  }
-  return result;
-}
-
 function intRand(min, max) {
   return min + Math.round(Math.random() * (max - min));
 }
@@ -16,7 +8,7 @@ function sleep(t) {
   }));
 }
 
-class Storage {
+class storage {
   static get(key) {
     try {
       return JSON.parse(localStorage.getItem(key));
@@ -30,20 +22,30 @@ class Storage {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {}
   }
+
+  static remove(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {}
+  }
 }
 
 const workerTask = (() => {
   let worker;
 
   const workerPromise = new Promise(resolve => {
-    new Worker('./worker.js').addEventListener('message', (event) => {
+    new Worker('./mtproto/worker.js').addEventListener('message', (event) => {
       if (event.data === 'ready') {
         worker = event.target;
         resolve(worker);
       } else {
-        const callback = tasksCallbacks[event.data.taskId];
+        const deferred = tasksCallbacks[event.data.taskId];
         delete tasksCallbacks[event.data.taskId];
-        callback(event.data.result);
+        if (event.data.error) {
+          deferred.reject(event.data.error);
+        } else {
+          deferred.resolve(event.data.result);
+        }
       }
     });
   });
@@ -59,11 +61,11 @@ const workerTask = (() => {
     if (!worker) {
       await workerPromise;
     }
-    return new Promise(resolve => {
-      const taskId = newTaskId();
-      tasksCallbacks[taskId] = resolve;
-      worker.postMessage({taskId, task, params});
-    });
+    const taskId = newTaskId();
+    const deferred = getDeferred();
+    tasksCallbacks[taskId] = deferred;
+    worker.postMessage({taskId, task, params});
+    return deferred.promise;
   }
 })();
 
@@ -77,10 +79,9 @@ function getDeferred() {
 }
 
 export {
-  chunkArray,
   intRand,
   sleep,
-  Storage,
+  storage,
   workerTask,
   getDeferred
 };

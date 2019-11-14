@@ -1,5 +1,5 @@
-import {storeInt, bufferRandom, bufferConcat, debugLogBuffer, pqPrimeFactorization, intToUint, bigint, bigBytesInt, bigStringInt, longFromInts, longToBytes, bytesToArrayBuffer, bytesCmp, bytesToHex, bytesFromHex, bytesModPow, bytesXor} from './bin.js';
-import {intRand, Storage, sleep, getDeferred} from './utils.js';
+import {bufferRandom, bufferConcat, pqPrimeFactorization, intToUint, bigint, bigBytesInt, bigStringInt, longFromInts, longToBytes, bytesToArrayBuffer, bytesCmp, bytesToHex, bytesFromHex, bytesPowMod, bytesXor} from './bin.js';
+import {intRand, storage, sleep, getDeferred} from './utils.js';
 import {TLSerialization, TLDeserialization} from './tl.js';
 import {selectRsaPublicKey, rsaEncrypt, sha1Hash, sha256Hash, aesIgeDecrypt, aesIgeEncrypt} from './crypto.js';
 import {aesjs} from './ext/aes.js';
@@ -26,6 +26,9 @@ export default class MTProto {
     if (1) {
       this.transport = new WebSocketTransport({
         onMessage: (buffer) => this.transportReceive(buffer),
+        onReconnect: () => {
+          this.init();
+        }
       });
     } else {
       this.transport = new HttpTransport();
@@ -39,9 +42,9 @@ export default class MTProto {
       await this.initProtocol();
     }
 
-    this.sessionId = new Uint8Array(bufferRandom(8));
+    this.updateSessionId();
 
-    const authData = Storage.get('auth');
+    const authData = storage.get('auth');
     if (authData) {
       this.authKey = bytesFromHex(authData.key);
       this.authKeyId = bytesFromHex(authData.id);
@@ -51,6 +54,10 @@ export default class MTProto {
     } else {
       this.reqPq();
     }
+  }
+
+  updateSessionId() {
+    this.sessionId = new Uint8Array(bufferRandom(8));
   }
 
   isProtocolFramingEnabled() {
@@ -106,7 +113,7 @@ export default class MTProto {
 
   async transportSend(buffer) {
     if (this.isProtocolFramingEnabled()) {
-      const header = storeInt(buffer.byteLength);
+      const header = new Uint32Array([buffer.byteLength]).buffer;
       buffer = await this.transportObfuscationEncrypt(bufferConcat(header, buffer));
     }
     const response = await this.transport.send(buffer);
@@ -358,7 +365,7 @@ export default class MTProto {
     return seqNo;
   }
 
-  async parseEncryptedResponse(buffer, resultType) {
+  async parseEncryptedResponse(buffer) {
     const res = new TLDeserialization(buffer, {mtproto: true});
     const authKeyId = res.fetchIntBytes(64, false, 'auth_key_id');
     if (!bytesCmp(authKeyId, this.authKeyId)) {
@@ -370,21 +377,12 @@ export default class MTProto {
 
     const {msgId, msgLen, seqNo, messageData} = await this.decryptMessage(encryptedData, msgKey);
 
-    const self = this;
-
     const deserializer = new TLDeserialization(messageData, {
       mtproto: true,
       override: {
-        mt_rpc_result: function (result, field) {
+        mt_rpc_result: function(result, field) {
           result.req_msg_id = this.fetchLong(field + '[req_msg_id]');
-          // const sentMessage = self.sentMessages.get(result.req_msg_id);
-          const type = resultType || 'Object';
-          if (result.req_msg_id && false/* && !sentMessage*/) {
-            console.warn('[MTProto] Result for unknown message', result);
-            return;
-          }
-          result.result = this.fetchObject(type, field + '[result]');
-          // self.sentMessages.delete(result.req_msg_id);
+          result.result = this.fetchObject('Object', field + '[result]');
         }
       }
     });
@@ -536,7 +534,7 @@ export default class MTProto {
     auth.pq = resPQ.pq;
 
     console.time('[MTProto] req_pq_factorize');
-    [auth.p, auth.q] = pqPrimeFactorization(resPQ.pq);
+    [auth.p, auth.q] = await pqPrimeFactorization(resPQ.pq);
     console.timeEnd('[MTProto] req_pq_factorize');
 
     this.reqDHParams(auth);
@@ -577,13 +575,11 @@ export default class MTProto {
       throw new Error('[MTProto] Server_DH_Params response invalid: ' + dhParams._);
     }
 
-    console.time('[MTProto] dh_params_sha1');
     const [hash1, hash2, hash3] = await Promise.all([
       sha1Hash(bufferConcat(auth.newNonce, auth.serverNonce)),
       sha1Hash(bufferConcat(auth.serverNonce, auth.newNonce)),
       sha1Hash(bufferConcat(auth.newNonce, auth.newNonce)),
     ]);
-    console.timeEnd('[MTProto] dh_params_sha1');
 
     auth.tmpAesKey = bufferConcat(hash1, hash2.slice(0, 12));
     auth.tmpAesIv = bufferConcat(hash2.slice(12), hash3, auth.newNonce.slice(0, 4));
@@ -661,7 +657,7 @@ export default class MTProto {
     auth.b = bufferRandom(256);
 
     console.time('[MTProto] dh_mod_pow');
-    const gB = bytesModPow(gBytes, auth.b, auth.dhPrime);
+    const gB = await bytesPowMod(gBytes, auth.b, auth.dhPrime);
     console.timeEnd('[MTProto] dh_mod_pow');
 
     var data = new TLSerialization({mtproto: true});
@@ -688,7 +684,7 @@ export default class MTProto {
     const answerPromise = this.sendPlainRequest(req);
 
     console.time('[MTProto] auth key modPow');
-    const authKey = new Uint8Array(bytesModPow(auth.gA, auth.b, auth.dhPrime));
+    const authKey = new Uint8Array(await bytesPowMod(auth.gA, auth.b, auth.dhPrime));
     console.timeEnd('[MTProto] auth key modPow');
     const authKeyHash = await sha1Hash(authKey);
     const authKeyAuxHash = authKeyHash.slice(0, 8);
@@ -746,7 +742,7 @@ export default class MTProto {
     this.authKeyId = auth.authKeyId;
     this.serverSalt = auth.serverSalt;
     this.timeOffset = auth.serverTime - Math.floor(Date.now() / 1000);
-    Storage.set('auth', {
+    storage.set('auth', {
       id: bytesToHex(auth.authKeyId),
       key: bytesToHex(auth.authKey),
       salt: bytesToHex(auth.serverSalt),
@@ -755,12 +751,23 @@ export default class MTProto {
     this.onAuthReady();
   }
 
+  resetAuth() {
+    console.log('[MTProto] resetting auth');
+    this.authKey = 0;
+    this.authKeyId = 0;
+    this.serverSalt = 0;
+    this.timeOffset = 0;
+    this.sessionId = 0;
+    this.seqNo = 0;
+    storage.remove('auth');
+  }
+
   updateServerSalt(longSalt) {
     const salt = longToBytes(longSalt);
     this.serverSalt = salt;
-    const authData = Storage.get('auth');
+    const authData = storage.get('auth');
     authData.salt = bytesToHex(salt);
-    Storage.set('auth', authData);
+    storage.set('auth', authData);
   }
 
   onAuthReady() {
@@ -769,6 +776,11 @@ export default class MTProto {
     }
     if (this.options.onConnectionReady) {
       this.options.onConnectionReady();
+      delete this.options.onConnectionReady;
+    }
+    if (this.migrateDeffered) {
+      this.migrateDeffered.resolve();
+      delete this.migrateDeffered;
     }
   }
 
@@ -807,4 +819,10 @@ export default class MTProto {
     return !notRelated.includes(constructor);
   }
 
+  migrateDC(dcId) {
+    this.resetAuth();
+    this.transport.migrateDC(dcId);
+    this.migrateDeffered = getDeferred();
+    return this.migrateDeffered.promise;
+  }
 }

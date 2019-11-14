@@ -1522,5 +1522,7 @@ export {
   sub_,
   eGCD_,
   one,
-  powMod
+  powMod,
+  multMod,
+
 };

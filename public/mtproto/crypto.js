@@ -1,4 +1,4 @@
-import {addPadding, bigStringInt, bigBytesInt, bytesFromBigInt} from './bin.js';
+import {bigStringInt, bigBytesInt, bytesFromBigInt, bufferConcat} from './bin.js';
 import {CryptoJS} from './ext/crypto.js';
 
 const RSA_PUBLIC_KEYS = {
@@ -149,7 +149,22 @@ function bytesFromWords (wordArray) {
   return bytes;
 }
 
-window.addPadding = addPadding;
+function addPadding(bytes, blockSize = 16, zeroes = false) {
+  if (!bytes.buffer) {
+    bytes = new Uint8Array(bytes);
+  }
+  const len = bytes.byteLength;
+  const needPadding = blockSize - (len % blockSize);
+  if (needPadding > 0 && needPadding < blockSize) {
+    const padding = new Uint8Array(needPadding);
+    if (!zeroes) {
+      crypto.getRandomValues(padding);
+    }
+    bytes = new Uint8Array(bufferConcat(bytes, padding));
+  }
+
+  return bytes;
+}
 
 export {
   selectRsaPublicKey,

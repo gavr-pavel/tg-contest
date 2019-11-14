@@ -116,34 +116,6 @@ var convertUtf8 = (function() {
   }
 })();
 
-var convertHex = (function() {
-  function toBytes(text) {
-    var result = [];
-    for (var i = 0; i < text.length; i += 2) {
-      result.push(parseInt(text.substr(i, 2), 16));
-    }
-
-    return result;
-  }
-
-  // http://ixti.net/development/javascript/2011/11/11/base64-encodedecode-of-utf8-in-browser-with-js.html
-  var Hex = '0123456789abcdef';
-
-  function fromBytes(bytes) {
-    var result = [];
-    for (var i = 0; i < bytes.length; i++) {
-      var v = bytes[i];
-      result.push(Hex[(v & 0xf0) >> 4] + Hex[v & 0x0f]);
-    }
-    return result.join('');
-  }
-
-  return {
-    toBytes: toBytes,
-    fromBytes: fromBytes,
-  }
-})();
-
 
 // Number of rounds by keysize
 var numberOfRounds = {16: 10, 24: 12, 32: 14}
@@ -369,245 +341,6 @@ AES.prototype.decrypt = function(ciphertext) {
 
 
 /**
- *  Mode Of Operation - Electonic Codebook (ECB)
- */
-var ModeOfOperationECB = function(key) {
-  if (!(this instanceof ModeOfOperationECB)) {
-    throw Error('AES must be instanitated with `new`');
-  }
-
-  this.description = "Electronic Code Block";
-  this.name = "ecb";
-
-  this._aes = new AES(key);
-}
-
-ModeOfOperationECB.prototype.encrypt = function(plaintext) {
-  plaintext = coerceArray(plaintext);
-
-  if ((plaintext.length % 16) !== 0) {
-    throw new Error('invalid plaintext size (must be multiple of 16 bytes)');
-  }
-
-  var ciphertext = createArray(plaintext.length);
-  var block = createArray(16);
-
-  for (var i = 0; i < plaintext.length; i += 16) {
-    copyArray(plaintext, block, 0, i, i + 16);
-    block = this._aes.encrypt(block);
-    copyArray(block, ciphertext, i);
-  }
-
-  return ciphertext;
-}
-
-ModeOfOperationECB.prototype.decrypt = function(ciphertext) {
-  ciphertext = coerceArray(ciphertext);
-
-  if ((ciphertext.length % 16) !== 0) {
-    throw new Error('invalid ciphertext size (must be multiple of 16 bytes)');
-  }
-
-  var plaintext = createArray(ciphertext.length);
-  var block = createArray(16);
-
-  for (var i = 0; i < ciphertext.length; i += 16) {
-    copyArray(ciphertext, block, 0, i, i + 16);
-    block = this._aes.decrypt(block);
-    copyArray(block, plaintext, i);
-  }
-
-  return plaintext;
-}
-
-
-/**
- *  Mode Of Operation - Cipher Block Chaining (CBC)
- */
-var ModeOfOperationCBC = function(key, iv) {
-  if (!(this instanceof ModeOfOperationCBC)) {
-    throw Error('AES must be instanitated with `new`');
-  }
-
-  this.description = "Cipher Block Chaining";
-  this.name = "cbc";
-
-  if (!iv) {
-    iv = createArray(16);
-
-  } else if (iv.length != 16) {
-    throw new Error('invalid initialation vector size (must be 16 bytes)');
-  }
-
-  this._lastCipherblock = coerceArray(iv, true);
-
-  this._aes = new AES(key);
-}
-
-ModeOfOperationCBC.prototype.encrypt = function(plaintext) {
-  plaintext = coerceArray(plaintext);
-
-  if ((plaintext.length % 16) !== 0) {
-    throw new Error('invalid plaintext size (must be multiple of 16 bytes)');
-  }
-
-  var ciphertext = createArray(plaintext.length);
-  var block = createArray(16);
-
-  for (var i = 0; i < plaintext.length; i += 16) {
-    copyArray(plaintext, block, 0, i, i + 16);
-
-    for (var j = 0; j < 16; j++) {
-      block[j] ^= this._lastCipherblock[j];
-    }
-
-    this._lastCipherblock = this._aes.encrypt(block);
-    copyArray(this._lastCipherblock, ciphertext, i);
-  }
-
-  return ciphertext;
-}
-
-ModeOfOperationCBC.prototype.decrypt = function(ciphertext) {
-  ciphertext = coerceArray(ciphertext);
-
-  if ((ciphertext.length % 16) !== 0) {
-    throw new Error('invalid ciphertext size (must be multiple of 16 bytes)');
-  }
-
-  var plaintext = createArray(ciphertext.length);
-  var block = createArray(16);
-
-  for (var i = 0; i < ciphertext.length; i += 16) {
-    copyArray(ciphertext, block, 0, i, i + 16);
-    block = this._aes.decrypt(block);
-
-    for (var j = 0; j < 16; j++) {
-      plaintext[i + j] = block[j] ^ this._lastCipherblock[j];
-    }
-
-    copyArray(ciphertext, this._lastCipherblock, 0, i, i + 16);
-  }
-
-  return plaintext;
-}
-
-
-/**
- *  Mode Of Operation - Cipher Feedback (CFB)
- */
-var ModeOfOperationCFB = function(key, iv, segmentSize) {
-  if (!(this instanceof ModeOfOperationCFB)) {
-    throw Error('AES must be instanitated with `new`');
-  }
-
-  this.description = "Cipher Feedback";
-  this.name = "cfb";
-
-  if (!iv) {
-    iv = createArray(16);
-
-  } else if (iv.length != 16) {
-    throw new Error('invalid initialation vector size (must be 16 size)');
-  }
-
-  if (!segmentSize) { segmentSize = 1; }
-
-  this.segmentSize = segmentSize;
-
-  this._shiftRegister = coerceArray(iv, true);
-
-  this._aes = new AES(key);
-}
-
-ModeOfOperationCFB.prototype.encrypt = function(plaintext) {
-  if ((plaintext.length % this.segmentSize) != 0) {
-    throw new Error('invalid plaintext size (must be segmentSize bytes)');
-  }
-
-  var encrypted = coerceArray(plaintext, true);
-
-  var xorSegment;
-  for (var i = 0; i < encrypted.length; i += this.segmentSize) {
-    xorSegment = this._aes.encrypt(this._shiftRegister);
-    for (var j = 0; j < this.segmentSize; j++) {
-      encrypted[i + j] ^= xorSegment[j];
-    }
-
-    // Shift the register
-    copyArray(this._shiftRegister, this._shiftRegister, 0, this.segmentSize);
-    copyArray(encrypted, this._shiftRegister, 16 - this.segmentSize, i, i + this.segmentSize);
-  }
-
-  return encrypted;
-}
-
-ModeOfOperationCFB.prototype.decrypt = function(ciphertext) {
-  if ((ciphertext.length % this.segmentSize) != 0) {
-    throw new Error('invalid ciphertext size (must be segmentSize bytes)');
-  }
-
-  var plaintext = coerceArray(ciphertext, true);
-
-  var xorSegment;
-  for (var i = 0; i < plaintext.length; i += this.segmentSize) {
-    xorSegment = this._aes.encrypt(this._shiftRegister);
-
-    for (var j = 0; j < this.segmentSize; j++) {
-      plaintext[i + j] ^= xorSegment[j];
-    }
-
-    // Shift the register
-    copyArray(this._shiftRegister, this._shiftRegister, 0, this.segmentSize);
-    copyArray(ciphertext, this._shiftRegister, 16 - this.segmentSize, i, i + this.segmentSize);
-  }
-
-  return plaintext;
-}
-
-/**
- *  Mode Of Operation - Output Feedback (OFB)
- */
-var ModeOfOperationOFB = function(key, iv) {
-  if (!(this instanceof ModeOfOperationOFB)) {
-    throw Error('AES must be instanitated with `new`');
-  }
-
-  this.description = "Output Feedback";
-  this.name = "ofb";
-
-  if (!iv) {
-    iv = createArray(16);
-
-  } else if (iv.length != 16) {
-    throw new Error('invalid initialation vector size (must be 16 bytes)');
-  }
-
-  this._lastPrecipher = coerceArray(iv, true);
-  this._lastPrecipherIndex = 16;
-
-  this._aes = new AES(key);
-}
-
-ModeOfOperationOFB.prototype.encrypt = function(plaintext) {
-  var encrypted = coerceArray(plaintext, true);
-
-  for (var i = 0; i < encrypted.length; i++) {
-    if (this._lastPrecipherIndex === 16) {
-      this._lastPrecipher = this._aes.encrypt(this._lastPrecipher);
-      this._lastPrecipherIndex = 0;
-    }
-    encrypted[i] ^= this._lastPrecipher[this._lastPrecipherIndex++];
-  }
-
-  return encrypted;
-}
-
-// Decryption is symetric
-ModeOfOperationOFB.prototype.decrypt = ModeOfOperationOFB.prototype.encrypt;
-
-
-/**
  *  Counter object for CTR common mode of operation
  */
 var Counter = function(initialValue) {
@@ -705,6 +438,48 @@ ModeOfOperationCTR.prototype.encrypt = function(plaintext) {
 
 // Decryption is symetric
 ModeOfOperationCTR.prototype.decrypt = ModeOfOperationCTR.prototype.encrypt;
+//
+//
+// /**
+//  *  Mode Of Operation - Infinite Garble Extension (IGE)
+//  */
+// var ModeOfOperationIGE = function(key, counter) {
+//   if (!(this instanceof ModeOfOperationIGE)) {
+//     throw Error('AES must be instanitated with `new`');
+//   }
+//
+//   this.description = "Infinite Garble Extension";
+//   this.name = "ige";
+//
+//   if (!(counter instanceof Counter)) {
+//     counter = new Counter(counter)
+//   }
+//
+//   this._counter = counter;
+//
+//   this._remainingCounter = null;
+//   this._remainingCounterIndex = 16;
+//
+//   this._aes = new AES(key);
+// }
+//
+// ModeOfOperationCTR.prototype.encrypt = function(plaintext) {
+//   var encrypted = coerceArray(plaintext, true);
+//
+//   for (var i = 0; i < encrypted.length; i++) {
+//     if (this._remainingCounterIndex === 16) {
+//       this._remainingCounter = this._aes.encrypt(this._counter._counter);
+//       this._remainingCounterIndex = 0;
+//       this._counter.increment();
+//     }
+//     encrypted[i] ^= this._remainingCounter[this._remainingCounterIndex++];
+//   }
+//
+//   return encrypted;
+// }
+//
+// // Decryption is symetric
+// ModeOfOperationCTR.prototype.decrypt = ModeOfOperationCTR.prototype.encrypt;
 
 
 ///////////////////////
@@ -751,15 +526,10 @@ var aesjs = {
   Counter: Counter,
 
   ModeOfOperation: {
-    ecb: ModeOfOperationECB,
-    cbc: ModeOfOperationCBC,
-    cfb: ModeOfOperationCFB,
-    ofb: ModeOfOperationOFB,
     ctr: ModeOfOperationCTR
   },
 
   utils: {
-    hex: convertHex,
     utf8: convertUtf8
   },
 
@@ -768,14 +538,7 @@ var aesjs = {
       pad: pkcs7pad,
       strip: pkcs7strip
     }
-  },
-
-  _arrayTest: {
-    coerceArray: coerceArray,
-    createArray: createArray,
-    copyArray: copyArray,
   }
 };
-
 
 export {aesjs};
