@@ -1,0 +1,138 @@
+.chats_sidebar {
+  box-sizing: border-box;
+  width: 420px;
+  height: 100%;
+  padding: 8px;
+  border-right: 1px solid #E0E3E6;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.chats_item {
+  margin: 2px 0;
+  height: 54px;
+  padding: 9px;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: row;
+  cursor: pointer;
+  position: relative;
+}
+
+.chats_item:hover {
+  background: #F4F4F5;
+}
+
+.chats_item_pinned + .chats_item:not(.chats_item_pinned) {
+  margin-top: 13px;
+}
+
+.chats_item_pinned + .chats_item:not(.chats_item_pinned):before {
+  border-top: 1px solid #E5E7E9;
+  content: '';
+  position: absolute;
+  display: block;
+  left: -10px;
+  right: -10px;
+  top: -7px;
+  pointer-events: none;
+}
+
+.chats_item_photo {
+  flex: 0 0 54px;
+  width: 54px;
+  height: 54px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background-color: #eee;
+}
+
+.chats_item_photo_saved_messages {
+  background-color: #5DA3EF;
+  background-image: url('../icons/savedmessages_svg.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.chats_item_photo_img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.chats_item_photo_placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.chats_item_text_row {
+  display: flex;
+}
+
+.chats_item_text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  width: 100%;
+}
+
+.chats_item_title {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.chats_item_date {
+  color: #676B70;
+  font-size: 12px;
+}
+
+.chats_item_badge {
+  margin-top: -5px;
+  margin-right: -3px;
+}
+.chats_item_badge-unread {
+  box-sizing: border-box;
+  height: 24px;
+  min-width: 24px;
+  line-height: 24px;
+  border-radius: 12px;
+  padding: 0 8px;
+  margin-left: 5px;
+  background-color: #6DC96B;
+  color: #fff;
+  font-size: 13px;
+  text-align: center;
+}
+.chats_item_badge-unread_muted {
+  background-color: #C5C9CC;
+}
+
+.chats_item_badge-pinned {
+  float: right;;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #C5C9CC url('../icons/pinnedchat_svg.svg') no-repeat center;
+  margin-left: 5px;
+}
+
+.chats_item_message {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #717579;
+}
+
+//.chats_item_message_content_label {
+//  color: #999;
+//}

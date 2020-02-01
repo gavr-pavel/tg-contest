@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>Telegram Web</title>
+    <link rel="stylesheet" href="main.css">
+    <script src="gunzip.min.js" async></script>
+    <script src="tgs-player.js" async></script>
+  </head>
+  <body>
+    <template id="template_login">
+      <div class="login_container">
+        <div class="login_image" data-js-label="image"></div>
+        <div class="login_header" data-js-label="header"></div>
+        <div class="login_subheader" data-js-label="subheader"></div>
+        <form class="login_form" data-js-label="form"></form>
+      </div>
+    </template>
+    <template id="template_main">
+      <div class="main_container">
+        <div class="chats_sidebar"></div>
+        <div class="messages_container">
+          <div class="messages_header" hidden></div>
+          <div class="messages_scroll">
+            <div class="messages_list"></div>
+          </div>
+        </div>
+      </div>
+    </template>
+    <script src="main.js"></script>
+  </body>
+</html>

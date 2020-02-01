@@ -1,1 +1,1 @@
-fswatch -o public | while read f; do rsync -ruvzP --delete public/* $1:/var/www/html/sandbox; done
+fswatch -o dist | while read f; do rsync -ruvzP --delete dist/* $1:/var/www/html/sandbox; done
