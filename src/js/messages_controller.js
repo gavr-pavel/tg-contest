@@ -194,12 +194,16 @@ const MessagesController = new class {
     if (this.scrolling) {
       this.scrollContainer.scrollTop = this.scrollContainer.scrollHeight - prevScrollHeight;
     } else {
-      this.scrollToBottom();
+      if (this.scrollContainer.scrollHeight <= this.scrollContainer.offsetHeight) {
+        this.loadMore();
+      } else {
+        this.scrollToBottom();
+      }
     }
   }
 
   buildMessageEl(message, options) {
-      const el = document.createElement('div');
+    const el = document.createElement('div');
 
     if (message._ === 'message') {
       el.className = this.getClasses({
@@ -215,8 +219,8 @@ const MessagesController = new class {
     }
 
     el.dataset.id = message.id;
-      this.messageElements.set(message.id, el);
-      return el;
+    this.messageElements.set(message.id, el);
+    return el;
   }
 
   getClasses(dict) {
@@ -231,17 +235,19 @@ const MessagesController = new class {
 
   renderMessageContent(el, message, options) {
     const authorName = !options.stickToPrev ? this.formatAuthorName(message) : '';
-    const photo = this.getMessageContentThumb(message.media);
+    const thumb = this.getMessageContentThumb(message.media);
+
     el.innerHTML = `
       <div class="messages_item_content">
         ${authorName}
         ${this.formatText(message)}
-        ${this.formatMessageContent(message, photo)}
+        ${this.formatMessageContent(message, thumb)}
         <div class="messages_item_date" title="${this.formatMessageDate(message.date)}">${this.formatMessageTime(message.date)}</div>
       </div>
     `;
-    if (photo) {
-      this.loadMessageContentThumb(el, photo);
+
+    if (thumb) {
+      this.loadMessageContentThumb(el, thumb);
     }
   }
 
@@ -254,6 +260,24 @@ const MessagesController = new class {
     return '';
   }
 
+  onThumbClick = () => {
+    // open media viewer
+  };
+
+  onFileClick = (event) => {
+    const msgId = +event.currentTarget.closest('.messages_item').dataset.id;
+    const message = MessagesApiManager.messages.get(msgId);
+    if (message) {
+      const document = message.media.document;
+      FileApiManager.loadMessageDocument(document)
+          .then((url) => {
+            console.log('downloaded', url);
+          });
+      console.log(`started loading ${document.mime_type} file`);
+    }
+    console.log(msgId, message);
+  };
+
   getMessageContentThumb(media) {
     if (!media) {
       return;
@@ -264,7 +288,7 @@ const MessagesController = new class {
       case 'messageMediaDocument': {
         const docAttributes = this.getDocumentAttributes(media.document);
         if (['video', 'gif', 'sticker'].includes(docAttributes.type)) {
-          return media.document.thumb;
+          return media.document;
         }
       } break;
       case 'messageMediaWebPage': {
@@ -275,40 +299,42 @@ const MessagesController = new class {
     }
   }
 
-  choosePhotoSize(photo) {
-    const found = photo.sizes.find((photoSize) => {
-      return photoSize.h > 200;
-    });
-    return found || photo.sizes[photo.sizes.length - 1];
-  }
-
   getThumbWidth(thumb) {
     return Math.round(200 * (thumb.w / thumb.h));
   }
 
-  loadMessageContentThumb(el, photo) {
-    let thumb = $('.messages_item_content_thumb', el);
+  async loadMessageContentThumb(messageEl, thumb) {
+    let thumbEl = $('.messages_item_content_thumb', messageEl);
 
-    const photoSize = MediaManager.choosePhotoSize(photo, 'm');
-    const thumbWidth = this.getThumbWidth(photoSize);
-
-    console.log(photo.sizes);
-
-    const inlineSize = MediaManager.choosePhotoSize(photo, 'i');
-    if (inlineSize) {
-      const _t = thumb;
-      const url = MediaManager.getPhotoStrippedSize(photo);
-      thumb = buildHtmlElement(`<img class="messages_item_content_thumb" src="${url}" width="${thumbWidth}" height="200">`);
-      _t.replaceWith(thumb);
+    let sizes;
+    if (thumb._ === 'document') {
+      sizes = thumb.thumbs;
+    } else {
+      sizes = thumb.sizes;
     }
 
-    FileApiManager.loadMessagePhoto(photo, photoSize.type)
-        .then((url) => {
-          thumb.replaceWith(buildHtmlElement(`<img class="messages_item_content_thumb" src="${url}" width="${thumbWidth}" height="200">`));
-        })
-        .catch((error) => {
-          console.log('thumb load error', error);
-        });
+    const photoSize = MediaManager.choosePhotoSize(sizes, 'm');
+    const thumbWidth = this.getThumbWidth(photoSize);
+
+    const inlineSize = MediaManager.choosePhotoSize(sizes, 'i');
+    if (inlineSize) {
+      const _t = thumbEl;
+      const url = MediaManager.getPhotoStrippedSize(sizes);
+      thumbEl = buildHtmlElement(`<img class="messages_item_content_thumb" src="${url}" width="${thumbWidth}" height="200">`);
+      _t.replaceWith(thumbEl);
+    }
+
+    try {
+      let url;
+      if (thumb._ === 'document') {
+        url = await FileApiManager.loadMessageDocumentThumb(thumb, photoSize.type);
+      } else {
+        url = await FileApiManager.loadMessagePhoto(thumb, photoSize.type);
+      }
+      thumbEl.replaceWith(buildHtmlElement(`<img class="messages_item_content_thumb" src="${url}" width="${thumbWidth}" height="200">`));
+    } catch (error) {
+      console.log('thumb load error', error);
+    }
   }
 
   formatMessageContent(message, thumb) {
@@ -317,18 +343,6 @@ const MessagesController = new class {
       return '';
     }
     switch (media._) {
-      // case 'messageText':
-      //   return this.formatText(content.text);
-      // case 'messagePhoto':
-      //   return this.formatThumb(thumb, content.photo.minithumbnail, content.caption);
-      // case 'messageVideo':
-      //   return this.formatThumb(thumb, content.video.minithumbnail, content.caption);
-      // case 'messageDocument':
-      //   return this.formatThumb(thumb, content.document.minithumbnail, content.caption);
-      // case 'messageAnimation':
-      //   return this.formatThumb(thumb, content.animation.minithumbnail, content.caption);
-      // case 'messageSticker':
-      //   return this.formatThumb(thumb, null, content.caption);
       case 'messageMediaPhoto':
         return this.formatThumb(thumb, message.media.caption);
       case 'messageMediaDocument':
@@ -525,6 +539,8 @@ const MessagesController = new class {
   getDocumentAttributes(document) {
     const result = {};
 
+    const hasThumb = document.thumbs && document.thumbs.length;
+
     for (const attribute of document.attributes) {
       switch (attribute._) {
         case 'documentAttributeFilename':
@@ -540,9 +556,9 @@ const MessagesController = new class {
           result.duration = attribute.duration;
           result.w = attribute.w;
           result.h = attribute.h;
-          if (document.thumb && attribute.pFlags.round_message) {
+          if (hasThumb && attribute.pFlags.round_message) {
             result.type = 'round';
-          } else if (document.thumb) {
+          } else if (hasThumb) {
             result.type = 'video';
           }
           break;
@@ -558,7 +574,7 @@ const MessagesController = new class {
               result.stickerSetInput = attribute.stickerset;
             }
           }
-          if (document.thumb && document.mime_type === 'image/webp') {
+          if (hasThumb && document.mime_type === 'image/webp') {
             result.type = 'sticker';
           }
           break;
@@ -567,7 +583,7 @@ const MessagesController = new class {
           result.h = attribute.h;
           break;
         case 'documentAttributeAnimated':
-          if ((document.mime_type === 'image/gif' || document.mime_type === 'video/mp4') && document.thumb) {
+          if ((document.mime_type === 'image/gif' || document.mime_type === 'video/mp4') && hasThumb) {
             result.type = 'gif';
           }
           result.animated = true;

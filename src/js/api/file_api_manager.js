@@ -58,18 +58,19 @@ const FileApiManager = new class {
     }
   }
 
-  async loadFile(location, dcId, {priority = 1, cache = false} = {}) {
-    try {
-      const blob = await this.getFromCache(location);
-      if (blob) {
-        return FileApiManager.getBlobUrl(blob);
+  async loadFile(location, dcId, {priority = 1, cache = false, mimeType = ''} = {}) {
+    if (cache) {
+      try {
+        const blob = await this.getFromCache(location);
+        if (blob) {
+          return FileApiManager.getBlobUrl(blob);
+        }
+      } catch (e) {
+        console.warn(e);
       }
-    } catch (e) {
-      console.warn(e);
     }
 
     const parts = [];
-    let mimeType = '';
 
     const apiConnection = this.getConnection(dcId);
 
@@ -96,22 +97,15 @@ const FileApiManager = new class {
 
     const blob = new Blob(parts, {type: mimeType});
 
-    try {
-      this.saveToCache(location, blob);
-    } catch (e) {
-      console.warn(e);
+    if (cache) {
+      try {
+        this.saveToCache(location, blob);
+      } catch (e) {
+        console.warn(e);
+      }
     }
 
     return FileApiManager.getBlobUrl(blob);
-  }
-
-  getInputFileLocation(fileLocation) {
-    return {
-      _: 'inputFileLocation',
-      volume_id: fileLocation.volume_id,
-      local_id: fileLocation.local_id,
-      secret: fileLocation.secret
-    };
   }
 
   getMimeType(storageFileType) {
@@ -195,7 +189,7 @@ const FileApiManager = new class {
     return this.loadFile(location, dcId, options);
   }
 
-  loadMessagePhoto(photo, size, options) {
+  loadMessagePhoto(photo, size) {
     const location = {
       _: 'inputPhotoFileLocation',
       id: photo.id,
@@ -203,7 +197,28 @@ const FileApiManager = new class {
       file_reference: photo.file_reference,
       thumb_size: size
     };
-    return this.loadFile(location, photo.dc_id, options);
+    return this.loadFile(location, photo.dc_id);
+  }
+
+  loadMessageDocumentThumb(document, size) {
+    const location = {
+      _: 'inputDocumentFileLocation',
+      id: document.id,
+      access_hash: document.access_hash,
+      file_reference: document.file_reference,
+      thumb_size: size
+    };
+    return this.loadFile(location, document.dc_id);
+  }
+
+  loadMessageDocument(document) {
+    const location = {
+      _: 'inputDocumentFileLocation',
+      id: document.id,
+      access_hash: document.access_hash,
+      file_reference: document.file_reference
+    };
+    return this.loadFile(location, document.dc_id, {mimeType: document.mime_type});
   }
 };
 

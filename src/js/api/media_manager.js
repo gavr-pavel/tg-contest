@@ -1,14 +1,14 @@
 import {base64Bytes, bufferConcat} from '../mtproto/bin';
 
 const MediaManager = new class {
-  choosePhotoSize(photo, type = 'm') {
-    return photo.sizes.find((item) => {
+  choosePhotoSize(sizes, type = 'm') {
+    return sizes.find((item) => {
       return item.type === type;
     });
   }
 
-  getPhotoStrippedSize(photo) {
-    const size = this.choosePhotoSize(photo, 'i');
+  getPhotoStrippedSize(sizes) {
+    const size = this.choosePhotoSize(sizes, 'i');
     if (size && size.bytes[0] === 0x01) {
       const header = this.jpegHeader;
       const footer = this.jpegFooter;
