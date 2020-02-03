@@ -1,0 +1,114 @@
+.left_sidebar {
+  border-right: 1px solid #E0E3E6;
+  box-sizing: border-box;
+  height: 100%;
+  overflow: hidden;
+  width: 420px;
+}
+
+.main_menu {
+  display: flex;
+  height: 58px;
+  padding: 8px;
+}
+
+.main_menu__button {
+  background-image: url('../icons/menu_svg.svg');
+  background-position: center;
+  background-repeat: no-repeat;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  height: 44px;
+  margin-right: 14px;
+  outline: none;
+  width: 44px;
+}
+
+.main_menu__button:hover {
+  background-color: #F4F4F5;
+}
+
+.main_menu__list {
+  background: #fff;
+  border-radius: 5px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+  display: none;
+  left: 14px;
+  padding: 8px 0;
+  position: absolute;
+  top: 60px;
+  width: 218px;
+  z-index: 1;
+}
+
+.main_menu__badge {
+  background-color: #C4C9CC;
+  border-radius: 50%;
+  color: #fff;
+  display: inline-block;
+  float: right;
+  font-size: 12px;
+  height: 24px;
+  line-height: 24px;
+  margin-right: 16px;
+  text-align: center;
+  width: 24px;
+}
+
+.main_menu__item {
+  align-items: center;
+  background-position: 18px center;
+  background-repeat: no-repeat;
+  background-size: 22px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  line-height: 56px;
+  padding-left: 72px;
+}
+
+.main_menu__item--new_group {
+  background-image: url('../icons/newgroup_svg.svg');
+}
+
+.main_menu__item--contacts {
+  background-image: url('../icons/newprivate_svg.svg');
+}
+
+.main_menu__item--archived {
+  background-image: url('../icons/archive_svg.svg');
+}
+
+.main_menu__item--saved {
+  background-image: url('../icons/savedmessages_svg.svg');
+}
+
+.main_menu__item--settings {
+  background-image: url('../icons/settings_svg.svg');
+}
+
+.main_menu__item--help {
+  background-image: url('../icons/help_svg.svg');
+}
+
+.main_menu__item:hover {
+  background-color: #F1F3F4;
+  cursor: pointer;
+}
+
+.left_sidebar__search {
+  background-color: #F4F4F5;
+  background-image: url('../icons/search_svg.svg');
+  background-position: 12px center;
+  background-repeat: no-repeat;
+  border: none;
+  border-radius: 50px;
+  display: inline-block;
+  flex-basis: 100%;
+  font-size: 13px;
+  height: 44px;
+  outline: none;
+  padding-left: 42px;
+}

@@ -49,6 +49,19 @@ function $(selector, parent = document) {
   return parent.querySelector(selector);
 }
 
+function isVisible(el) {
+  const style = window.getComputedStyle(el);
+  return style.display !== 'none';
+}
+
+function toggleVisibility(el) {
+  if (isVisible(el)) {
+    el.style.display = 'none';
+  } else {
+    el.style.display = 'block';
+  }
+}
+
 function importTemplate(id) {
   const template = $('#template_' + id);
   return document.importNode(template.content, true);
@@ -90,6 +103,8 @@ export {
   Emitter,
   getDeferred,
   $,
+  isVisible,
+  toggleVisibility,
   importTemplate,
   buildHtmlElement,
   getLabeledElements,
