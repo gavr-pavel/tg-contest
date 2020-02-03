@@ -20,6 +20,8 @@ const ChatsController = new class {
 
   onDialogsUpdate = (event) => {
     const dialogs = event.detail;
+
+    this.renderMenu();
     this.renderChats(dialogs);
   };
 
@@ -91,6 +93,22 @@ const ChatsController = new class {
       peer: lastDialog.peer,
       date: lastDialogMessage.date,
     };
+  }
+
+  renderMenu() {
+    const menu = document.createElement('div');
+    menu.className = 'chats_menu';
+
+    const menuBtn = document.createElement('button');
+    menuBtn.className = 'chats_menu_button';
+    menu.append(menuBtn);
+
+    const searchInput = document.createElement('input');
+    searchInput.className = 'chats_menu_search';
+    searchInput.placeholder = 'Search';
+    menu.append(searchInput);
+
+    this.container.append(menu);
   }
 
   buildChatPreviewElement(dialog) {
