@@ -235,19 +235,19 @@ const MessagesController = new class {
 
   renderMessageContent(el, message, options) {
     const authorName = !options.stickToPrev ? this.formatAuthorName(message) : '';
-    const thumb = this.getMessageContentThumb(message.media);
+    const mediaThumbItem = this.getMessageMediaThumb(message.media);
 
     el.innerHTML = `
       <div class="messages_item_content">
         ${authorName}
         ${this.formatText(message)}
-        ${this.formatMessageContent(message, thumb)}
+        ${this.formatMessageMedia(message, mediaThumbItem)}
         <div class="messages_item_date" title="${this.formatMessageDate(message.date)}">${this.formatMessageTime(message.date)}</div>
       </div>
     `;
 
-    if (thumb) {
-      this.loadMessageContentThumb(el, thumb);
+    if (mediaThumbItem) {
+      this.loadMessageMediaThumb(el, mediaThumbItem);
     }
   }
 
@@ -278,7 +278,7 @@ const MessagesController = new class {
     console.log(msgId, message);
   };
 
-  getMessageContentThumb(media) {
+  getMessageMediaThumb(media) {
     if (!media) {
       return;
     }
@@ -303,15 +303,10 @@ const MessagesController = new class {
     return Math.round(200 * (thumb.w / thumb.h));
   }
 
-  async loadMessageContentThumb(messageEl, thumb) {
-    let thumbEl = $('.messages_item_content_thumb', messageEl);
+  async loadMessageMediaThumb(messageEl, mediaThumbItem) {
+    let thumbEl = $('.messages_item_media_thumb', messageEl);
 
-    let sizes;
-    if (thumb._ === 'document') {
-      sizes = thumb.thumbs;
-    } else {
-      sizes = thumb.sizes;
-    }
+    const sizes = MediaManager.getMediaPhotoSizes(mediaThumbItem);
 
     const photoSize = MediaManager.choosePhotoSize(sizes, 'm');
     const thumbWidth = this.getThumbWidth(photoSize);
@@ -320,35 +315,35 @@ const MessagesController = new class {
     if (inlineSize) {
       const _t = thumbEl;
       const url = MediaManager.getPhotoStrippedSize(sizes);
-      thumbEl = buildHtmlElement(`<img class="messages_item_content_thumb" src="${url}" width="${thumbWidth}" height="200">`);
+      thumbEl = buildHtmlElement(`<img class="messages_item_media_thumb" src="${url}" width="${thumbWidth}" height="200">`);
       _t.replaceWith(thumbEl);
     }
 
     try {
       let url;
-      if (thumb._ === 'document') {
-        url = await FileApiManager.loadMessageDocumentThumb(thumb, photoSize.type);
+      if (mediaThumbItem._ === 'document') {
+        url = await FileApiManager.loadMessageDocumentThumb(mediaThumbItem, photoSize.type);
       } else {
-        url = await FileApiManager.loadMessagePhoto(thumb, photoSize.type);
+        url = await FileApiManager.loadMessagePhoto(mediaThumbItem, photoSize.type);
       }
-      thumbEl.replaceWith(buildHtmlElement(`<img class="messages_item_content_thumb" src="${url}" width="${thumbWidth}" height="200">`));
+      thumbEl.replaceWith(buildHtmlElement(`<img class="messages_item_media_thumb" src="${url}" width="${thumbWidth}" height="200">`));
     } catch (error) {
       console.log('thumb load error', error);
     }
   }
 
-  formatMessageContent(message, thumb) {
+  formatMessageMedia(message, mediaThumbItem) {
     const media = message.media;
     if (!media) {
       return '';
     }
     switch (media._) {
       case 'messageMediaPhoto':
-        return this.formatThumb(thumb, message.media.caption);
+        return this.formatThumb(mediaThumbItem);
       case 'messageMediaDocument':
-        return this.formatDocument(media, thumb);
+        return this.formatDocument(media, mediaThumbItem);
       case 'messageMediaWebPage':
-        return this.formatWebPage(media, thumb);
+        return this.formatWebPage(media, mediaThumbItem);
       case 'messageMediaPoll':
         return 'Poll';
       case 'messageMediaGeo':
@@ -364,9 +359,9 @@ const MessagesController = new class {
     }
   }
 
-  formatDocument(media, thumb) {
-    if (thumb) {
-      return this.formatThumb(thumb, media.caption);
+  formatDocument(media, mediaThumbItem) {
+    if (mediaThumbItem) {
+      return this.formatThumb(mediaThumbItem);
     }
 
     const attributes = this.getDocumentAttributes(media.document);
@@ -380,7 +375,7 @@ const MessagesController = new class {
         return '[sticker]';
     }
 
-    const caption = media.caption ? this.formatText({message: media.caption}) : '';
+    const caption = ''; // media.caption ? this.formatText({message: media.caption}) : '';
 
     return `
       ${caption}
@@ -409,12 +404,12 @@ const MessagesController = new class {
     return '';
   }
 
-  formatWebPage(media, thumb) {
+  formatWebPage(media, thumbPhoto) {
     const webpage = media.webpage;
     if (webpage._ === 'webPage') {
       return `
         <!--a href="${webpage.url}" target="_blank">${webpage.display_url}</a-->
-        <div class="webpage">${this.formatWebpageContent(webpage, thumb)}</div>
+        <div class="webpage">${this.formatWebpageContent(webpage, thumbPhoto)}</div>
       `;
     } else if (webpage._ === 'webPagePending') {
       return 'Content is loading...'
@@ -422,8 +417,8 @@ const MessagesController = new class {
     return 'Content not available';
   }
 
-  formatWebpageContent(webpage, thumb) {
-    const formattedThumb = this.formatThumb(thumb);
+  formatWebpageContent(webpage, thumbPhoto) {
+    const formattedThumb = this.formatThumb(thumbPhoto);
 
     switch (webpage.type) {
       case 'telegram_message':
@@ -509,18 +504,23 @@ const MessagesController = new class {
     }
   }
 
-  formatThumb(thumb, caption) {
+  formatThumb(mediaThumbItem, caption) {
     let html = '';
 
-    if (thumb) {
-      const width = this.getThumbWidth(thumb);
-      const height = 200;
-      html += `<div class="messages_item_content_thumb" style="width:${width}px;height:${height}px;"></div>`;
+    let thumbWidth;
+    let thumbHeight;
+
+    if (mediaThumbItem) {
+      const sizes = MediaManager.getMediaPhotoSizes(mediaThumbItem);
+      const photoSize = MediaManager.choosePhotoSize(sizes);
+      thumbWidth = this.getThumbWidth(photoSize);
+      thumbHeight = 200;
+      html += `<div class="messages_item_media_thumb" style="width:${thumbWidth}px;height:${thumbHeight}px;"></div>`;
     }
 
     if (caption) {
-      const width = thumb ? this.getThumbWidth(thumb) : '';
-      html += `<div class="messages_item_content_caption" style="width:${width}px;">${caption}</div>`;
+      const cssWidth = thumbWidth ? `width:${width}px;` : '';
+      html += `<div class="messages_item_media_caption" style="${cssWidth}">${caption}</div>`;
     }
 
     return html;

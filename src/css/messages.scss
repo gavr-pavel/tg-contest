@@ -12,6 +12,7 @@
   height: 60px;
   padding: 0 18px;
   border-bottom: 1px solid #E0E3E6;
+  background: #fff;
 }
 .messages_header[hidden] {
   display: none;
@@ -64,7 +65,8 @@
 .messages_scroll {
   height: 100%;
   overflow: auto;
-  background: #E7EBEE;
+  background: #E7EBEE; // url('../images/BG.jpg') center;
+  background-size: cover;
 }
 
 .messages_list {
@@ -150,11 +152,11 @@
   white-space: pre-wrap;
 }
 
-.messages_item_content_thumb {
-  margin: -6px -10px -10px;
+.messages_item_media_thumb {
+  margin: -6px -10px;
   display: block;
 }
-.messages_item_content_thumb + .messages_item_date {
+.messages_item_media_thumb + .messages_item_date {
   position: absolute;
   right: 4px;
   bottom: 3px;
@@ -164,13 +166,13 @@
   border-radius: 10px;
   text-decoration: none !important;
 }
-.webpage .messages_item_content_thumb {
+.webpage .messages_item_media_thumb {
   margin: 0;
 }
-.messages_item_author + .messages_item_content_thumb {
+.messages_item_author + .messages_item_media_thumb {
   margin-top: 5px;
 }
-.messages_item_content_caption {
+.messages_item_media_caption {
   margin: 20px -10px 0;
   padding: 0 10px;
   box-sizing: border-box;

@@ -1,10 +1,23 @@
 import {base64Bytes, bufferConcat} from '../mtproto/bin';
 
 const MediaManager = new class {
+  getMediaPhotoSizes(object) {
+    if (object._ === 'photo') {
+      return object.sizes;
+    }
+    if (object._ === 'document') {
+      return object.thumbs;
+    }
+  }
+
   choosePhotoSize(sizes, type = 'm') {
-    return sizes.find((item) => {
-      return item.type === type;
-    });
+    const size = sizes.find(item => item.type === type);
+    if (size) {
+      return size;
+    }
+    if (type !== 'i') {
+      return sizes.find(item => item.type !== 'i');
+    }
   }
 
   getPhotoStrippedSize(sizes) {
