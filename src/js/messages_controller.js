@@ -581,6 +581,9 @@ const MessagesController = new class {
         case 'documentAttributeImageSize':
           result.w = attribute.w;
           result.h = attribute.h;
+          if (hasThumb && document.mime_type === 'application/x-tgsticker') { // todo animated sticker support
+            result.type = 'sticker';
+          }
           break;
         case 'documentAttributeAnimated':
           if ((document.mime_type === 'image/gif' || document.mime_type === 'video/mp4') && hasThumb) {
