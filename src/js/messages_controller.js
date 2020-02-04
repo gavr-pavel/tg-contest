@@ -55,8 +55,8 @@ const MessagesController = new class {
     this.messageElements.clear();
     this.dialog = null;
     this.chatId = null;
-    this.lastMsgId = 0;
-    this.offsetMsgId = 0;
+    this.lastMsgId = null;
+    this.offsetMsgId = null;
     this.container.innerHTML = '';
     this.loading = false;
     this.noMore = false;
@@ -87,8 +87,21 @@ const MessagesController = new class {
     const onInput = () => {
       button.classList.toggle('messages_new_message_button_send', !!input.value);
     };
-    this.newMessageInput.addEventListener('input', onInput);
-    this.newMessageInput.addEventListener('change', onInput);
+    input.addEventListener('input', onInput);
+    input.addEventListener('change', onInput);
+
+    const onSubmit = () => {
+      const message = input.value;
+      MessagesApiManager.sendMessage(this.dialog.peer, message);
+      input.value = '';
+      onInput();
+    };
+    input.addEventListener('keyup', (event) => {
+      if (event.keyCode === 13) {
+        onSubmit();
+      }
+    });
+    button.addEventListener('click', onSubmit);
   }
 
   showHeader(dialog) {
@@ -195,12 +208,26 @@ const MessagesController = new class {
   renderMessages(messages) {
     this.loader.remove();
 
-    if (this.offsetMsgId && messages[messages.length - 1].id === this.offsetMsgId /*&& messages[0].id === this.lastMsgId*/) {
+    if (this.offsetMsgId && messages[messages.length - 1].id === this.offsetMsgId && messages[0].id === this.lastMsgId) {
       this.noMore = true;
       return;
     }
 
     const prevScrollHeight = this.scrollContainer.scrollHeight;
+
+    if (this.lastMsgId) {
+      const frag = document.createDocumentFragment();
+      for (let i = 0; messages[i].id > this.lastMsgId; i++) {
+        const message = messages[i];
+        const nextMessage = messages[i - 1];
+        const prevMessage = messages[i + 1];
+        const stickToNext = message.from_id && nextMessage && nextMessage.from_id === message.from_id;
+        const stickToPrev = message.from_id && prevMessage && prevMessage.from_id === message.from_id;
+        const el = this.buildMessageEl(message, {stickToNext, stickToPrev});
+        frag.append(el);
+      }
+      this.container.prepend(frag);
+    }
 
     const frag = document.createDocumentFragment();
     messages.forEach((message, i) => {
@@ -219,10 +246,9 @@ const MessagesController = new class {
       const el = this.buildMessageEl(message, {stickToNext, stickToPrev});
       frag.append(el);
     });
-
     this.container.append(frag);
 
-    // this.lastMsgId = messages[0].id;
+    this.lastMsgId = messages[0].id;
     this.offsetMsgId = messages[messages.length - 1].id;
 
     if (this.scrolling) {
