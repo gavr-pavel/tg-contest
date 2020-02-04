@@ -26,6 +26,9 @@ const ChatsController = new class {
   onNewMessage = (event) => {
     const {chatId, message} = event.detail;
     const dialog = MessagesApiManager.peerDialogs.get(chatId);
+    if (!dialog) { // todo: get dialog data somehow
+      return;
+    }
     const el = this.chatElements.get(chatId);
     this.renderChatPreviewContent(el, dialog);
 
