@@ -11,6 +11,7 @@ const MessagesController = new class {
 
   init() {
     this.header = $('.messages_header');
+    this.footer = $('.messages_footer');
     this.scrollContainer = $('.messages_scroll');
     this.container = $('.messages_list');
 
@@ -19,6 +20,8 @@ const MessagesController = new class {
     this.scrollContainer.addEventListener('scroll', this.onScroll);
 
     this.initPlaceholder();
+
+    this.initNewMessageForm();
 
     MessagesApiManager.emitter.on('chatMessagesUpdate', this.onChatMessagesUpdate);
     MessagesApiManager.emitter.on('chatNewMessage', this.onNewMessage);
@@ -36,9 +39,11 @@ const MessagesController = new class {
     this.dialog = dialog;
     this.chatId = MessagesApiManager.getPeerId(dialog.peer);
 
-    this.showHeader(dialog);
-
     this.placeholder.remove();
+
+    this.showHeader(dialog);
+    this.footer.hidden = !this.canSendMessage(dialog);
+
     this.container.append(this.loader);
 
     this.loadMore();
@@ -46,6 +51,7 @@ const MessagesController = new class {
 
   exitChat() {
     this.header.hidden = true;
+    this.footer.hidden = true;
     this.messageElements.clear();
     this.dialog = null;
     this.chatId = null;
@@ -69,6 +75,20 @@ const MessagesController = new class {
       </div>
     `);
     this.container.append(this.placeholder);
+  }
+
+  initNewMessageForm() {
+    this.newMessageInput = $('.messages_new_message_input');
+    this.newMessageButton = $('.messages_new_message_button');
+
+    const input = this.newMessageInput;
+    const button = this.newMessageButton;
+
+    const onInput = () => {
+      button.classList.toggle('messages_new_message_button_send', !!input.value);
+    };
+    this.newMessageInput.addEventListener('input', onInput);
+    this.newMessageInput.addEventListener('change', onInput);
   }
 
   showHeader(dialog) {
@@ -107,7 +127,7 @@ const MessagesController = new class {
 
     const photoEl = $('.messages_header_peer_photo', this.header);
     const photo = MessagesApiManager.getPeerPhoto(dialog.peer);
-    if (photo) {
+    if (photo && photo._ !== 'chatPhotoEmpty') {
       FileApiManager.loadPeerPhoto(dialog.peer, photo.photo_small, photo.dc_id, {priority: 10, cache: true})
           .then((url) => {
             photoEl.style.backgroundImage = `url(${url})`;
@@ -130,6 +150,20 @@ const MessagesController = new class {
         .finally(() => {
           this.loading = false;
         });
+  }
+
+  canSendMessage(dialog) {
+    const chat = MessagesApiManager.getPeerData(dialog.peer);
+    if (!chat) {
+      return false;
+    }
+    if (chat._ === 'user' || chat._ === 'chat') {
+      return true;
+    }
+    if (chat._ === 'channel') {
+      return chat.pFlags.creator || chat.pFlags.megagroup;
+    }
+    return false;
   }
 
   onChatMessagesUpdate = (event) => {

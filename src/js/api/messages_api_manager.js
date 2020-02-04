@@ -92,8 +92,14 @@ const MessagesApiManager = new class {
   }
 
   handleUpdateShortMessage(update) {
-    const message = {_: 'message', id: update.id, date: update.date, message: update.message};
-    message.to_id = {_: 'peerUser', user_id: update.user_id};
+    const message = {
+      _: 'message',
+      id: update.id,
+      date: update.date,
+      message: update.message,
+      to_id: {_: 'peerUser', user_id: update.user_id},
+      pFlags: {}
+    };
     this.updateMessages([message]);
     const chatId = update.user_id;
     const dialog = this.peerDialogs.get(chatId);

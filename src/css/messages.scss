@@ -3,6 +3,8 @@
   flex-direction: column;
   overflow: hidden;
   position: relative;
+  background: #E7EBEE; // url('../images/BG.jpg') center;
+  background-size: cover;
 }
 
 .messages_header {
@@ -65,8 +67,6 @@
 .messages_scroll {
   height: 100%;
   overflow: auto;
-  background: #E7EBEE; // url('../images/BG.jpg') center;
-  background-size: cover;
 }
 
 .messages_list {
@@ -310,4 +310,81 @@
 }
 .messages_placeholder_action-channel:hover {
   background-image: url('../icons/newchannel_white_svg.svg');
+}
+
+.messages_footer {
+  padding: 10px 0 20px;
+}
+
+.messages_new_message_form {
+  display: flex;
+  justify-content: center;
+  max-width: 700px;
+  margin: 0 auto;
+}
+.messages_new_message_input {
+  display: block;
+  border: none;
+  outline: none;
+  resize: none;
+  font: inherit;
+  width: 100%;
+  height: 54px;
+  border-radius: 10px 10px 0 10px;
+  line-height: 18px;
+  padding: 18px 56px;
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0,0,0,.15);
+}
+.messages_new_message_input::placeholder {
+  color: #A3ACB3;
+}
+.messages_new_message_input_wrap {
+  width: 100%;
+  margin-right: 9px;
+  position: relative;
+}
+.messages_new_message_emoji_button {
+  position: absolute;
+  border: none;
+  outline: none;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  left: 15px;
+  bottom: 15px;
+  cursor: pointer;
+  background: url('../icons/smile_svg_gray.svg');
+}
+.messages_new_message_emoji_button_active {
+  background: url('../icons/smile_svg_blue.svg');
+}
+.messages_new_message_media_button {
+  position: absolute;
+  border: none;
+  outline: none;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  right: 15px;
+  bottom: 15px;
+  cursor: pointer;
+  background: url('../icons/attach_svg_gray.svg');
+}
+.messages_new_message_media_button_active {
+  background: url('../icons/attach_svg_blue.svg');
+}
+.messages_new_message_button {
+  border: none;
+  outline: none;
+  padding: 0;
+  min-width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,.15);
+  background: #fff url('../icons/microphone_svg_gray.svg') no-repeat center;
+}
+.messages_new_message_button_send {
+  background-image: url('../icons/send_svg_blue.svg');
 }
