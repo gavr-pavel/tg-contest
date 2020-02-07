@@ -1,4 +1,4 @@
-import {$} from './utils';
+import {$, buildHtmlElement} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
 import {MDCRipple} from '@material/ripple/component';
@@ -20,6 +20,8 @@ const ChatsController = new class {
 
   onDialogsUpdate = (event) => {
     const dialogs = event.detail;
+
+    this.renderMenu();
     this.renderChats(dialogs);
   };
 
@@ -94,6 +96,14 @@ const ChatsController = new class {
       peer: lastDialog.peer,
       date: lastDialogMessage.date,
     };
+  }
+
+  renderMenu() {
+    const badge = buildHtmlElement('<div class="main_menu_badge">69</div>');
+    $('.main_menu_item--archived').append(badge);
+
+    const button = $('.main_menu_button');
+    button.addEventListener('click', this.onMainMenuClick);;
   }
 
   buildChatPreviewElement(dialog) {
@@ -278,6 +288,25 @@ const ChatsController = new class {
     const peerId = +el.dataset.peerId;
     const dialog = MessagesApiManager.getDialog(peerId);
     MessagesController.setChat(dialog);
+  };
+
+  onMainMenuClick = (event) => {
+    const button = $('.main_menu_button');
+    const list = $('.main_menu_list');
+    list.hidden = !list.hidden;
+
+    const onClick = (event) => {
+      if (!list.contains(event.target) && event.target !== button && !list.hidden) {
+        list.hidden = true;
+        document.removeEventListener('click', onClick);
+      }
+    };
+
+    if (!list.hidden) {
+      document.addEventListener('click', onClick);
+    } else {
+      document.removeEventListener('click', onClick);
+    }
   };
 
   isPeerMe(peer) {
