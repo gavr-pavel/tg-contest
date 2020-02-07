@@ -144,9 +144,9 @@ const ChatsController = new class {
     } else if (messageDate.getTime() > now - 86400000 * 6) {
       return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][messageDate.getDay()];
     } if (messageDate.getFullYear() === new Date().getFullYear()) {
-      return [messageDate.getDate(), messageDate.getMonth()].join('/');
+      return [messageDate.getDate(), messageDate.getMonth() + 1].join('/');
     } else {
-      return [messageDate.getDate(), messageDate.getMonth(), messageDate.getFullYear()].join('/');
+      return [messageDate.getDate(), messageDate.getMonth() + 1, messageDate.getFullYear()].join('/');
     }
   }
 

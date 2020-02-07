@@ -21,7 +21,6 @@ html,
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
 }
 
 body {
@@ -46,7 +45,6 @@ pre {
 
 .main_container {
   max-width: 1680px;
-  height: 100%;
   display: grid;
   grid-template: auto / auto 1fr;
 }
