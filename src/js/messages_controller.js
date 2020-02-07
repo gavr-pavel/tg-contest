@@ -11,6 +11,7 @@ const MessagesController = new class {
 
   init() {
     this.header = $('.messages_header');
+    this.footer = $('.messages_footer');
     this.scrollContainer = $('.messages_scroll');
     this.container = $('.messages_list');
 
@@ -19,6 +20,8 @@ const MessagesController = new class {
     this.scrollContainer.addEventListener('scroll', this.onScroll);
 
     this.initPlaceholder();
+
+    this.initNewMessageForm();
 
     MessagesApiManager.emitter.on('chatMessagesUpdate', this.onChatMessagesUpdate);
     MessagesApiManager.emitter.on('chatNewMessage', this.onNewMessage);
@@ -36,9 +39,11 @@ const MessagesController = new class {
     this.dialog = dialog;
     this.chatId = MessagesApiManager.getPeerId(dialog.peer);
 
-    this.showHeader(dialog);
-
     this.placeholder.remove();
+
+    this.showHeader(dialog);
+    this.footer.hidden = !this.canSendMessage(dialog);
+
     this.container.append(this.loader);
 
     this.loadMore();
@@ -46,11 +51,12 @@ const MessagesController = new class {
 
   exitChat() {
     this.header.hidden = true;
+    this.footer.hidden = true;
     this.messageElements.clear();
     this.dialog = null;
     this.chatId = null;
-    this.lastMsgId = 0;
-    this.offsetMsgId = 0;
+    this.lastMsgId = null;
+    this.offsetMsgId = null;
     this.container.innerHTML = '';
     this.loading = false;
     this.noMore = false;
@@ -69,6 +75,33 @@ const MessagesController = new class {
       </div>
     `);
     this.container.append(this.placeholder);
+  }
+
+  initNewMessageForm() {
+    this.newMessageInput = $('.messages_new_message_input');
+    this.newMessageButton = $('.messages_new_message_button');
+
+    const input = this.newMessageInput;
+    const button = this.newMessageButton;
+
+    const onInput = () => {
+      button.classList.toggle('messages_new_message_button_send', !!input.value);
+    };
+    input.addEventListener('input', onInput);
+    input.addEventListener('change', onInput);
+
+    const onSubmit = () => {
+      const message = input.value;
+      MessagesApiManager.sendMessage(this.dialog.peer, message);
+      input.value = '';
+      onInput();
+    };
+    input.addEventListener('keyup', (event) => {
+      if (event.keyCode === 13) {
+        onSubmit();
+      }
+    });
+    button.addEventListener('click', onSubmit);
   }
 
   showHeader(dialog) {
@@ -107,7 +140,7 @@ const MessagesController = new class {
 
     const photoEl = $('.messages_header_peer_photo', this.header);
     const photo = MessagesApiManager.getPeerPhoto(dialog.peer);
-    if (photo) {
+    if (photo && photo._ !== 'chatPhotoEmpty') {
       FileApiManager.loadPeerPhoto(dialog.peer, photo.photo_small, photo.dc_id, {priority: 10, cache: true})
           .then((url) => {
             photoEl.style.backgroundImage = `url(${url})`;
@@ -130,6 +163,20 @@ const MessagesController = new class {
         .finally(() => {
           this.loading = false;
         });
+  }
+
+  canSendMessage(dialog) {
+    const chat = MessagesApiManager.getPeerData(dialog.peer);
+    if (!chat) {
+      return false;
+    }
+    if (chat._ === 'user' || chat._ === 'chat') {
+      return true;
+    }
+    if (chat._ === 'channel') {
+      return chat.pFlags.creator || chat.pFlags.megagroup;
+    }
+    return false;
   }
 
   onChatMessagesUpdate = (event) => {
@@ -161,12 +208,26 @@ const MessagesController = new class {
   renderMessages(messages) {
     this.loader.remove();
 
-    if (this.offsetMsgId && messages[messages.length - 1].id === this.offsetMsgId /*&& messages[0].id === this.lastMsgId*/) {
+    if (this.offsetMsgId && messages[messages.length - 1].id === this.offsetMsgId && messages[0].id === this.lastMsgId) {
       this.noMore = true;
       return;
     }
 
     const prevScrollHeight = this.scrollContainer.scrollHeight;
+
+    if (this.lastMsgId) {
+      const frag = document.createDocumentFragment();
+      for (let i = 0; messages[i].id > this.lastMsgId; i++) {
+        const message = messages[i];
+        const nextMessage = messages[i - 1];
+        const prevMessage = messages[i + 1];
+        const stickToNext = message.from_id && nextMessage && nextMessage.from_id === message.from_id;
+        const stickToPrev = message.from_id && prevMessage && prevMessage.from_id === message.from_id;
+        const el = this.buildMessageEl(message, {stickToNext, stickToPrev});
+        frag.append(el);
+      }
+      this.container.prepend(frag);
+    }
 
     const frag = document.createDocumentFragment();
     messages.forEach((message, i) => {
@@ -185,10 +246,9 @@ const MessagesController = new class {
       const el = this.buildMessageEl(message, {stickToNext, stickToPrev});
       frag.append(el);
     });
-
     this.container.append(frag);
 
-    // this.lastMsgId = messages[0].id;
+    this.lastMsgId = messages[0].id;
     this.offsetMsgId = messages[messages.length - 1].id;
 
     if (this.scrolling) {

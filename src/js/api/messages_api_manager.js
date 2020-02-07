@@ -28,22 +28,25 @@ const MessagesApiManager = new class {
 
   constructor() {
     ApiClient.emitter.on('updates', (event) => {
-      const object = event.detail;
-      switch (object._) {
-        case 'updates':
-          this.updateChats(object.chats);
-          this.updateUsers(object.users);
-          for (const update of object.updates) {
-            this.handleUpdate(update);
-          }
-          break;
-        case 'updateShort':
-          this.handleUpdateShort(object.update);
-          break;
-        case 'updateShortMessage':
-          this.handleUpdateShortMessage(object);
-      }
+      this.handleUpdates(event.detail);
     });
+  }
+
+  handleUpdates(object) {
+    switch (object._) {
+      case 'updates':
+        this.updateChats(object.chats);
+        this.updateUsers(object.users);
+        for (const update of object.updates) {
+          this.handleUpdate(update);
+        }
+        break;
+      case 'updateShort':
+        this.handleUpdateShort(object.update);
+        break;
+      case 'updateShortMessage':
+        this.handleUpdateShortMessage(object);
+    }
   }
 
   handleUpdateShort(update) {
@@ -68,10 +71,7 @@ const MessagesApiManager = new class {
         if (dialog) {
           dialog.top_message = message.id;
         }
-        const chatMessages = this.chatMessages.get(chatId);
-        if (chatMessages) {
-          chatMessages.push(message);
-        }
+        this.updateChatMessages(chatId, [message]);
         this.emitter.trigger('chatNewMessage', {chatId, message});
       } break;
       // case 'updateDeleteMessages':
@@ -92,18 +92,21 @@ const MessagesApiManager = new class {
   }
 
   handleUpdateShortMessage(update) {
-    const message = {_: 'message', id: update.id, date: update.date, message: update.message};
-    message.to_id = {_: 'peerUser', user_id: update.user_id};
+    const message = {
+      _: 'message',
+      id: update.id,
+      date: update.date,
+      message: update.message,
+      to_id: {_: 'peerUser', user_id: update.user_id},
+      pFlags: {}
+    };
     this.updateMessages([message]);
     const chatId = update.user_id;
     const dialog = this.peerDialogs.get(chatId);
     if (dialog) {
       dialog.top_message = message.id;
     }
-    const chatMessages = this.chatMessages.get(chatId);
-    if (chatMessages) {
-      chatMessages.push(message);
-    }
+    this.updateChatMessages(chatId, [message]);
     this.emitter.trigger('chatNewMessage', {chatId, message});
   }
 
@@ -167,9 +170,7 @@ const MessagesApiManager = new class {
     this.updateUsers(response.users);
     this.updateChats(response.chats);
 
-    chatMessages.push(...response.messages);
-
-    this.emitter.trigger('chatMessagesUpdate', {chatId, messages: chatMessages});
+    this.updateChatMessages(chatId, response.messages, true);
   }
 
   updateDialogs(dialogs) {
@@ -211,6 +212,30 @@ const MessagesApiManager = new class {
     for (const message of messages) {
       this.messages.set(message.id, message);
     }
+  }
+
+  updateChatMessages(chatId, newMessages, history = false) {
+    const chatMessages = this.chatMessages.get(chatId);
+    if (!chatMessages) {
+      return;
+    }
+    if (history) {
+      chatMessages.push(...newMessages);
+    } else {
+      chatMessages.unshift(...newMessages);
+    }
+    this.emitter.trigger('chatMessagesUpdate', {chatId, messages: chatMessages});
+  }
+
+  sendMessage(peer, message) {
+    return ApiClient.callMethod('messages.sendMessage', {
+      message,
+      peer: this.getInputPeer(peer),
+      random_id: Math.floor(Math.random() * 1e9),
+    })
+        .then((res) => {
+          this.handleUpdates(res);
+        });
   }
 
   getDialog(peerId) {
@@ -276,16 +301,6 @@ const MessagesApiManager = new class {
       case 'peerChannel':
         return {_: 'inputPeerChannel', channel_id: peer.channel_id, access_hash: peerData.access_hash || 0};
     }
-  }
-
-  sendMessage(chatId, message) {
-    const inputPeer = this.getInputPeer();
-    const randomId = Math.floor(Math.random() * 1e9);
-
-    ApiClient.callMethod('messages.sendMessage', {
-      message,
-      random_id: randomId,
-    });
   }
 };
 
