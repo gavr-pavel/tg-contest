@@ -1,8 +1,11 @@
 .chats_sidebar {
-  height: 100%;
+  box-sizing: border-box;
+  width: 420px;
+  height: 100vh;
+  padding: 8px;
+  border-right: 1px solid #E0E3E6;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px;
 }
 
 .chats_item {

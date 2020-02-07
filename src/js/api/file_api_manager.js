@@ -167,7 +167,7 @@ const FileApiManager = new class {
   }
 
   getDbFileName(location) {
-    return JSON.stringify(location);
+    return location._ + (location.id || location.volume_id + location.local_id);
   }
 
   getDbRequestPromise(request) {
@@ -189,7 +189,7 @@ const FileApiManager = new class {
     return this.loadFile(location, dcId, options);
   }
 
-  loadMessagePhoto(photo, size) {
+  loadMessagePhoto(photo, size, options = {}) {
     const location = {
       _: 'inputPhotoFileLocation',
       id: photo.id,
@@ -197,10 +197,10 @@ const FileApiManager = new class {
       file_reference: photo.file_reference,
       thumb_size: size
     };
-    return this.loadFile(location, photo.dc_id);
+    return this.loadFile(location, photo.dc_id, options);
   }
 
-  loadMessageDocumentThumb(document, size) {
+  loadMessageDocumentThumb(document, size, options = {}) {
     const location = {
       _: 'inputDocumentFileLocation',
       id: document.id,
@@ -208,7 +208,7 @@ const FileApiManager = new class {
       file_reference: document.file_reference,
       thumb_size: size
     };
-    return this.loadFile(location, document.dc_id);
+    return this.loadFile(location, document.dc_id, options);
   }
 
   loadMessageDocument(document) {

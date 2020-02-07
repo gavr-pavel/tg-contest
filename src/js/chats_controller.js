@@ -99,10 +99,10 @@ const ChatsController = new class {
   }
 
   renderMenu() {
-    const badge = buildHtmlElement('<div class="main_menu__badge">69</div>');
-    $('.main_menu__item--archived').append(badge);
+    const badge = buildHtmlElement('<div class="main_menu_badge">69</div>');
+    $('.main_menu_item--archived').append(badge);
 
-    const button = $('.main_menu__button');
+    const button = $('.main_menu_button');
     button.addEventListener('click', this.onMainMenuClick);;
   }
 
@@ -154,9 +154,9 @@ const ChatsController = new class {
     } else if (messageDate.getTime() > now - 86400000 * 6) {
       return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][messageDate.getDay()];
     } if (messageDate.getFullYear() === new Date().getFullYear()) {
-      return [messageDate.getDate(), messageDate.getMonth()].join('/');
+      return [messageDate.getDate(), messageDate.getMonth() + 1].join('/');
     } else {
-      return [messageDate.getDate(), messageDate.getMonth(), messageDate.getFullYear()].join('/');
+      return [messageDate.getDate(), messageDate.getMonth() + 1, messageDate.getFullYear()].join('/');
     }
   }
 
@@ -291,8 +291,8 @@ const ChatsController = new class {
   };
 
   onMainMenuClick = (event) => {
-    const button = $('.main_menu__button');
-    const list = $('.main_menu__list');
+    const button = $('.main_menu_button');
+    const list = $('.main_menu_list');
     list.hidden = !list.hidden;
 
     const onClick = (event) => {

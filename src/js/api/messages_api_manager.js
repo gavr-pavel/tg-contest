@@ -32,31 +32,43 @@ const MessagesApiManager = new class {
     });
   }
 
+  async initUpdatesState() {
+    this.updatesState = await ApiClient.callMethod('updates.getState');
+  }
+
+  checkUpdatesSeq(seq, date) {
+    return true;
+    // const local = this.updatesState;
+    // if (local.seq + 1 === seq) {
+    //   local.seq = seq;
+    //   local.date = date;
+    //   console.log(`updates state seq updated to ${seq}`);
+    //   return true;
+    // }
+    // if (local.seq + 1 < seq) {
+    //   // there's an updates gap that must be filled
+    // }
+    // console.warn(`bad updates seq ${seq}, local seq is ${local.seq}`);
+    // debugger;
+    // return false;
+  }
+
   handleUpdates(object) {
     switch (object._) {
       case 'updates':
-        this.updateChats(object.chats);
-        this.updateUsers(object.users);
-        for (const update of object.updates) {
-          this.handleUpdate(update);
+        if (this.checkUpdatesSeq(object.seq, object.date)) {
+          this.updateChats(object.chats);
+          this.updateUsers(object.users);
+          for (const update of object.updates) {
+            this.handleUpdate(update);
+          }
         }
         break;
       case 'updateShort':
-        this.handleUpdateShort(object.update);
+        this.handleUpdate(object.update);
         break;
       case 'updateShortMessage':
         this.handleUpdateShortMessage(object);
-    }
-  }
-
-  handleUpdateShort(update) {
-    switch (update._) {
-      case 'updateUserStatus': {
-        const user = this.users.get(update.user_id);
-        if (user) {
-          user.status = update.status;
-        }
-      } break;
     }
   }
 
@@ -74,11 +86,6 @@ const MessagesApiManager = new class {
         this.updateChatMessages(chatId, [message]);
         this.emitter.trigger('chatNewMessage', {chatId, message});
       } break;
-      // case 'updateDeleteMessages':
-      //   for (const msgId of update.messages) {
-      //     this.emitter.trigger('messageDelete', {id: msgId});
-      //   }
-      //   break;
       case 'updateReadHistoryInbox':
       case 'updateReadChannelInbox': {
         const peerId = update._ === 'updateReadChannelInbox' ? update.channel_id : this.getPeerId(update.peer);
@@ -86,6 +93,12 @@ const MessagesApiManager = new class {
         if (dialog) {
           dialog.unread_count = Math.max(0, dialog.unread_count - 1);
           this.emitter.trigger('updateUnreadCount', {chatId: peerId, dialog});
+        }
+      } break;
+      case 'updateUserStatus': {
+        const user = this.users.get(update.user_id);
+        if (user) {
+          user.status = update.status;
         }
       } break;
     }
@@ -159,6 +172,9 @@ const MessagesApiManager = new class {
       this.emitter.trigger('chatMessagesUpdate', {chatId, messages: chatMessages});
     }
 
+    if (dialog.peer.channel_id === 1267450324) {
+      debugger;
+    }
     const response = await ApiClient.callMethod('messages.getHistory', {
       peer: this.getInputPeer(dialog.peer),
       offset_id: offsetId,
@@ -231,11 +247,18 @@ const MessagesApiManager = new class {
     return ApiClient.callMethod('messages.sendMessage', {
       message,
       peer: this.getInputPeer(peer),
-      random_id: Math.floor(Math.random() * 1e9),
+      random_id: Math.floor(Math.random() * 1e9)
     })
         .then((res) => {
           this.handleUpdates(res);
         });
+  }
+
+  saveDraft(peer, message) {
+    return ApiClient.callMethod('messages.saveDraft', {
+      message,
+      peer: this.getInputPeer(peer)
+    });
   }
 
   getDialog(peerId) {

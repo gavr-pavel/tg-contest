@@ -1,4 +1,4 @@
-import {$, buildHtmlElement} from './utils';
+import {$, buildHtmlElement, debounce, emojiRegex} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple';
 import {MediaManager} from './api/media_manager';
@@ -23,6 +23,7 @@ const MessagesController = new class {
 
     this.initNewMessageForm();
 
+    MessagesApiManager.initUpdatesState();
     MessagesApiManager.emitter.on('chatMessagesUpdate', this.onChatMessagesUpdate);
     MessagesApiManager.emitter.on('chatNewMessage', this.onNewMessage);
   }
@@ -84,21 +85,33 @@ const MessagesController = new class {
     const input = this.newMessageInput;
     const button = this.newMessageButton;
 
+    const saveDraft = debounce((peer, message) => {
+      MessagesApiManager.saveDraft(peer, message);
+    });
+
     const onInput = () => {
-      button.classList.toggle('messages_new_message_button_send', !!input.value);
+      input.style.height = '';
+      input.style.height = input.scrollHeight + 'px';
+      const message = input.value.trim();
+      button.classList.toggle('messages_new_message_button_send', !!message);
+      saveDraft(this.dialog.peer, message);
     };
     input.addEventListener('input', onInput);
     input.addEventListener('change', onInput);
 
     const onSubmit = () => {
-      const message = input.value;
+      const message = input.value.trim();
+      if (!message) {
+        return;
+      }
       MessagesApiManager.sendMessage(this.dialog.peer, message);
       input.value = '';
       onInput();
     };
-    input.addEventListener('keyup', (event) => {
-      if (event.keyCode === 13) {
+    input.addEventListener('keydown', (event) => {
+      if (event.keyCode === 13 && !event.shiftKey) {
         onSubmit();
+        event.preventDefault();
       }
     });
     button.addEventListener('click', onSubmit);
@@ -137,6 +150,11 @@ const MessagesController = new class {
       </div>
     `;
     this.header.hidden = false;
+
+    const peerEl = $('.messages_header_peer');
+    peerEl.addEventListener('click', () => {
+
+    });
 
     const photoEl = $('.messages_header_peer_photo', this.header);
     const photo = MessagesApiManager.getPeerPhoto(dialog.peer);
@@ -295,19 +313,18 @@ const MessagesController = new class {
 
   renderMessageContent(el, message, options) {
     const authorName = !options.stickToPrev ? this.formatAuthorName(message) : '';
-    const mediaThumbItem = this.getMessageMediaThumb(message.media);
+    const mediaThumbData = this.getMessageMediaThumb(message.media);
 
     el.innerHTML = `
       <div class="messages_item_content">
         ${authorName}
-        ${this.formatText(message)}
-        ${this.formatMessageMedia(message, mediaThumbItem)}
+        ${this.formatMessageContent(message, mediaThumbData)}
         <div class="messages_item_date" title="${this.formatMessageDate(message.date)}">${this.formatMessageTime(message.date)}</div>
       </div>
     `;
 
-    if (mediaThumbItem) {
-      this.loadMessageMediaThumb(el, mediaThumbItem);
+    if (mediaThumbData) {
+      this.loadMessageMediaThumb(el, mediaThumbData);
     }
   }
 
@@ -344,16 +361,25 @@ const MessagesController = new class {
     }
     switch (media._) {
       case 'messageMediaPhoto':
-        return media.photo;
+        const photo = media.photo;
+        return {type: 'photo', object: photo, sizes: photo.sizes};
       case 'messageMediaDocument': {
-        const docAttributes = this.getDocumentAttributes(media.document);
+        const document = media.document;
+        const docAttributes = this.getDocumentAttributes(document);
         if (['video', 'gif', 'sticker'].includes(docAttributes.type)) {
-          return media.document;
+          return {type: docAttributes.type, object: document, sizes: document.thumbs};
         }
       } break;
       case 'messageMediaWebPage': {
-        if (media.webpage.photo) {
-          return media.webpage.photo;
+        if (media.webpage.type === 'photo') {
+          const photo = media.webpage.photo;
+          return {type: 'photo', object: photo, sizes: photo.sizes};
+        } else if (media.webpage.type === 'document') {
+          const document = media.webpage.document;
+          const docAttributes = this.getDocumentAttributes(document);
+          if (['video', 'gif', 'sticker'].includes(docAttributes.type)) {
+            return {type: docAttributes.type, object: document, sizes: document.thumbs};
+          }
         }
       } break;
     }
@@ -363,65 +389,62 @@ const MessagesController = new class {
     return Math.round(200 * (thumb.w / thumb.h));
   }
 
-  async loadMessageMediaThumb(messageEl, mediaThumbItem) {
+  async loadMessageMediaThumb(messageEl, mediaThumbData) {
     let thumbEl = $('.messages_item_media_thumb', messageEl);
 
-    const sizes = MediaManager.getMediaPhotoSizes(mediaThumbItem);
-
-    const photoSize = MediaManager.choosePhotoSize(sizes, 'm');
-    const thumbWidth = this.getThumbWidth(photoSize);
+    const sizes = mediaThumbData.sizes;
 
     const inlineSize = MediaManager.choosePhotoSize(sizes, 'i');
     if (inlineSize) {
-      const _t = thumbEl;
       const url = MediaManager.getPhotoStrippedSize(sizes);
-      thumbEl = buildHtmlElement(`<img class="messages_item_media_thumb" src="${url}" width="${thumbWidth}" height="200">`);
-      _t.replaceWith(thumbEl);
+      thumbEl.innerHTML = `<img class="messages_item_media_thumb_image messages_item_media_thumb_image-blurred" src="${url}">`;
     }
 
     try {
+      const photoSize = MediaManager.choosePhotoSize(sizes, 'm');
       let url;
-      if (mediaThumbItem._ === 'document') {
-        url = await FileApiManager.loadMessageDocumentThumb(mediaThumbItem, photoSize.type);
+      if (mediaThumbData.object._ === 'document') {
+        url = await FileApiManager.loadMessageDocumentThumb(mediaThumbData.object, photoSize.type, {cache: true});
       } else {
-        url = await FileApiManager.loadMessagePhoto(mediaThumbItem, photoSize.type);
+        url = await FileApiManager.loadMessagePhoto(mediaThumbData.object, photoSize.type, {cache: true});
       }
-      thumbEl.replaceWith(buildHtmlElement(`<img class="messages_item_media_thumb" src="${url}" width="${thumbWidth}" height="200">`));
+      thumbEl.innerHTML = `<img class="messages_item_media_thumb_image" src="${url}">`;
     } catch (error) {
       console.log('thumb load error', error);
     }
   }
 
-  formatMessageMedia(message, mediaThumbItem) {
+  formatMessageContent(message, mediaThumbData) {
     const media = message.media;
+    const caption = this.formatText(message);
     if (!media) {
-      return '';
+      return caption;
     }
     switch (media._) {
       case 'messageMediaPhoto':
-        return this.formatThumb(mediaThumbItem);
+        return this.formatThumb(mediaThumbData, caption);
       case 'messageMediaDocument':
-        return this.formatDocument(media, mediaThumbItem);
+        return this.formatDocument(media, mediaThumbData, caption);
       case 'messageMediaWebPage':
-        return this.formatWebPage(media, mediaThumbItem);
+        return caption + this.formatWebPage(media, mediaThumbData, caption);
       case 'messageMediaPoll':
-        return 'Poll';
+        return caption + 'Poll';
       case 'messageMediaGeo':
-        return 'Geo';
+        return caption + 'Geo';
       case 'messageMediaGeoLive':
-        return 'Live Geo';
+        return caption + 'Live Geo';
       case 'messageMediaContact':
-        return 'Contact';
+        return caption + 'Contact';
       case 'messageMediaUnsupported':
         return 'Message unsupported';
       default:
-        return '[' + media._ + ']';
+        return caption + '[' + media._ + ']';
     }
   }
 
-  formatDocument(media, mediaThumbItem) {
-    if (mediaThumbItem) {
-      return this.formatThumb(mediaThumbItem);
+  formatDocument(media, mediaThumbData, caption) {
+    if (mediaThumbData) {
+      return this.formatThumb(mediaThumbData, caption);
     }
 
     const attributes = this.getDocumentAttributes(media.document);
@@ -434,8 +457,6 @@ const MessagesController = new class {
       case 'sticker':
         return '[sticker]';
     }
-
-    const caption = ''; // media.caption ? this.formatText({message: media.caption}) : '';
 
     return `
       ${caption}
@@ -464,12 +485,12 @@ const MessagesController = new class {
     return '';
   }
 
-  formatWebPage(media, thumbPhoto) {
+  formatWebPage(media, mediaThumbData) {
     const webpage = media.webpage;
     if (webpage._ === 'webPage') {
       return `
         <!--a href="${webpage.url}" target="_blank">${webpage.display_url}</a-->
-        <div class="webpage">${this.formatWebpageContent(webpage, thumbPhoto)}</div>
+        <div class="webpage">${this.formatWebpageContent(webpage, mediaThumbData)}</div>
       `;
     } else if (webpage._ === 'webPagePending') {
       return 'Content is loading...'
@@ -477,8 +498,8 @@ const MessagesController = new class {
     return 'Content not available';
   }
 
-  formatWebpageContent(webpage, thumbPhoto) {
-    const formattedThumb = this.formatThumb(thumbPhoto);
+  formatWebpageContent(webpage, mediaThumbData) {
+    const formattedThumb = this.formatThumb(mediaThumbData);
 
     switch (webpage.type) {
       case 'telegram_message':
@@ -490,8 +511,11 @@ const MessagesController = new class {
           <div class="webpage_description">${this.replaceLineBreaks(webpage.description)}</div>
         `;
       case 'photo':
-      case 'video':
-        return formattedThumb;
+      case 'document':
+        if (formattedThumb) {
+          return formattedThumb;
+        }
+        break;
     }
     return '[' + webpage.type + ']';
   }
@@ -507,6 +531,7 @@ const MessagesController = new class {
   formatText(message) {
     const sourceText = message.message;
     let text = '';
+    let addClass = '';
     if (message.entities) {
       let offset = 0;
       for (const entity of message.entities) {
@@ -521,10 +546,17 @@ const MessagesController = new class {
     }
     if (text) {
       text = this.replaceLineBreaks(text);
-      text = `<span class="messages_item_text">${text}</span>`;
+      if (text.length <= 12 && !message.media) {
+        const emojiMatches = text.match(emojiRegex);
+        if (emojiMatches && emojiMatches.length <= 3 && emojiMatches.join('').length === text.length) {
+          addClass += ' messages_item_text_emoji_big';
+        }
+      }
+      text = `<span class="messages_item_text ${addClass}">${text}</span>`;
     }
     return text;
   }
+
 
   processEntity(text, entity) {
     switch (entity._) {
@@ -564,22 +596,24 @@ const MessagesController = new class {
     }
   }
 
-  formatThumb(mediaThumbItem, caption) {
+  formatThumb(mediaThumbData, caption) {
     let html = '';
 
     let thumbWidth;
     let thumbHeight;
 
-    if (mediaThumbItem) {
-      const sizes = MediaManager.getMediaPhotoSizes(mediaThumbItem);
-      const photoSize = MediaManager.choosePhotoSize(sizes);
+    if (mediaThumbData) {
+      const photoSize = MediaManager.choosePhotoSize(mediaThumbData.sizes);
       thumbWidth = this.getThumbWidth(photoSize);
+      if (caption && thumbWidth < 300) {
+        thumbWidth = 300;
+      }
       thumbHeight = 200;
-      html += `<div class="messages_item_media_thumb" style="width:${thumbWidth}px;height:${thumbHeight}px;"></div>`;
+      html += `<div class="messages_item_media_thumb messages_item_media_thumb-${mediaThumbData.type}" style="width:${thumbWidth}px;height:${thumbHeight}px;"></div>`;
     }
 
     if (caption) {
-      const cssWidth = thumbWidth ? `width:${width}px;` : '';
+      const cssWidth = thumbWidth ? `width:${thumbWidth}px;` : '';
       html += `<div class="messages_item_media_caption" style="${cssWidth}">${caption}</div>`;
     }
 
