@@ -371,10 +371,10 @@ const MessagesController = new class {
         }
       } break;
       case 'messageMediaWebPage': {
-        if (media.webpage.type === 'photo') {
+        if (media.webpage.photo) {
           const photo = media.webpage.photo;
           return {type: 'photo', object: photo, sizes: photo.sizes};
-        } else if (media.webpage.type === 'document') {
+        } else if (media.webpage.document) {
           const document = media.webpage.document;
           const docAttributes = this.getDocumentAttributes(document);
           if (['video', 'gif', 'sticker'].includes(docAttributes.type)) {
@@ -511,6 +511,7 @@ const MessagesController = new class {
           <div class="webpage_description">${this.replaceLineBreaks(webpage.description)}</div>
         `;
       case 'photo':
+      case 'video':
       case 'document':
         if (formattedThumb) {
           return formattedThumb;
