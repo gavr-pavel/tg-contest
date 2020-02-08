@@ -107,8 +107,11 @@
   border-radius: 50px;
   display: inline-block;
   flex-basis: 100%;
-  font-size: 13px;
+  font: inherit;
   height: 44px;
   outline: none;
   padding-left: 42px;
+}
+.left_sidebar_search::placeholder {
+  color: #8E969B;
 }

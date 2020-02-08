@@ -1,4 +1,4 @@
-import {$, buildHtmlElement} from './utils';
+import {$} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
 import {MDCRipple} from '@material/ripple/component';
@@ -8,8 +8,10 @@ const ChatsController = new class {
 
   init() {
     this.container = $('.chats_sidebar');
-
     this.container.addEventListener('scroll', this.onScroll);
+
+    this.menuButton = $('.main_menu_button');
+    this.menuButton.addEventListener('click', this.onMainMenuClick);
 
     MessagesApiManager.emitter.on('dialogsUpdate', this.onDialogsUpdate);
     MessagesApiManager.emitter.on('chatNewMessage', this.onNewMessage);
@@ -21,7 +23,6 @@ const ChatsController = new class {
   onDialogsUpdate = (event) => {
     const dialogs = event.detail;
 
-    this.renderMenu();
     this.renderChats(dialogs);
   };
 
@@ -96,14 +97,6 @@ const ChatsController = new class {
       peer: lastDialog.peer,
       date: lastDialogMessage.date,
     };
-  }
-
-  renderMenu() {
-    const badge = buildHtmlElement('<div class="main_menu_badge">69</div>');
-    $('.main_menu_item--archived').append(badge);
-
-    const button = $('.main_menu_button');
-    button.addEventListener('click', this.onMainMenuClick);;
   }
 
   buildChatPreviewElement(dialog) {

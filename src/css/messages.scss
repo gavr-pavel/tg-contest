@@ -4,7 +4,7 @@
   flex-direction: column;
   overflow: hidden;
   position: relative;
-  background: #E7EBEE url('../images/BG.jpg') center;
+  background: #E7EBEE url('../img/bg.jpg') center;
   background-size: cover;
 }
 
@@ -126,7 +126,7 @@
 
 .messages_item-type-date,
 .messages_item-type-service {
-  background: #B4B8BB;
+  background: rgba(0, 0, 0, .3);
   color: #fff;
   margin: 4px auto;
   padding: 0 7px;
