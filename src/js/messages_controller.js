@@ -1,8 +1,9 @@
-import {$, buildHtmlElement, debounce, emojiRegex} from './utils';
+import {$, buildHtmlElement, debounce} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple';
 import {MediaApiManager} from './api/media_api_manager';
 import {MediaViewController} from './media_view_controller';
+import {emojiRegex} from './emoji';
 
 const MessagesController = new class {
   dialog = null;
