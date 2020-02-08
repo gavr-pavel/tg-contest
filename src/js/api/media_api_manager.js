@@ -1,15 +1,4 @@
-import {base64Bytes, bufferConcat} from '../mtproto/bin';
-
-const MediaManager = new class {
-  getMediaPhotoSizes(object) {
-    if (object._ === 'photo') {
-      return object.sizes;
-    }
-    if (object._ === 'document') {
-      return object.thumbs;
-    }
-  }
-
+const MediaApiManager = new class {
   choosePhotoSize(sizes, type = 'm') {
     const size = sizes.find(item => item.type === type);
     if (size) {
@@ -25,6 +14,11 @@ const MediaManager = new class {
     if (size && size.bytes[0] === 0x01) {
       const header = this.jpegHeader;
       const footer = this.jpegFooter;
+
+      // const bytes = new Uint8Array(header.byteLength + footer.byteLength + size.bytes.byteLength);
+      // bytes.set(header.subarray(0, 164), 0);
+      // bytes.set(size.bytes.subarray(1, 2), 164);
+
       const bytes = bufferConcat(header.subarray(0, 164), size.bytes.subarray(1, 2), header.subarray(165, 166), size.bytes.subarray(2, 3), header.subarray(167), size.bytes.subarray(3), footer);
 
       return 'data:image/jpeg;base64,' + base64Encode(bytes);
@@ -51,9 +45,9 @@ const MediaManager = new class {
   jpegFooter = base64Decode('/9k=');
 };
 
-window.MediaManager = MediaManager;
+window.MediaApiManager = MediaApiManager;
 
-export {MediaManager};
+export {MediaApiManager};
 
 
 function base64Encode(bytes) {
@@ -74,4 +68,18 @@ function base64Decode(string) {
     binaryView[i] = binaryString.charCodeAt(i);
   }
   return binaryView;
+}
+
+function bufferConcat(...buffers) {
+  let len = 0;
+  for (const buf of buffers) {
+    len += buf.byteLength || buf.length || 0;
+  }
+  const tmp = new Int8Array(len);
+  let offset = 0;
+  for (const buf of buffers) {
+    tmp.set(buf instanceof ArrayBuffer ? new Int8Array(buf) : buf, offset);
+    offset += buf.byteLength || buf.length;
+  }
+  return tmp.buffer;
 }

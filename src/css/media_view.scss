@@ -1,0 +1,76 @@
+.media_view {
+  z-index: 100;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.9);
+  transition: opacity .2s;
+}
+.media_view[hidden] {
+  display: block;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.media_view_controls {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  display: flex;
+}
+
+.media_view_controls_item {
+  background: transparent no-repeat center;
+  border: none;
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  margin: 0 2px;
+  border-radius: 50%;
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+.media_view_controls_item:hover {
+  opacity: 1;
+}
+
+.media_view_controls_item-delete {
+  background-image: url('../icons/delete_svg_white.svg');
+}
+
+.media_view_controls_item-forward {
+  background-image: url('../icons/forward_svg_white.svg');
+}
+
+.media_view_controls_item-download {
+  background-image: url('../icons/download_svg_white.svg');
+}
+
+.media_view_controls_item-close {
+  background-image: url('../icons/close_svg_white.svg');
+}
+
+.media_view_content {
+  box-sizing: border-box;
+  padding: 126px 200px;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-content: center;
+  transition: transform .2s;
+}
+.media_view[hidden] .media_view_content {
+  transform: scale(0.7);
+}
+
+.media_view_content_image,
+.media_view_content_gif,
+.media_view_content_video {
+  align-self: center;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}

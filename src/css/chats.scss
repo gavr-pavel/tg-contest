@@ -19,7 +19,8 @@
   position: relative;
 }
 
-.chats_item:hover {
+.chats_item:hover,
+.chats_item-selected {
   background: #F4F4F5;
 }
 

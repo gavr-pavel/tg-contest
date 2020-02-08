@@ -2,7 +2,7 @@ import {getDeferred} from '../utils';
 import {ApiConnection} from '../mtproto/api_connection';
 import {MessagesApiManager} from './messages_api_manager';
 
-const PART_SIZE = 1024 * 1024;
+const PART_SIZE = 512 * 1024;
 const MAX_CONNECTIONS = 2;
 
 const FileApiManager = new class {
@@ -58,7 +58,7 @@ const FileApiManager = new class {
     }
   }
 
-  async loadFile(location, dcId, {priority = 1, cache = false, mimeType = ''} = {}) {
+  async loadFile(location, dcId, {priority = 1, cache = false, mimeType = '', size = 0, onProgress, signal} = {}) {
     if (cache) {
       try {
         const blob = await this.getFromCache(location);
@@ -74,19 +74,31 @@ const FileApiManager = new class {
 
     const apiConnection = this.getConnection(dcId);
 
+    let aborted = false;
+    if (signal) {
+      signal.addEventListener('abort', () => aborted = true);
+    }
+
     try {
       await this.checkQueue(priority);
-      for (let offset = 0; ; offset += PART_SIZE) {
+      for (let offset = 0, loaded = 0; ; offset += PART_SIZE) {
         const res = await apiConnection.callMethod('upload.getFile', {
           location,
           offset,
-          limit: PART_SIZE,
+          limit: PART_SIZE
         });
+        if (aborted) {
+          throw new Error('File download aborted');
+        }
         parts.push(res.bytes);
+        loaded += res.bytes.byteLength;
+        if (onProgress) {
+          onProgress(loaded);
+        }
         if (!mimeType) {
           mimeType = this.getMimeType(res.type);
         }
-        if (res.bytes.byteLength < PART_SIZE) {
+        if (size && loaded >= size || !size && res.bytes.byteLength < PART_SIZE) {
           break;
         }
       }
@@ -189,13 +201,13 @@ const FileApiManager = new class {
     return this.loadFile(location, dcId, options);
   }
 
-  loadMessagePhoto(photo, size, options = {}) {
+  loadMessagePhoto(photo, sizeType, options = {}) {
     const location = {
       _: 'inputPhotoFileLocation',
       id: photo.id,
       access_hash: photo.access_hash,
       file_reference: photo.file_reference,
-      thumb_size: size
+      thumb_size: sizeType
     };
     return this.loadFile(location, photo.dc_id, options);
   }
@@ -211,14 +223,15 @@ const FileApiManager = new class {
     return this.loadFile(location, document.dc_id, options);
   }
 
-  loadMessageDocument(document) {
+  loadMessageDocument(document, options = {}) {
     const location = {
       _: 'inputDocumentFileLocation',
       id: document.id,
       access_hash: document.access_hash,
       file_reference: document.file_reference
     };
-    return this.loadFile(location, document.dc_id, {mimeType: document.mime_type});
+    Object.assign(options, {mimeType: document.mime_type, size: document.size});
+    return this.loadFile(location, document.dc_id, options);
   }
 };
 

@@ -237,7 +237,12 @@ class TLSerialization {
       if (type.indexOf('?') !== -1) {
         const condType = type.split('?');
         const fieldBit = condType[0].split('.');
-        if (!(params[fieldBit[0]] & (1 << fieldBit[1]))) {
+        if (typeof params[param.name] !== 'undefined') {
+          if (typeof params[fieldBit[0]] === 'undefined') {
+            params[fieldBit[0]] = 0;
+          }
+          params[fieldBit[0]] |= 1 << fieldBit[1];
+        } else {
           continue;
         }
         type = condType[1];

@@ -172,9 +172,6 @@ const MessagesApiManager = new class {
       this.emitter.trigger('chatMessagesUpdate', {chatId, messages: chatMessages});
     }
 
-    if (dialog.peer.channel_id === 1267450324) {
-      debugger;
-    }
     const response = await ApiClient.callMethod('messages.getHistory', {
       peer: this.getInputPeer(dialog.peer),
       offset_id: offsetId,

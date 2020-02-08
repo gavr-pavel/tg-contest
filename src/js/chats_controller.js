@@ -288,6 +288,12 @@ const ChatsController = new class {
     const peerId = +el.dataset.peerId;
     const dialog = MessagesApiManager.getDialog(peerId);
     MessagesController.setChat(dialog);
+
+    const prevSelected = this.container.querySelector('.chats_item-selected');
+    if (prevSelected) {
+      prevSelected.classList.remove('chats_item-selected');
+    }
+    el.classList.add('chats_item-selected');
   };
 
   onMainMenuClick = (event) => {

@@ -1,7 +1,8 @@
 import {$, buildHtmlElement, debounce, emojiRegex} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple';
-import {MediaManager} from './api/media_manager';
+import {MediaApiManager} from './api/media_api_manager';
+import {MediaViewController} from './media_view_controller';
 
 const MessagesController = new class {
   dialog = null;
@@ -337,8 +338,22 @@ const MessagesController = new class {
     return '';
   }
 
-  onThumbClick = () => {
-    // open media viewer
+  onThumbClick = (event) => {
+    const thumb = event.currentTarget;
+    const msgId = +thumb.closest('.messages_item').dataset.id;
+    const message = MessagesApiManager.messages.get(msgId);
+
+    if (message.media.photo) {
+      MediaViewController.showPhoto(message.media.photo, thumb);
+    } else if (message.media.document) {
+      const document = message.media.document;
+      const attributes = this.getDocumentAttributes(document);
+      if (attributes.type === 'video') {
+        MediaViewController.showVideo(document, thumb);
+      } else if (attributes.type === 'gif') {
+        MediaViewController.showGif(document, thumb);
+      }
+    }
   };
 
   onFileClick = (event) => {
@@ -391,17 +406,18 @@ const MessagesController = new class {
 
   async loadMessageMediaThumb(messageEl, mediaThumbData) {
     let thumbEl = $('.messages_item_media_thumb', messageEl);
+    thumbEl.addEventListener('click', this.onThumbClick);
 
     const sizes = mediaThumbData.sizes;
 
-    const inlineSize = MediaManager.choosePhotoSize(sizes, 'i');
+    const inlineSize = MediaApiManager.choosePhotoSize(sizes, 'i');
     if (inlineSize) {
-      const url = MediaManager.getPhotoStrippedSize(sizes);
+      const url = MediaApiManager.getPhotoStrippedSize(sizes);
       thumbEl.innerHTML = `<img class="messages_item_media_thumb_image messages_item_media_thumb_image-blurred" src="${url}">`;
     }
 
     try {
-      const photoSize = MediaManager.choosePhotoSize(sizes, 'm');
+      const photoSize = MediaApiManager.choosePhotoSize(sizes, 'm');
       let url;
       if (mediaThumbData.object._ === 'document') {
         url = await FileApiManager.loadMessageDocumentThumb(mediaThumbData.object, photoSize.type, {cache: true});
@@ -604,7 +620,7 @@ const MessagesController = new class {
     let thumbHeight;
 
     if (mediaThumbData) {
-      const photoSize = MediaManager.choosePhotoSize(mediaThumbData.sizes);
+      const photoSize = MediaApiManager.choosePhotoSize(mediaThumbData.sizes);
       thumbWidth = this.getThumbWidth(photoSize);
       if (caption && thumbWidth < 300) {
         thumbWidth = 300;
