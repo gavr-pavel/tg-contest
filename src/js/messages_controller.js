@@ -1,9 +1,10 @@
-import {$, buildHtmlElement, debounce} from './utils';
+import {$, buildHtmlElement} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple';
 import {MediaApiManager} from './api/media_api_manager';
 import {MediaViewController} from './media_view_controller';
-import {emojiRegex} from './emoji';
+import {emojiRegex} from './emoji_config';
+import {MessagesFormController} from './messages_form_controller';
 
 const MessagesController = new class {
   dialog = null;
@@ -23,7 +24,7 @@ const MessagesController = new class {
 
     this.initPlaceholder();
 
-    this.initNewMessageForm();
+    MessagesFormController.init();
 
     MessagesApiManager.initUpdatesState();
     MessagesApiManager.emitter.on('chatMessagesUpdate', this.onChatMessagesUpdate);
@@ -64,6 +65,7 @@ const MessagesController = new class {
     this.loading = false;
     this.noMore = false;
     this.scrolling = false;
+    MediaViewController.abort();
   }
 
   initPlaceholder() {
@@ -78,45 +80,6 @@ const MessagesController = new class {
       </div>
     `);
     this.container.append(this.placeholder);
-  }
-
-  initNewMessageForm() {
-    this.newMessageInput = $('.messages_new_message_input');
-    this.newMessageButton = $('.messages_new_message_button');
-
-    const input = this.newMessageInput;
-    const button = this.newMessageButton;
-
-    const saveDraft = debounce((peer, message) => {
-      MessagesApiManager.saveDraft(peer, message);
-    });
-
-    const onInput = () => {
-      input.style.height = '';
-      input.style.height = input.scrollHeight + 'px';
-      const message = input.value.trim();
-      button.classList.toggle('messages_new_message_button_send', !!message);
-      saveDraft(this.dialog.peer, message);
-    };
-    input.addEventListener('input', onInput);
-    input.addEventListener('change', onInput);
-
-    const onSubmit = () => {
-      const message = input.value.trim();
-      if (!message) {
-        return;
-      }
-      MessagesApiManager.sendMessage(this.dialog.peer, message);
-      input.value = '';
-      onInput();
-    };
-    input.addEventListener('keydown', (event) => {
-      if (event.keyCode === 13 && !event.shiftKey) {
-        onSubmit();
-        event.preventDefault();
-      }
-    });
-    button.addEventListener('click', onSubmit);
   }
 
   showHeader(dialog) {
@@ -343,17 +306,13 @@ const MessagesController = new class {
     const thumb = event.currentTarget;
     const msgId = +thumb.closest('.messages_item').dataset.id;
     const message = MessagesApiManager.messages.get(msgId);
-
-    if (message.media.photo) {
-      MediaViewController.showPhoto(message.media.photo, thumb);
-    } else if (message.media.document) {
-      const document = message.media.document;
-      const attributes = this.getDocumentAttributes(document);
-      if (attributes.type === 'video') {
-        MediaViewController.showVideo(document, thumb);
-      } else if (attributes.type === 'gif') {
-        MediaViewController.showGif(document, thumb);
-      }
+    const thumbData = this.getMessageMediaThumb(message.media);
+    if (thumbData.type === 'photo') {
+      MediaViewController.showPhoto(thumbData.object, thumb);
+    } else if (thumbData.type === 'video') {
+      MediaViewController.showVideo(thumbData.object, thumb);
+    } else if (thumbData.type === 'gif') {
+      MediaViewController.showGif(thumbData.object, thumb);
     }
   };
 
@@ -401,12 +360,22 @@ const MessagesController = new class {
     }
   }
 
-  getThumbWidth(thumb) {
-    return Math.round(200 * (thumb.w / thumb.h));
+  getThumbWidthHeight(thumb) {
+    let h = 200;
+    let w = Math.round(h * (thumb.w / thumb.h));
+    if (w > 400) {
+      w = 400;
+      h = Math.round(w / (thumb.w / thumb.h));
+    }
+    return [w, h];
   }
 
   async loadMessageMediaThumb(messageEl, mediaThumbData) {
     let thumbEl = $('.messages_item_media_thumb', messageEl);
+    if (!thumbEl) {
+      debugger;
+      return;
+    }
     thumbEl.addEventListener('click', this.onThumbClick);
 
     const sizes = mediaThumbData.sizes;
@@ -622,11 +591,10 @@ const MessagesController = new class {
 
     if (mediaThumbData) {
       const photoSize = MediaApiManager.choosePhotoSize(mediaThumbData.sizes);
-      thumbWidth = this.getThumbWidth(photoSize);
-      if (caption && thumbWidth < 300) {
+      [thumbWidth, thumbHeight] = this.getThumbWidthHeight(photoSize);
+      if (caption && caption.length > 100 && thumbWidth < 300) {
         thumbWidth = 300;
       }
-      thumbHeight = 200;
       html += `<div class="messages_item_media_thumb messages_item_media_thumb-${mediaThumbData.type}" style="width:${thumbWidth}px;height:${thumbHeight}px;"></div>`;
     }
 

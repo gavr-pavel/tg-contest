@@ -1,4 +1,5 @@
-import {$} from './utils';
+import {$, buildHtmlElement} from './utils';
+import {App} from './app';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
 import {MDCRipple} from '@material/ripple/component';
@@ -12,6 +13,7 @@ const ChatsController = new class {
 
     this.menuButton = $('.main_menu_button');
     this.menuButton.addEventListener('click', this.onMainMenuClick);
+    new MDCRipple(this.menuButton).unbounded = true;
 
     MessagesApiManager.emitter.on('dialogsUpdate', this.onDialogsUpdate);
     MessagesApiManager.emitter.on('chatNewMessage', this.onNewMessage);
@@ -101,14 +103,12 @@ const ChatsController = new class {
 
   buildChatPreviewElement(dialog) {
     const peerId = MessagesApiManager.getPeerId(dialog.peer);
-    const el = document.createElement('div');
-    el.className = 'chats_item' + (dialog.pFlags.pinned ? ' chats_item_pinned' : '');
-    el.dataset.peerId = peerId;
-    el.innerHTML = `
-      <div class="chats_item_photo"></div>
-      <div class="chats_item_text"></div>
-      <span class="mdc-button__ripple"></span>
-    `;
+    const el = buildHtmlElement(`
+      <div class="chats_item ${dialog.pFlags.pinned ? ' chats_item_pinned' : ''} mdc-ripple-surface" data-peer-id="${peerId}">
+        <div class="chats_item_photo"></div>
+        <div class="chats_item_text"></div>
+      </div>
+    `);
     this.renderChatPreviewContent(el, dialog);
     this.loadChatPhoto(el, dialog);
     el.addEventListener('click', this.onChatClick);
@@ -309,7 +309,7 @@ const ChatsController = new class {
   };
 
   isPeerMe(peer) {
-    return peer._ === 'peerUser' && peer.user_id === App.auth_user_id;
+    return peer._ === 'peerUser' && peer.user_id === App.getAuthUserId();
   }
 
 };

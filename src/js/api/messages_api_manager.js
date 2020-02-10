@@ -1,5 +1,6 @@
 import {ApiClient} from './api_client';
 import {Emitter} from '../utils';
+import {App} from '../app';
 
 const MessagesApiManager = new class {
   dialogs = [];
@@ -28,7 +29,7 @@ const MessagesApiManager = new class {
 
   constructor() {
     ApiClient.emitter.on('updates', (event) => {
-      this.handleUpdates(event.detail);
+      this.onUpdates(event.detail);
     });
   }
 
@@ -53,26 +54,27 @@ const MessagesApiManager = new class {
     // return false;
   }
 
-  handleUpdates(object) {
+  onUpdates(object) {
     switch (object._) {
       case 'updates':
-        if (this.checkUpdatesSeq(object.seq, object.date)) {
-          this.updateChats(object.chats);
-          this.updateUsers(object.users);
-          for (const update of object.updates) {
-            this.handleUpdate(update);
-          }
+      case 'updatesCombined':
+        this.updateChats(object.chats);
+        this.updateUsers(object.users);
+        for (const update of object.updates) {
+          this.handleUpdate(update);
         }
         break;
       case 'updateShort':
         this.handleUpdate(object.update);
         break;
       case 'updateShortMessage':
+      case 'updateShortChatMessage':
         this.handleUpdateShortMessage(object);
     }
   }
 
   handleUpdate(update) {
+    console.log(update._, update);
     switch (update._) {
       case 'updateNewMessage':
       case 'updateNewChannelMessage': {
@@ -91,8 +93,18 @@ const MessagesApiManager = new class {
         const peerId = update._ === 'updateReadChannelInbox' ? update.channel_id : this.getPeerId(update.peer);
         const dialog = this.peerDialogs.get(peerId);
         if (dialog) {
-          dialog.unread_count = Math.max(0, dialog.unread_count - 1);
+          dialog.unread_count = update.still_unread_count;
           this.emitter.trigger('updateUnreadCount', {chatId: peerId, dialog});
+        }
+      } break;
+      case 'updateDeleteMessages': {
+        for (let msgId of update.messages) {
+          const message = this.messages.get(msgId);
+          if (message) {
+            this.messages.delete(msgId);
+            const chatId = this.getPeerId(message.to_id);
+            this.updateChatDeletedMessage(chatId, message);
+          }
         }
       } break;
       case 'updateUserStatus': {
@@ -101,29 +113,43 @@ const MessagesApiManager = new class {
           user.status = update.status;
         }
       } break;
+      case 'updateDraftMessage': {
+        const peerId = this.getPeerId(update.peer);;
+        const dialog = this.peerDialogs.get(peerId);
+        if (dialog) {
+          dialog.draft = update.draft;
+        }
+      } break;
     }
   }
 
   handleUpdateShortMessage(update) {
-    const message = {
-      _: 'message',
-      id: update.id,
-      date: update.date,
-      message: update.message,
-      to_id: {_: 'peerUser', user_id: update.user_id},
-      pFlags: {}
-    };
-    this.updateMessages([message]);
-    const chatId = update.user_id;
-    const dialog = this.peerDialogs.get(chatId);
-    if (dialog) {
-      dialog.top_message = message.id;
-    }
-    this.updateChatMessages(chatId, [message]);
-    this.emitter.trigger('chatNewMessage', {chatId, message});
+    const isOut = update.pFlags.out;
+    const fromId = update.from_id || (isOut ? App.getAuthUserId() : update.user_id);
+    const toId = update.chat_id ? {_: 'peerChat', chat_id: update.chat_id} : {_: 'peerUser', user_id: update.user_id};
+
+    this.handleUpdate({
+      _: 'updateNewMessage',
+      message: {
+        _: 'message',
+        flags: update.flags,
+        pFlags: update.pFlags,
+        id: update.id,
+        from_id: fromId,
+        to_id: toId,
+        date: update.date,
+        message: update.message,
+        fwd_from: update.fwd_from,
+        reply_to_msg_id: update.reply_to_msg_id,
+        entities: update.entities
+      },
+      pts: update.pts,
+      pts_count: update.pts_count
+    });
   }
 
   async loadDialogs(offset = {}, limit = 20) {
+    console.log('load dialogs');
     await ApiClient.connectionDefered.promise;
     const response = await ApiClient.callMethod('messages.getDialogs', {
       offset_date: offset.date || 0,
@@ -240,6 +266,17 @@ const MessagesApiManager = new class {
     this.emitter.trigger('chatMessagesUpdate', {chatId, messages: chatMessages});
   }
 
+  updateChatDeletedMessage(chatId, message) {
+    const chatMessages = this.chatMessages.get(chatId);
+    if (!chatMessages) {
+      return;
+    }
+    const index = chatMessages.indexOf(message);
+    if (index > -1) {
+      chatMessages.splice(index, 1);
+    }
+  }
+
   sendMessage(peer, message) {
     return ApiClient.callMethod('messages.sendMessage', {
       message,
@@ -247,7 +284,7 @@ const MessagesApiManager = new class {
       random_id: Math.floor(Math.random() * 1e9)
     })
         .then((res) => {
-          this.handleUpdates(res);
+          this.onUpdates(res);
         });
   }
 

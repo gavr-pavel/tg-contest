@@ -15,10 +15,6 @@ const MediaApiManager = new class {
       const header = this.jpegHeader;
       const footer = this.jpegFooter;
 
-      // const bytes = new Uint8Array(header.byteLength + footer.byteLength + size.bytes.byteLength);
-      // bytes.set(header.subarray(0, 164), 0);
-      // bytes.set(size.bytes.subarray(1, 2), 164);
-
       const bytes = bufferConcat(header.subarray(0, 164), size.bytes.subarray(1, 2), header.subarray(165, 166), size.bytes.subarray(2, 3), header.subarray(167), size.bytes.subarray(3), footer);
 
       return 'data:image/jpeg;base64,' + base64Encode(bytes);

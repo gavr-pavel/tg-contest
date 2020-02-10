@@ -19,6 +19,11 @@ const MediaViewController = new class {
 
     this.dom.button_download.addEventListener('click', this.download);
     this.dom.button_close.addEventListener('click', this.close);
+    this.dom.content.addEventListener('click', (event) => {
+      if (event.target === event.currentTarget) {
+        this.close();
+      }
+    });
 
     document.body.appendChild(this.container);
   }

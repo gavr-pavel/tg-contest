@@ -1,0 +1,121 @@
+.emoji_dropdown {
+  position: absolute;
+  z-index: 50;
+  left: 0;
+  bottom: 64px;
+  width: 420px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, .5);
+  overflow: hidden;
+}
+
+.emoji_dropdown_top_nav {
+  display: flex;
+  justify-content: space-evenly;
+  height: 47px;
+  line-height: 47px;
+  padding: 0 30px;
+  font-size: 15px;
+  border-bottom: 1px solid #DADCE0;
+}
+
+.emoji_dropdown_top_nav_item {
+  font-weight: 500;
+  color: #717579;
+  cursor: pointer;
+  position: relative;
+}
+
+.emoji_dropdown_top_nav_item-active {
+  color: #5FA1E3;
+}
+.emoji_dropdown_top_nav_item-active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 4px;
+  border-radius: 2px 2px 0 0;
+  background-color: #5FA1E3;
+}
+
+.emoji_dropdown_sections_wrap {
+  display: flex;
+  width: 300%;
+  transition: transform .2s;
+}
+
+.emoji_dropdown_section {
+  width: 100%;
+}
+
+.emoji_dropdown_section_content {
+  height: 324px;
+  overflow: scroll;
+}
+
+.emoji_dropdown_section-emoji {
+  font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", Times, Symbola, Aegyptus, Code2000, Code2001, Code2002, Musica, serif, LastResort;
+  font-size: 30px;
+  line-height: 42px;
+  text-align: center;;
+}
+
+.emoji_dropdown_section-emoji .emoji_dropdown_list {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  padding: 10px;
+}
+
+.emoji_dropdown_section-emoji .emoji_dropdown_list_item {
+  width: 42px;
+  height: 42px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+.emoji_dropdown_section-emoji .emoji_dropdown_list_item:hover {
+  background-color: #F1F3F4;
+}
+
+.emoji_dropdown_bottom_nav {
+  height: 47px;
+  border-top: 1px solid #DADCE0;
+  display: flex;
+  justify-content: space-evenly;
+}
+
+.emoji_dropdown_bottom_nav_item {
+  width: 48px;
+  background: no-repeat center;
+  cursor: pointer;
+}
+.emoji_dropdown_bottom_nav_item:hover {
+  opacity: .8;
+}
+
+.emoji_dropdown_bottom_nav_item-recent {
+  background-image: url('../icons/recent_svg_gray.svg');
+}
+.emoji_dropdown_bottom_nav_item-smileys {
+  background-image: url('../icons/smile2_svg_gray.svg');
+}
+.emoji_dropdown_bottom_nav_item-animals {
+  background-image: url('../icons/animals_svg_gray.svg');
+}
+.emoji_dropdown_bottom_nav_item-food {
+  background-image: url('../icons/eats_svg_gray.svg');
+}
+.emoji_dropdown_bottom_nav_item-travel {
+  background-image: url('../icons/car_svg_gray.svg');
+}
+.emoji_dropdown_bottom_nav_item-sports {
+  background-image: url('../icons/sport_svg_gray.svg');
+}
+.emoji_dropdown_bottom_nav_item-objects {
+  background-image: url('../icons/lamp_svg_gray.svg');
+}
+.emoji_dropdown_bottom_nav_item-flags {
+  background-image: url('../icons/flag_svg_gray.svg');
+}
