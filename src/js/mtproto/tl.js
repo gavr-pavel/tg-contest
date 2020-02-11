@@ -218,9 +218,9 @@ class TLSerialization {
     const schema = this.mtproto ? Schema.MTProto : Schema.API;
     let methodData = false;
 
-    for (let i = 0; i < schema.methods.length; i++) {
-      if (schema.methods[i].method === methodName) {
-        methodData = schema.methods[i];
+    for (const method of schema.methods) {
+      if (method.method === methodName) {
+        methodData = method;
         break
       }
     }
@@ -228,21 +228,16 @@ class TLSerialization {
       throw new Error('No method ' + methodName + ' found')
     }
 
+    this.setObjectFlags(params, methodData);
+
     this.storeInt(intToUint(methodData.id), methodName + '[id]');
 
-    const len = methodData.params.length;
-    for (let i = 0; i < len; i++) {
-      const param = methodData.params[i];
+    for (const param of methodData.params) {
       let type = param.type;
       if (type.indexOf('?') !== -1) {
         const condType = type.split('?');
         const fieldBit = condType[0].split('.');
-        if (typeof params[param.name] !== 'undefined') {
-          if (typeof params[fieldBit[0]] === 'undefined') {
-            params[fieldBit[0]] = 0;
-          }
-          params[fieldBit[0]] |= 1 << fieldBit[1];
-        } else {
+        if (!(params[fieldBit[0]] & (1 << fieldBit[1]))) {
           continue;
         }
         type = condType[1];
@@ -308,9 +303,9 @@ class TLSerialization {
       type = type.substr(1);
     }
 
-    for (let i = 0; i < schema.constructors.length; i++) {
-      if (schema.constructors[i].predicate === predicate) {
-        constructorData = schema.constructors[i];
+    for (const constructor of schema.constructors) {
+      if (constructor.predicate === predicate) {
+        constructorData = constructor;
         break;
       }
     }
@@ -326,9 +321,9 @@ class TLSerialization {
       this.writeInt(intToUint(constructorData.id), field + '[' + predicate + '][id]');
     }
 
-    const len = constructorData.params.length;
-    for (let i = 0; i < len; i++) {
-      const param = constructorData.params[i];
+    this.setObjectFlags(obj, constructorData);
+
+    for (const param of constructorData.params) {
       let type = param.type;
       if (type.indexOf('?') !== -1) {
         const condType = type.split('?');
@@ -343,6 +338,19 @@ class TLSerialization {
     }
 
     return constructorData.type;
+  }
+
+  setObjectFlags(object, constructorData) {
+    for (const param of constructorData.params) {
+      const type = param.type;
+      if (type.indexOf('?') !== -1) {
+        const condType = type.split('?');
+        const [field, bit] = condType[0].split('.');
+        if (object[param.name] !== void(0)) {
+          object[field] = (object[field] || 0) | (1 << bit);
+        }
+      }
+    }
   }
 }
 
@@ -567,9 +575,9 @@ class TLDeserialization {
 
     if (type.charAt(0) === '%') {
       const checkType = type.substr(1);
-      for (let i = 0; i < schema.constructors.length; i++) {
-        if (schema.constructors[i].type === checkType) {
-          constructorData = schema.constructors[i];
+      for (const constructor of schema.constructors) {
+        if (constructor.type === checkType) {
+          constructorData = constructor;
           break;
         }
       }
@@ -577,9 +585,9 @@ class TLDeserialization {
         throw new Error('Constructor not found for type: ' + type);
       }
     } else if (type.charAt(0) >= 97 && type.charAt(0) <= 122) {
-      for (let i = 0; i < schema.constructors.length; i++) {
-        if (schema.constructors[i].predicate === type) {
-          constructorData = schema.constructors[i];
+      for (const constructor of schema.constructors) {
+        if (constructor.predicate === type) {
+          constructorData = constructor;
           break;
         }
       }
@@ -613,9 +621,9 @@ class TLDeserialization {
 
       if (!constructorData && this.mtproto) {
         const schemaFallback = Schema.API;
-        for (let i = 0; i < schemaFallback.constructors.length; i++) {
-          if (schemaFallback.constructors[i].id == constructorCmp) {
-            constructorData = schemaFallback.constructors[i];
+        for (const constructor of schemaFallback.constructors) {
+          if (constructor.id == constructorCmp) {
+            constructorData = constructor;
 
             delete this.mtproto;
             fallback = true;

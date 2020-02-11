@@ -1,5 +1,6 @@
-import {buildHtmlElement, getLabeledElements, $} from './utils';
+import {buildHtmlElement, getLabeledElements, $, Storage} from './utils';
 import {emojiConfig} from './emoji_config';
+import {ApiClient} from './api/api_client';
 
 const EmojiDropdown = new class {
   constructor() {
@@ -61,11 +62,22 @@ const EmojiDropdown = new class {
     container.addEventListener('click', this.onEmojiClick);
   }
 
-  initStickersSection() {
+  async initStickersSection() {
+    let allStickers = Storage.get('user_stickers');
+    let hash = 0;
+    if (allStickers) {
+      hash = allStickers.hash;
+    }
+    const response = await ApiClient.callMethod('messages.getAllStickers', {hash});
+    console.log(response);
+    if (response._ !== 'messages.allStickersNotModified') {
+      allStickers = response;
+      Storage.set('user_stickers', allStickers);
+    }
+
     const container = $('.emoji_dropdown_section_content', this.dom.section_stickers);
     container.innerHTML = '[stickers will be here]';
     container.addEventListener('click', this.onStickerClick);
-    // TODO load and render stickers
   }
 
   setSection(section) {
@@ -104,11 +116,57 @@ const EmojiDropdown = new class {
 
   show() {
     this.container.hidden = false;
-  }
+    this.button.classList.add('messages_new_message_emoji_button-active');
+    document.addEventListener('mousedown', this.onGlobalClick);
+    this.input.focus();
+  };
 
   hide() {
     this.container.hidden = true;
+    this.button.classList.remove('messages_new_message_emoji_button-active');
+    document.removeEventListener('mousedown', this.onGlobalClick);
+  };
+
+  bind(button, input) {
+    this.button = button;
+    this.input = input;
+    button.addEventListener('mousedown', this.onButtonClick);
+    button.addEventListener('mouseenter', this.onMouseEnter);
+    button.addEventListener('mouseleave', this.onMouseLeave);
+    this.container.addEventListener('mouseenter', this.onMouseEnter);
+    this.container.addEventListener('mouseleave', this.onMouseLeave);
   }
+
+  onButtonClick = () => {
+    if (!this.isShown()) {
+      this.show();
+    }
+  };
+
+  onMouseEnter = () => {
+    clearTimeout(this.hideTimeout);
+    if (!this.isShown()) {
+      this.show();
+    }
+  };
+
+  onMouseLeave = () => {
+    this.hideTimeout = setTimeout(() => {
+      if (this.isShown()) {
+        this.hide();
+      }
+      this.hideTimeout = null;
+    }, 500);
+  };
+
+  onGlobalClick = (event) => {
+    if (!EmojiDropdown.container.contains(event.target) && event.target !== this.button) {
+      this.hide();
+    } else {
+      event.preventDefault(); // prevent input blur
+    }
+  };
+
 };
 
 window.EmojiDropdown = EmojiDropdown;

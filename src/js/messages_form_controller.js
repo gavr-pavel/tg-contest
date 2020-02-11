@@ -2,6 +2,7 @@ import {$, debounce} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
 import {EmojiDropdown} from './emoji_dropdown';
+import {MDCRipple} from '@material/ripple';
 
 const MessagesFormController = new class {
   init() {
@@ -19,8 +20,10 @@ const MessagesFormController = new class {
     this.input.addEventListener('change', this.onInput);
     this.input.addEventListener('keydown', this.onKeyDown);
     this.button.addEventListener('click', this.onSubmit);
-    this.emojiButton.addEventListener('click', this.onEmojiButtonClick);
-    this.mediaButton.addEventListener('click', this.onMediaButtonClick);
+
+    new MDCRipple(this.button).unbounded = true;
+
+    EmojiDropdown.bind(this.emojiButton, this.input);
 
     this.input.parentNode.appendChild(EmojiDropdown.container);
   }
@@ -51,25 +54,6 @@ const MessagesFormController = new class {
     }
   };
 
-  onEmojiButtonClick = (event) => {
-    if (!EmojiDropdown.isShown()) {
-      EmojiDropdown.show();
-      event.preventDefault();
-      this.input.focus();
-      document.addEventListener('mousedown', function closeHandler(event) {
-        if (!EmojiDropdown.container.contains(event.target)) {
-          EmojiDropdown.hide();
-          document.removeEventListener('mousedown', closeHandler);
-        } else {
-          event.preventDefault(); // prevent input blur
-        }
-      });
-    }
-  };
-
-  onMediaButtonClick = () => {
-
-  };
 };
 
 window.MessagesFormController = MessagesFormController;

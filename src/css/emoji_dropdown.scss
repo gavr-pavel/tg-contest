@@ -8,6 +8,14 @@
   border-radius: 10px;
   box-shadow: 0 10px 20px rgba(0, 0, 0, .5);
   overflow: hidden;
+  transition: transform .2s, opacity .2s, visibility .2s;
+  transform-origin: 29px 455px;
+}
+.emoji_dropdown[hidden] {
+  display: block;
+  visibility: hidden;
+  opacity: 0;
+  transform: scale(0);
 }
 
 .emoji_dropdown_top_nav {

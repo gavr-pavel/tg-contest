@@ -399,10 +399,7 @@
   cursor: pointer;
   background: url('../icons/smile_svg_gray.svg');
 }
-.messages_new_message_emoji_button:hover {
-  opacity: 0.9;
-}
-.messages_new_message_emoji_button_active {
+.messages_new_message_emoji_button-active {
   background: url('../icons/smile_svg_blue.svg');
 }
 .messages_new_message_media_button {
@@ -417,10 +414,7 @@
   cursor: pointer;
   background: url('../icons/attach_svg_gray.svg');
 }
-.messages_new_message_media_button:hover {
-  opacity: 0.9;
-}
-.messages_new_message_media_button_active {
+.messages_new_message_media_button-active {
   background: url('../icons/attach_svg_blue.svg');
 }
 .messages_new_message_button {

@@ -73,6 +73,9 @@ class WebSocketTransport extends Transport {
   }
 
   destroy() {
+    if (!this.socket) {
+      return;
+    }
     this.socket.removeEventListener('message', this.onSocketMessage);
     this.socket.removeEventListener('error', this.onSocketError);
     this.socket.removeEventListener('close', this.onSocketClose);

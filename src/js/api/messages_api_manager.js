@@ -12,21 +12,6 @@ const MessagesApiManager = new class {
 
   emitter = new Emitter();
 
-  getInputUser(id) {
-    const user = this.users.get(id);
-    if (!user) {
-      return {_: 'inputUserEmpty'};
-    }
-    if (user.pFlags.self) {
-      return {_: 'inputUserSelf'}
-    }
-    return {
-      _: 'inputUser',
-      user_id: id,
-      access_hash: user.access_hash || 0
-    }
-  }
-
   constructor() {
     ApiClient.emitter.on('updates', (event) => {
       this.onUpdates(event.detail);
@@ -55,6 +40,7 @@ const MessagesApiManager = new class {
   }
 
   onUpdates(object) {
+    console.log(object._);
     switch (object._) {
       case 'updates':
       case 'updatesCombined':
@@ -80,24 +66,32 @@ const MessagesApiManager = new class {
       case 'updateNewChannelMessage': {
         const message = update.message;
         this.updateMessages([message]);
-        const chatId = this.getPeerId(message.to_id);
+        const chatId = this.getMessagePeerId(message);
         const dialog = this.peerDialogs.get(chatId);
         if (dialog) {
           dialog.top_message = message.id;
+          if (!message.pFlags.out && message.id > dialog.read_inbox_max_id) {
+            dialog.unread_count++;
+          }
+          this.handleDialogOrder(dialog);
+        } else {
+          this.handleNewDialog(message);
         }
         this.updateChatMessages(chatId, [message]);
         this.emitter.trigger('chatNewMessage', {chatId, message});
       } break;
-      case 'updateReadHistoryInbox':
-      case 'updateReadChannelInbox': {
-        const peerId = update._ === 'updateReadChannelInbox' ? update.channel_id : this.getPeerId(update.peer);
-        const dialog = this.peerDialogs.get(peerId);
-        if (dialog) {
-          dialog.unread_count = update.still_unread_count;
-          this.emitter.trigger('updateUnreadCount', {chatId: peerId, dialog});
+      case 'updateEditMessage':
+      case 'updateEditChannelMessage':{
+        const msgId = update.message.id;
+        const message = this.messages.get(msgId);
+        if (message) {
+          const chatId = this.getPeerId(message.to_id);
+          this.updateChatEditedMessage(chatId, message, update.message);
         }
+        this.messages.set(msgId, update.message);
       } break;
-      case 'updateDeleteMessages': {
+      case 'updateDeleteMessages':
+      case 'updateDeleteChannelMessages': {
         for (let msgId of update.messages) {
           const message = this.messages.get(msgId);
           if (message) {
@@ -107,6 +101,16 @@ const MessagesApiManager = new class {
           }
         }
       } break;
+      case 'updateReadHistoryInbox':
+      case 'updateReadChannelInbox': {
+        const peerId = update.channel_id || this.getPeerId(update.peer);
+        const dialog = this.peerDialogs.get(peerId);
+        if (dialog) {
+          dialog.unread_count = update.still_unread_count;
+          dialog.read_inbox_max_id = update.max_id;
+          this.emitter.trigger('updateUnreadCount', {chatId: peerId, dialog});
+        }
+      } break;
       case 'updateUserStatus': {
         const user = this.users.get(update.user_id);
         if (user) {
@@ -114,7 +118,7 @@ const MessagesApiManager = new class {
         }
       } break;
       case 'updateDraftMessage': {
-        const peerId = this.getPeerId(update.peer);;
+        const peerId = this.getPeerId(update.peer);
         const dialog = this.peerDialogs.get(peerId);
         if (dialog) {
           dialog.draft = update.draft;
@@ -126,7 +130,13 @@ const MessagesApiManager = new class {
   handleUpdateShortMessage(update) {
     const isOut = update.pFlags.out;
     const fromId = update.from_id || (isOut ? App.getAuthUserId() : update.user_id);
-    const toId = update.chat_id ? {_: 'peerChat', chat_id: update.chat_id} : {_: 'peerUser', user_id: update.user_id};
+    let toIdPeer;
+    if (update.chat_id) {
+      toIdPeer = {_: 'peerChat', chat_id: update.chat_id};
+    } else {
+      const userId = (isOut ? update.user_id : App.getAuthUserId());
+      toIdPeer = {_: 'peerUser', user_id: userId};
+    }
 
     this.handleUpdate({
       _: 'updateNewMessage',
@@ -136,7 +146,7 @@ const MessagesApiManager = new class {
         pFlags: update.pFlags,
         id: update.id,
         from_id: fromId,
-        to_id: toId,
+        to_id: toIdPeer,
         date: update.date,
         message: update.message,
         fwd_from: update.fwd_from,
@@ -148,8 +158,36 @@ const MessagesApiManager = new class {
     });
   }
 
+  async handleNewDialog(message) {
+    // const peer = this.getMessagePeer(message);
+    // const inputDialogPeer = {_: 'inputDialogPeer', peer: this.getInputPeer(peer)};
+    // const res = await ApiClient.callMethod('messages.getPeerDialogs', {peers: [inputDialogPeer]});
+    //
+    // this.updateUsers(res.users);
+    // this.updateChats(res.chats);
+    // this.updateMessages(res.messages);
+    // this.updateDialogs(res.dialogs);
+    //
+    // for (const dialog of res.dialogs) {
+    //   this.handleDialogOrder(res.dialog);
+    // }
+  }
+
+  handleDialogOrder(dialog) {
+    // if (dialog.pFlags.pinned) {
+    //   return;
+    // }
+    // const curIndex = this.dialogs.indexOf(dialog);
+    // if (curIndex > -1) {
+    //   this.dialogs.splice(index, 1);
+    // }
+    // const newIndex = this.dialogs.findIndex((item) => {
+    //   return !item.pFlags.pinned;
+    // });
+    // this.dialogs.splice(newIndex, 0, dialog);
+  }
+
   async loadDialogs(offset = {}, limit = 20) {
-    console.log('load dialogs');
     await ApiClient.connectionDefered.promise;
     const response = await ApiClient.callMethod('messages.getDialogs', {
       offset_date: offset.date || 0,
@@ -198,12 +236,20 @@ const MessagesApiManager = new class {
       this.emitter.trigger('chatMessagesUpdate', {chatId, messages: chatMessages});
     }
 
+    if (window.debugMessagesLoader) {
+      debugger;
+    }
+
     const response = await ApiClient.callMethod('messages.getHistory', {
       peer: this.getInputPeer(dialog.peer),
       offset_id: offsetId,
       limit: limit,
       offset_date: 0,
     });
+
+    if (window.debugMessagesLoader) {
+      debugger;
+    }
 
     this.updateMessages(response.messages);
     this.updateUsers(response.users);
@@ -266,14 +312,23 @@ const MessagesApiManager = new class {
     this.emitter.trigger('chatMessagesUpdate', {chatId, messages: chatMessages});
   }
 
+  updateChatEditedMessage(chatId, message, newMessage) {
+    const chatMessages = this.chatMessages.get(chatId);
+    if (chatMessages) {
+      const index = chatMessages.indexOf(message);
+      if (index > -1) {
+        chatMessages.splice(index, 1, newMessage);
+      }
+    }
+  }
+
   updateChatDeletedMessage(chatId, message) {
     const chatMessages = this.chatMessages.get(chatId);
-    if (!chatMessages) {
-      return;
-    }
-    const index = chatMessages.indexOf(message);
-    if (index > -1) {
-      chatMessages.splice(index, 1);
+    if (chatMessages) {
+      const index = chatMessages.indexOf(message);
+      if (index > -1) {
+        chatMessages.splice(index, 1);
+      }
     }
   }
 
@@ -297,6 +352,17 @@ const MessagesApiManager = new class {
 
   getDialog(peerId) {
     return this.peerDialogs.get(peerId);
+  }
+
+  getMessagePeer(message) {
+    if (message.to_id._ === 'peerUser') {
+      return message.pFlags.out ? message.to_id : {_: 'peerUser', uaer_id: message.from_id};
+    }
+    return message.to_id;
+  }
+
+  getMessagePeerId(message) {
+    return this.getPeerById(this.getMessagePeer(message));
   }
 
   getPeerId(peer) {
@@ -357,6 +423,30 @@ const MessagesApiManager = new class {
         return {_: 'inputPeerChat', chat_id: peer.chat_id, access_hash: peerData.access_hash || 0};
       case 'peerChannel':
         return {_: 'inputPeerChannel', channel_id: peer.channel_id, access_hash: peerData.access_hash || 0};
+    }
+  }
+
+  getInputPeerById(peerId) {
+    return this.getInputPeer(this.getPeerById(peerId));
+  }
+
+  getUserPeer(user) {
+    return {_: 'peerUser', user_id: user.id};
+  }
+
+  getChatPeer(chat) {
+    if (chat._ === 'channel') {
+      return {_: 'peerChannel', channel_id: chat.id};
+    } else {
+      return {_: 'peerChat', chat_id: chat.id};
+    }
+  }
+
+  getPeerById(peerId) {
+    if (this.users.has(peerId)) {
+      return this.getUserPeer(this.users.get(peerId));
+    } else if (this.chats.has(peerId)) {
+      return this.getChatPeer(this.chats.get(peerId));
     }
   }
 };
