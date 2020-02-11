@@ -40,7 +40,6 @@ const MessagesApiManager = new class {
   }
 
   onUpdates(object) {
-    console.log(object._);
     switch (object._) {
       case 'updates':
       case 'updatesCombined':

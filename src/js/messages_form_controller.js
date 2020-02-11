@@ -42,7 +42,7 @@ const MessagesFormController = new class {
     if (!message) {
       return;
     }
-    MessagesApiManager.sendMessage(this.dialog.peer, message);
+    MessagesApiManager.sendMessage(MessagesController.dialog.peer, message);
     this.input.value = '';
     this.onInput();
   };
