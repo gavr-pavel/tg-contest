@@ -19,34 +19,7 @@
 }
 
 .emoji_dropdown_top_nav {
-  display: flex;
-  justify-content: space-evenly;
-  height: 47px;
-  line-height: 47px;
   padding: 0 30px;
-  font-size: 15px;
-  border-bottom: 1px solid #DADCE0;
-}
-
-.emoji_dropdown_top_nav_item {
-  font-weight: 500;
-  color: #717579;
-  cursor: pointer;
-  position: relative;
-}
-
-.emoji_dropdown_top_nav_item-active {
-  color: #5FA1E3;
-}
-.emoji_dropdown_top_nav_item-active::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 4px;
-  border-radius: 2px 2px 0 0;
-  background-color: #5FA1E3;
 }
 
 .emoji_dropdown_sections_wrap {

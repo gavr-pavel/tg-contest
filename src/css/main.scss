@@ -91,5 +91,44 @@ pre {
   }
 }
 
+.nav_tabs_container {
+  display: flex;
+  justify-content: space-evenly;
+  height: 47px;
+  line-height: 47px;
+  font-size: 15px;
+  border-bottom: 1px solid #DADCE0;
+}
 
+.nav_tabs_item {
+  width: 100%;
+  font-weight: 500;
+  color: #717579;
+  cursor: pointer;
+  position: relative;
+  text-align: center;
+}
 
+.nav_tabs_item:hover {
+  background: rgba(0, 0, 0, .05);
+}
+
+.nav_tabs_item_label {
+  display: inline-block;
+  position: relative;
+}
+
+.nav_tabs_item-active .nav_tabs_item_label {
+  color: #5FA1E3;
+}
+
+.nav_tabs_item-active .nav_tabs_item_label::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 4px;
+  border-radius: 2px 2px 0 0;
+  background-color: #5FA1E3;
+}

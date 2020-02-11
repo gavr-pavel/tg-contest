@@ -6,10 +6,16 @@ const EmojiDropdown = new class {
   constructor() {
     this.container = buildHtmlElement(`
       <div class="emoji_dropdown" hidden>
-        <div class="emoji_dropdown_top_nav">
-          <div class="emoji_dropdown_top_nav_item emoji_dropdown_top_nav_item-active" data-js-label="nav_emoji">Emoji</div>
-          <div class="emoji_dropdown_top_nav_item" data-js-label="nav_stickers">Stickers</div>
-          <div class="emoji_dropdown_top_nav_item" data-js-label="nav_gifs">GIFs</div>
+        <div class="emoji_dropdown_top_nav nav_tabs_container">
+          <div class="nav_tabs_item emoji_dropdown_top_nav_item" data-js-label="nav_emoji">
+            <div class="nav_tabs_item_label">Emoji</div>
+          </div>
+          <div class="nav_tabs_item emoji_dropdown_top_nav_item" data-js-label="nav_stickers">
+            <div class="nav_tabs_item_label">Stickers</div>
+          </div>
+          <div class="nav_tabs_item emoji_dropdown_top_nav_item" data-js-label="nav_gifs">
+            <div class="nav_tabs_item_label">GIFs</div>
+          </div>
         </div>
         <div class="emoji_dropdown_sections_wrap" data-js-label="sections_wrap">
           <section class="emoji_dropdown_section emoji_dropdown_section-emoji" data-js-label="section_emoji">
@@ -84,10 +90,10 @@ const EmojiDropdown = new class {
       return;
     }
     if (this.section) {
-      this.dom[`nav_${this.section}`].classList.remove('emoji_dropdown_top_nav_item-active');
+      this.dom[`nav_${this.section}`].classList.remove('nav_tabs_item-active');
     }
     this.section = section;
-    this.dom[`nav_${this.section}`].classList.add('emoji_dropdown_top_nav_item-active');
+    this.dom[`nav_${this.section}`].classList.add('nav_tabs_item-active');
 
     const index = ['emoji', 'stickers', 'gifs'].indexOf(section);
     const position = -index * 420;
