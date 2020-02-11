@@ -18,7 +18,14 @@ module.exports = {
     rules: [
       {
         test: /\.m?js$/,
-        use: ['babel-loader']
+        use: [
+          {
+            loader: 'babel-loader',
+            options: {
+              plugins: ["@babel/plugin-proposal-class-properties", "@babel/plugin-syntax-dynamic-import"]
+            }
+          }
+        ]
       },
       {
         test: /\.s?css$/,

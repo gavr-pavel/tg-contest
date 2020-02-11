@@ -287,14 +287,13 @@ const ChatsController = new class {
   setChatPhotoPlaceholder(photoEl, dialog) {
     const peerId = MessagesApiManager.getPeerId(dialog.peer);
     const peerTitle = MessagesApiManager.getPeerName(dialog.peer);
-    const colors = this.getPlaceholderColors();
-
-    photoEl.style.backgroundColor = colors[peerId % colors.length];
+    photoEl.style.backgroundColor = this.getPlaceholderColor(peerId);
     photoEl.innerHTML = '<div class="chats_item_photo_placeholder">' + peerTitle.charAt(0) + '</div>';
   }
 
-  getPlaceholderColors() {
-    return ['#FFBF69', '#247BA0', '#EA526F', '#2EC4B6', '#F79256', '#662C91', '#049A8F', '#06D6A0', '#F25C54'];
+  getPlaceholderColor(peerId) {
+    const colors = ['#FFBF69', '#247BA0', '#EA526F', '#2EC4B6', '#F79256', '#662C91', '#049A8F', '#06D6A0', '#F25C54'];
+    return colors[peerId % colors.length];
   }
 
   onChatClick = (event) => {

@@ -195,14 +195,6 @@ const MessagesApiManager = new class {
       limit: limit
     });
 
-    if (response._ === 'messages.dialogsNotModified') {
-      return;
-    } else if (response._ === 'messages.dialogsSlice') {
-      // this.totalCount = response.count;
-    } else if (response._ === 'messages.dialogs') {
-      // this.totalCount = response.dialogs.length;
-    }
-
     const {dialogs, messages, chats, users} = response;
 
     this.updateUsers(users);
@@ -262,13 +254,6 @@ const MessagesApiManager = new class {
     this.updateChatMessages(chatId, response.messages, true);
   }
 
-  updateDialogs(dialogs) {
-    for (const dialog of dialogs) {
-      const peerId = this.getPeerId(dialog.peer);
-      this.peerDialogs.set(peerId, dialog);
-    }
-  }
-
   async preloadDialogsMessages(dialogs) {
     if (this.dialogsPreloaded) {
       return;
@@ -278,6 +263,26 @@ const MessagesApiManager = new class {
       if (!this.chatMessages.has(this.getPeerId(dialog.peer))) {
         await this.loadChatMessages(dialog, 0, 10);
       }
+    }
+  }
+
+  async loadPeerDialog(peer) {
+    const res = await ApiClient.callMethod('messages.getPeerDialogs', {
+      peers: [{_: 'inputDialogPeer', peer: this.getInputPeer(peer)}],
+    });
+
+    this.updateUsers(res.users);
+    this.updateChats(res.chats);
+    this.updateMessages(res.messages);
+    this.updateDialogs(res.dialogs);
+
+    return res.dialogs[0];
+  }
+
+  updateDialogs(dialogs) {
+    for (const dialog of dialogs) {
+      const peerId = this.getPeerId(dialog.peer);
+      this.peerDialogs.set(peerId, dialog);
     }
   }
 
@@ -394,15 +399,19 @@ const MessagesApiManager = new class {
     }
 
     if (peer._ === 'peerUser') {
-      if (peerData.pFlags.deleted) {
-        return 'Deleted Account';
-      } else if (full) {
-        return [peerData.first_name, peerData.last_name].join(' ').trim();
-      } else {
-        return peerData.first_name || peerData.last_name || '';
-      }
+      return this.getUserName(peerData, full);
     } else {
       return peerData.title || '';
+    }
+  }
+
+  getUserName(user, full = true) {
+    if (user.pFlags.deleted) {
+      return 'Deleted Account';
+    } else if (full) {
+      return [user.first_name, user.last_name].join(' ').trim();
+    } else {
+      return user.first_name || user.last_name || '';
     }
   }
 

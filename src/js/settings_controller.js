@@ -6,6 +6,7 @@ const SettingsController = new class {
   init() {
     const userId = App.getAuthUserId();
     const user = MessagesApiManager.users.get(userId);
+    const userName = MessagesApiManager.getUserName(user);
 
     this.container = buildHtmlElement(`
       <div class="settings_menu">
@@ -22,7 +23,7 @@ const SettingsController = new class {
         </div>
         <div class="settings_menu_user_info">
           <div class="settings_menu_user_photo"></div>
-          <div class="settings_menu_user_name">${user.first_name} ${user.last_name}</div>
+          <div class="settings_menu_user_name">${userName}</div>
           <div class="settings_menu_user_phone">+${user.phone}</div>
         </div>
         <ul class="settings_main_menu_list mdc-list">

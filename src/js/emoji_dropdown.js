@@ -166,7 +166,6 @@ const EmojiDropdown = new class {
       event.preventDefault(); // prevent input blur
     }
   };
-
 };
 
 window.EmojiDropdown = EmojiDropdown;

@@ -27,8 +27,6 @@ const LoginController = new class {
     this.setStep(STEP_PHONE);
 
     document.body.append(container);
-
-    import('./api/password_manager.js');
   }
 
   setDomContent(label, content) {
@@ -80,6 +78,7 @@ const LoginController = new class {
         this.passwordTextField = new MDCTextField(input);
         this.dom.form.append(input, this.submitButton);
         this.mdcComponents.push(this.passwordTextField);
+        import('./api/password_manager.js');
       } break;
 
       case STEP_SIGN_UP: {
@@ -229,15 +228,11 @@ const LoginController = new class {
     }
 
     const accountPassword = await ApiClient.callMethod('account.getPassword');
-    console.log(accountPassword);
     const {getInputPasswordSRP} = await import('./api/password_manager.js');
     const inputPasswordSRP = await getInputPasswordSRP(password, accountPassword);
 
     this.submitButton.disabled = true;
 
-    // ApiClient.callMethod('auth.checkPassword', {
-    //   password_hash: passwordHash
-    // })
     ApiClient.callMethod('auth.checkPassword', {
       password: Object.assign({_: 'inputCheckPasswordSRP'}, inputPasswordSRP)
     })
@@ -251,17 +246,6 @@ const LoginController = new class {
         .finally(() => {
           this.submitButton.disabled = false;
         });
-  }
-
-  loadPasswordManager() {
-    return import('./api/password_manager.js');
-  }
-
-  async getPasswordHash(password, accountPassword) {
-    const {bufferConcat} = await import('./mtproto/bin.js');
-    const {sha256Hash} = await import('./mtproto/crypto.js');
-    const passwordBytes = new TextEncoder().encode(password);
-    return sha256Hash(bufferConcat(accountPassword.current_salt, passwordBytes, accountPassword.current_salt));
   }
 
   submitSignUp() {
