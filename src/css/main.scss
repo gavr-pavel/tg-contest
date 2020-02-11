@@ -107,6 +107,7 @@ pre {
   cursor: pointer;
   position: relative;
   text-align: center;
+  user-select: none;
 }
 
 .nav_tabs_item:hover {
