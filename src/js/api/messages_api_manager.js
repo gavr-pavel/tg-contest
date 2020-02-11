@@ -55,6 +55,7 @@ const MessagesApiManager = new class {
       case 'updateShortMessage':
       case 'updateShortChatMessage':
         this.handleUpdateShortMessage(object);
+        break;
     }
   }
 
@@ -330,15 +331,49 @@ const MessagesApiManager = new class {
     }
   }
 
-  sendMessage(peer, message) {
-    return ApiClient.callMethod('messages.sendMessage', {
-      message,
+  async sendMessage(peer, text) {
+    const randomId = Math.floor(Math.random() * 1e9);
+
+    const updates = await ApiClient.callMethod('messages.sendMessage', {
+      message: text,
       peer: this.getInputPeer(peer),
-      random_id: Math.floor(Math.random() * 1e9)
-    })
-        .then((res) => {
-          this.onUpdates(res);
-        });
+      random_id: randomId
+    });
+
+    const isChannel = !!peer.channel_id;
+    const isMegagroup = isChannel && this.isMegagroup(peer.channel_id);
+
+    if (updates._ === 'updateShortSentMessage') {
+      this.handleUpdate({
+        _: 'updateMessageID',
+        random_id: randomId,
+        id: updates.id
+      });
+      const message = {
+        _: 'message',
+        id: updates.id,
+        from_id: isChannel && !isMegagroup ? 0 : App.getAuthUserId(),
+        to_id: peer,
+        flags: updates.flags,
+        pFlags: updates.pFlags,
+        date: updates.date,
+        message: text
+      };
+      if (updates.media && updates.media._ !== 'messageMediaEmpty') {
+        message.media = updates.media;
+      }
+      if (updates.entities) {
+        message.entities = updates.entities;
+      }
+      this.handleUpdate({
+        _: isChannel ? 'updateNewChannelMessage' : 'updateNewMessage',
+        message: message,
+        pts: updates.pts,
+        pts_count: updates.pts_count
+      });
+    } else {
+      this.onUpdates(updates);
+    }
   }
 
   saveDraft(peer, message) {
@@ -450,6 +485,11 @@ const MessagesApiManager = new class {
     } else if (this.chats.has(peerId)) {
       return this.getChatPeer(this.chats.get(peerId));
     }
+  }
+
+  isMegagroup(channelId) {
+    const channel = this.chats.get(channelId);
+    return !!channel.pFlags.megagroup;
   }
 };
 
