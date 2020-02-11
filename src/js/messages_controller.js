@@ -5,6 +5,7 @@ import {MediaApiManager} from './api/media_api_manager';
 import {MediaViewController} from './media_view_controller';
 import {emojiRegex} from './emoji_config';
 import {MessagesFormController} from './messages_form_controller';
+import {ChatsController} from "./chats_controller";
 
 const MessagesController = new class {
   dialog = null;
@@ -51,9 +52,19 @@ const MessagesController = new class {
     this.container.append(this.loader);
 
     this.loadMore();
+
+    const chatEl = ChatsController.chatElements.get(this.chatId);
+    if (chatEl) {
+      chatEl.classList.add('chats_item-selected');
+    }
   }
 
   exitChat() {
+    const chatEl = ChatsController.chatElements.get(this.chatId);
+    if (chatEl) {
+      chatEl.classList.remove('chats_item-selected');
+    }
+
     this.header.hidden = true;
     this.footer.hidden = true;
     this.messageElements.clear();
@@ -65,6 +76,7 @@ const MessagesController = new class {
     this.loading = false;
     this.noMore = false;
     this.scrolling = false;
+
     MediaViewController.abort();
   }
 
@@ -95,6 +107,8 @@ const MessagesController = new class {
         if (user.status._ === 'userStatusOnline') {
           peerStatusClass = 'messages_header_peer_status-online';
         }
+      } else {
+        peerStatus = 'last seen a long time ago';
       }
     } else {
       const chat = MessagesApiManager.getPeerData(dialog.peer);
@@ -124,7 +138,7 @@ const MessagesController = new class {
     const photoEl = $('.messages_header_peer_photo', this.header);
     const photo = MessagesApiManager.getPeerPhoto(dialog.peer);
     if (photo && photo._ !== 'chatPhotoEmpty') {
-      FileApiManager.loadPeerPhoto(dialog.peer, photo.photo_small, photo.dc_id, {priority: 10, cache: true})
+      FileApiManager.loadPeerPhoto(dialog.peer, photo.photo_small, false, photo.dc_id, {priority: 10, cache: true})
           .then((url) => {
             photoEl.style.backgroundImage = `url(${url})`;
           });
@@ -190,6 +204,10 @@ const MessagesController = new class {
 
   renderMessages(messages) {
     this.loader.remove();
+
+    if (!messages.length) {
+      return;
+    }
 
     if (this.offsetMsgId && messages[messages.length - 1].id === this.offsetMsgId && messages[0].id === this.lastMsgId) {
       this.noMore = true;
@@ -757,7 +775,7 @@ const MessagesController = new class {
       case 'userStatusLastMonth':
         return 'last seen last month';
     }
-    return 'last seen long time ago';
+    return 'last seen a long time ago';
   }
 };
 

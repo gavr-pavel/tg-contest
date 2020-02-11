@@ -13,8 +13,10 @@ const App = new class {
   auth_user_id = 0;
 
   constructor() {
-    this.auth_user_id = Utils.Storage.get('api_auth');
-    if (this.auth_user_id) {
+    const apiAuth = Utils.Storage.get('api_auth');
+
+    if (apiAuth) {
+      this.auth_user_id = apiAuth.user_id;
       this.initMainView();
     } else {
       LoginController.init();
@@ -48,7 +50,18 @@ const App = new class {
   }
 
   logOut() {
-    Utils.Storage.remove('api_auth');
+    ApiClient.callMethod('auth.logOut', {}).then((res) => {
+      if (res._ === 'boolTrue') {
+        this.logOutDone();
+      } else {
+        this.alert('logout error');
+      }
+    });
+  }
+
+  logOutDone() {
+    localStorage.clear();
+    location.reload();
   }
 
   initMainView() {

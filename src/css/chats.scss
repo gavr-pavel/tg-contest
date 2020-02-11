@@ -1,4 +1,5 @@
-.chats_sidebar {
+.chats_sidebar,
+.contacts_sidebar {
   box-sizing: border-box;
   width: 420px;
   height: 100vh;
@@ -8,7 +9,8 @@
   overflow-x: hidden;
 }
 
-.chats_item {
+.chats_item,
+.contact_item {
   margin: 2px 0;
   height: 54px;
   padding: 9px;
@@ -20,6 +22,7 @@
 }
 
 .chats_item:hover,
+.contact_item:hover,
 .chats_item-selected {
   background: #F4F4F5;
 }
@@ -39,7 +42,8 @@
   pointer-events: none;
 }
 
-.chats_item_photo {
+.chats_item_photo,
+.contact_item_photo {
   flex: 0 0 54px;
   width: 54px;
   height: 54px;
@@ -55,13 +59,15 @@
   background-position: center;
 }
 
-.chats_item_photo_img {
+.chats_item_photo_img,
+.contact_item_photo_img {
   width: 100%;
   height: 100%;
   border-radius: 50%;
 }
 
-.chats_item_photo_placeholder {
+.chats_item_photo_placeholder,
+.contact_item_photo_placeholder {
   width: 100%;
   height: 100%;
   display: flex;
@@ -72,11 +78,13 @@
   color: #fff;
 }
 
-.chats_item_text_row {
+.chats_item_text_row,
+.contact_item_text_row {
   display: flex;
 }
 
-.chats_item_text {
+.chats_item_text,
+.contact_item_text {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -84,7 +92,8 @@
   width: 100%;
 }
 
-.chats_item_title {
+.chats_item_title,
+.contact_item_title {
   flex: 1;
   font-size: 15px;
   font-weight: 500;
@@ -126,7 +135,8 @@
   margin-left: 5px;
 }
 
-.chats_item_message {
+.chats_item_message,
+.contact_item_status {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;

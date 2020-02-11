@@ -209,6 +209,11 @@ const MessagesApiManager = new class {
     this.updateChats(chats);
     this.updateMessages(messages);
     this.updateDialogs(dialogs);
+
+    this.dialogs = this.dialogs.concat(dialogs);
+    this.emitter.trigger('dialogsUpdate', this.dialogs);
+
+    this.preloadDialogsMessages(dialogs);
   }
 
   async loadChatMessages(dialog, offsetId, limit) {
@@ -262,10 +267,6 @@ const MessagesApiManager = new class {
       const peerId = this.getPeerId(dialog.peer);
       this.peerDialogs.set(peerId, dialog);
     }
-    this.dialogs = this.dialogs.concat(dialogs);
-    this.emitter.trigger('dialogsUpdate', this.dialogs);
-
-    this.preloadDialogsMessages(dialogs);
   }
 
   async preloadDialogsMessages(dialogs) {
@@ -417,11 +418,11 @@ const MessagesApiManager = new class {
     const peerData = this.getPeerData(peer);
     switch (peer._) {
       case 'peerUser':
-        return {_: 'inputPeerUser', user_id: peer.user_id, access_hash: peerData.access_hash || 0};
+        return {_: 'inputPeerUser', user_id: peer.user_id, access_hash: peerData && peerData.access_hash || 0};
       case 'peerChat':
-        return {_: 'inputPeerChat', chat_id: peer.chat_id, access_hash: peerData.access_hash || 0};
+        return {_: 'inputPeerChat', chat_id: peer.chat_id, access_hash: peerData && peerData.access_hash || 0};
       case 'peerChannel':
-        return {_: 'inputPeerChannel', channel_id: peer.channel_id, access_hash: peerData.access_hash || 0};
+        return {_: 'inputPeerChannel', channel_id: peer.channel_id, access_hash: peerData && peerData.access_hash || 0};
     }
   }
 

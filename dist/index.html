@@ -20,19 +20,35 @@
     <template id="template_main">
       <div class="main_container">
         <div class="left_sidebar">
-          <div class="left_sidebar__menu main_menu">
-            <button type="button" class="main_menu_button mdc-icon-button"></button>
-            <div class="main_menu_list" hidden>
-              <div class="main_menu_item main_menu_item-new_group">New Group</div>
-              <div class="main_menu_item main_menu_item-contacts">Contacts</div>
-              <div class="main_menu_item main_menu_item-archived">Archived</div>
-              <div class="main_menu_item main_menu_item-saved">Saved</div>
-              <div class="main_menu_item main_menu_item-settings">Settings</div>
-              <div class="main_menu_item main_menu_item-help">Help</div>
+          <div class="main_menu">
+            <button type="button" class="left_sidebar_menu_button mdc-icon-button"></button>
+            <button type="button" class="left_sidebar_back_button mdc-icon-button" hidden></button>
+            <div class="main_menu_list mdc-menu mdc-menu-surface">
+              <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">
+                <li class="mdc-list-item main_menu_item-new_group" role="menuitem">
+                  <span class="mdc-list-item__text">New Group</span>
+                </li>
+                <li class="mdc-list-item main_menu_item-contacts" role="menuitem">
+                  <span class="mdc-list-item__text">Contacts</span>
+                </li>
+                <li class="mdc-list-item main_menu_item-archived" role="menuitem">
+                  <span class="mdc-list-item__text">Archived</span>
+                </li>
+                <li class="mdc-list-item main_menu_item-saved" role="menuitem">
+                  <span class="mdc-list-item__text">Saved</span>
+                </li>
+                <li class="mdc-list-item main_menu_item-settings" role="menuitem">
+                  <span class="mdc-list-item__text">Settings</span>
+                </li>
+                <li class="mdc-list-item main_menu_item-help" role="menuitem">
+                  <span class="mdc-list-item__text">Help</span>
+                </li>
+              </ul>
             </div>
             <input type="text" placeholder="Search" class="left_sidebar_search" />
           </div>
           <div class="chats_sidebar"></div>
+          <div class="contacts_sidebar" hidden></div>
         </div>
         <div class="messages_container">
           <div class="messages_header" hidden></div>

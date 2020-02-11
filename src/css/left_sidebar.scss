@@ -1,8 +1,15 @@
+@import "@material/list/mdc-list";
+@import "@material/menu-surface/mdc-menu-surface";
+@import "@material/menu/mdc-menu";
+
 .left_sidebar {
   border-right: 1px solid #E0E3E6;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  position: relative;
   width: 420px;
 }
 
@@ -12,7 +19,7 @@
   padding: 8px;
 }
 
-.main_menu_button {
+.left_sidebar_menu_button {
   background-image: url('../icons/menu_svg.svg');
   background-position: center;
   background-repeat: no-repeat;
@@ -20,27 +27,28 @@
   border-radius: 50%;
   cursor: pointer;
   flex-shrink: 0;
-  height: 44px;
   margin-right: 14px;
   outline: none;
-  width: 44px;
 }
 
-.main_menu_button:hover {
-  background-color: #F4F4F5;
+.left_sidebar_back_button {
+  background-image: url('../icons/back_svg_gray.svg');
+  background-position: center;
+  background-repeat: no-repeat;
+  position: absolute;
+  z-index: 10;
+}
+
+.left_sidebar_menu_button[hidden] {
+  visibility: hidden;
+}
+
+.left_sidebar_back_button[hidden] {
+  display: none;
 }
 
 .main_menu_list {
-  background: #fff;
-  border-radius: 5px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.15);
-  font-size: 15px;
-  left: 14px;
-  padding: 8px 0;
-  position: absolute;
-  top: 60px;
   width: 218px;
-  z-index: 1;
 }
 
 .main_menu_badge {
@@ -57,15 +65,11 @@
   width: 24px;
 }
 
-.main_menu_item {
-  align-items: center;
+.main_menu_list .mdc-list-item,
+.settings_main_menu_list .mdc-list-item {
   background-position: 18px center;
   background-repeat: no-repeat;
   background-size: 22px;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: space-between;
-  line-height: 56px;
   padding-left: 72px;
 }
 

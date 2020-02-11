@@ -99,7 +99,7 @@ class ApiConnection {
         return this.callMethod(method, params);
       } else if (result.error_message === 'AUTH_KEY_UNREGISTERED') {
         if (!this.options.upload) {
-          App.logOut();
+          App.logOutDone();
         }
       }
       return Promise.reject(result);

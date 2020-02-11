@@ -191,13 +191,19 @@ const FileApiManager = new class {
     });
   }
 
-  loadPeerPhoto(peer, photo, dcId, options) {
+  loadPeerPhoto(peer, photo, big, dcId, options) {
     const location = {
       _: 'inputPeerPhotoFileLocation',
       peer: MessagesApiManager.getInputPeer(peer),
       volume_id: photo.volume_id,
-      local_id: photo.local_id
+      local_id: photo.local_id,
     };
+
+    if (big) {
+      location.big = true;
+      location.flags = 1;
+    }
+
     return this.loadFile(location, dcId, options);
   }
 

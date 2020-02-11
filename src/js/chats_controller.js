@@ -2,7 +2,10 @@ import {$, buildHtmlElement} from './utils';
 import {App} from './app';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
+import {SettingsController} from './settings_controller';
 import {MDCRipple} from '@material/ripple/component';
+import {MDCMenu} from '@material/menu';
+import {ContactsController} from "./contacts_controller";
 
 const ChatsController = new class {
   chatElements = new Map();
@@ -11,15 +14,28 @@ const ChatsController = new class {
     this.container = $('.chats_sidebar');
     this.container.addEventListener('scroll', this.onScroll);
 
-    this.menuButton = $('.main_menu_button');
-    this.menuButton.addEventListener('click', this.onMainMenuClick);
-    new MDCRipple(this.menuButton).unbounded = true;
+    this.initMenu();
 
     MessagesApiManager.emitter.on('dialogsUpdate', this.onDialogsUpdate);
     MessagesApiManager.emitter.on('chatNewMessage', this.onNewMessage);
     MessagesApiManager.emitter.on('updateUnreadCount', this.onUpdateUnreadCount);
 
     this.loadMore();
+  }
+
+  initMenu() {
+    this.mainMenu = new MDCMenu($('.main_menu_list'));
+
+    this.menuButton = $('.left_sidebar_menu_button');
+    this.menuButton.addEventListener('click', this.onMainMenuClick);
+
+    new MDCRipple(this.menuButton).unbounded = true;
+
+    const contactsButtonEl = $('.main_menu_item-contacts');
+    contactsButtonEl.addEventListener('click', this.onMenuContactsClick);
+
+    const settingsButtonEl = $('.main_menu_item-settings');
+    settingsButtonEl.addEventListener('click', this.onMenuSettingsClick);
   }
 
   onDialogsUpdate = (event) => {
@@ -258,7 +274,7 @@ const ChatsController = new class {
       return;
     }
 
-    FileApiManager.loadPeerPhoto(dialog.peer, photo.photo_small, photo.dc_id, {priority: 10, cache: true})
+    FileApiManager.loadPeerPhoto(dialog.peer, photo.photo_small, false, photo.dc_id, {priority: 10, cache: true})
       .then((url) => {
         photoEl.innerHTML = `<img src="${url}" alt class="chats_item_photo_img">`;
       })
@@ -271,9 +287,14 @@ const ChatsController = new class {
   setChatPhotoPlaceholder(photoEl, dialog) {
     const peerId = MessagesApiManager.getPeerId(dialog.peer);
     const peerTitle = MessagesApiManager.getPeerName(dialog.peer);
-    const colors = ['#FFBF69', '#247BA0', '#EA526F', '#2EC4B6', '#F79256', '#662C91', '#049A8F', '#06D6A0', '#F25C54'];
+    const colors = this.getPlaceholderColors();
+
     photoEl.style.backgroundColor = colors[peerId % colors.length];
     photoEl.innerHTML = '<div class="chats_item_photo_placeholder">' + peerTitle.charAt(0) + '</div>';
+  }
+
+  getPlaceholderColors() {
+    return ['#FFBF69', '#247BA0', '#EA526F', '#2EC4B6', '#F79256', '#662C91', '#049A8F', '#06D6A0', '#F25C54'];
   }
 
   onChatClick = (event) => {
@@ -281,31 +302,21 @@ const ChatsController = new class {
     const peerId = +el.dataset.peerId;
     const dialog = MessagesApiManager.getDialog(peerId);
     MessagesController.setChat(dialog);
-
-    const prevSelected = this.container.querySelector('.chats_item-selected');
-    if (prevSelected) {
-      prevSelected.classList.remove('chats_item-selected');
-    }
-    el.classList.add('chats_item-selected');
   };
 
-  onMainMenuClick = (event) => {
-    const button = $('.main_menu_button');
-    const list = $('.main_menu_list');
-    list.hidden = !list.hidden;
-
-    const onClick = (event) => {
-      if (!list.contains(event.target) && event.target !== button && !list.hidden) {
-        list.hidden = true;
-        document.removeEventListener('click', onClick);
-      }
-    };
-
-    if (!list.hidden) {
-      document.addEventListener('click', onClick);
-    } else {
-      document.removeEventListener('click', onClick);
+  onMainMenuClick = () => {
+    if (!this.mainMenu.open) {
+      this.mainMenu.open = true;
+      this.mainMenu.setAbsolutePosition(14, 60);
     }
+  };
+
+  onMenuContactsClick = () => {
+    ContactsController.init();
+  };
+
+  onMenuSettingsClick = () => {
+    SettingsController.init();
   };
 
   isPeerMe(peer) {
