@@ -364,15 +364,12 @@ const MessagesController = new class {
         }
       } break;
       case 'messageMediaWebPage': {
-        if (media.webpage.photo) {
+        if (['video', 'gif'].includes(media.webpage.type)) {
+          const document = media.webpage.document;
+          return {type: media.webpage.type, object: document, sizes: document.thumbs};
+        } else if (media.webpage.photo) {
           const photo = media.webpage.photo;
           return {type: 'photo', object: photo, sizes: photo.sizes};
-        } else if (media.webpage.document) {
-          const document = media.webpage.document;
-          const docAttributes = this.getDocumentAttributes(document);
-          if (['video', 'gif', 'sticker'].includes(docAttributes.type)) {
-            return {type: docAttributes.type, object: document, sizes: document.thumbs};
-          }
         }
       } break;
     }
@@ -516,6 +513,7 @@ const MessagesController = new class {
         `;
       case 'photo':
       case 'video':
+      case 'gif':
       case 'document':
         if (formattedThumb) {
           return formattedThumb;
