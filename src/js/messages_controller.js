@@ -364,7 +364,7 @@ const MessagesController = new class {
         }
       } break;
       case 'messageMediaWebPage': {
-        if (['video', 'gif'].includes(media.webpage.type)) {
+        if (['video', 'gif'].includes(media.webpage.type) && media.webpage.document) {
           const document = media.webpage.document;
           return {type: media.webpage.type, object: document, sizes: document.thumbs};
         } else if (media.webpage.photo) {

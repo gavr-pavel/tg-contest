@@ -69,7 +69,6 @@ const EmojiDropdown = new class {
       hash = allStickers.hash;
     }
     const response = await ApiClient.callMethod('messages.getAllStickers', {hash});
-    console.log(response);
     if (response._ !== 'messages.allStickersNotModified') {
       allStickers = response;
       Storage.set('user_stickers', allStickers);

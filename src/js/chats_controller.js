@@ -17,8 +17,9 @@ const ChatsController = new class {
     this.initMenu();
 
     MessagesApiManager.emitter.on('dialogsUpdate', this.onDialogsUpdate);
-    MessagesApiManager.emitter.on('chatNewMessage', this.onNewMessage);
-    MessagesApiManager.emitter.on('updateUnreadCount', this.onUpdateUnreadCount);
+    MessagesApiManager.emitter.on('dialogNewMessage', this.onDialogNewMessage);
+    MessagesApiManager.emitter.on('dialogUnreadCountUpdate', this.onDialogUnreadCountUpdate);
+    MessagesApiManager.emitter.on('dialogOrderUpdate', this.onDialogOrderUpdate);
 
     this.loadMore();
   }
@@ -40,39 +41,35 @@ const ChatsController = new class {
 
   onDialogsUpdate = (event) => {
     const dialogs = event.detail;
-
     this.renderChats(dialogs);
   };
 
-  onNewMessage = (event) => {
-    const {chatId, message} = event.detail;
-    const dialog = MessagesApiManager.peerDialogs.get(chatId);
-    if (!dialog) { // todo: get dialog data somehow
-      return;
+  onDialogNewMessage = (event) => {
+    const {dialog} = event.detail;
+    const chatId = MessagesApiManager.getPeerId(dialog.peer);
+    let el = this.chatElements.get(chatId);
+    if (el) {
+      this.renderChatPreviewContent(el, dialog);
+    } else {
+      this.buildChatPreviewElement(dialog);
     }
-    const el = this.chatElements.get(chatId);
-    this.renderChatPreviewContent(el, dialog);
-
-    // if (!dialog.pFlags.pinned) {
-    //   const prevIndex = MessagesApiManager.dialogs.indexOf(dialog);
-    //   const newIndex = MessagesApiManager.dialogs.findIndex((item) => {
-    //     if (item.pFlags.pinned) return false;
-    //     const itemMsgId = item.top_message;
-    //     const itemMsg = MessagesApiManager.messages.get(itemMsgId);
-    //     return itemMsg && itemMsg.date < message.date;
-    //   });
-    //   if (prevIndex > -1 && newIndex > -1) {
-    //     const nextDialog = MessagesApiManager.dialogs[newIndex];
-    //     MessagesApiManager.dialogs.splice(prevIndex, 1);
-    //     MessagesApiManager.dialogs.splice(newIndex, 0, dialog);
-    //     const nextDialogEl = this.chatElements.get(MessagesApiManager.getPeerId(nextDialog.peer));
-    //     this.container.insertBefore(el, nextDialogEl);
-    //   }
-    // }
   };
 
-  onUpdateUnreadCount = (event) => {
-    const {chatId, dialog} = event.detail;
+  onDialogOrderUpdate = (event) => {
+    const {dialog, index} = event.detail;
+    const chatId = MessagesApiManager.getPeerId(dialog.peer);
+    let el = this.chatElements.get(chatId);
+    if (el) {
+      this.renderChatPreviewContent(el, dialog);
+    } else {
+      el = this.buildChatPreviewElement(dialog);
+    }
+    this.container.insertBefore(el, this.container.children[index]);
+  };
+
+  onDialogUnreadCountUpdate = (event) => {
+    const {dialog} = event.detail;
+    const chatId = MessagesApiManager.getPeerId(dialog.peer);
     const el = this.chatElements.get(chatId);
     this.renderChatPreviewContent(el, dialog);
   };

@@ -4,8 +4,20 @@
   flex-direction: column;
   overflow: hidden;
   position: relative;
+  z-index: 1;
+}
+
+.messages_bg {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   background: #E7EBEE url('../img/bg.jpg') center;
   background-size: cover;
+  //filter: blur(10px);
+  //transform: translateZ(0) scale(1.1);
 }
 
 .messages_header {

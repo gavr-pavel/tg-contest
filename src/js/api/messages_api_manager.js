@@ -73,11 +73,11 @@ const MessagesApiManager = new class {
             dialog.unread_count++;
           }
           this.handleDialogOrder(dialog);
+          this.emitter.trigger('dialogNewMessage', {dialog, message});
         } else {
           this.handleNewDialog(message);
         }
         this.updateChatMessages(chatId, [message]);
-        this.emitter.trigger('chatNewMessage', {chatId, message});
       } break;
       case 'updateEditMessage':
       case 'updateEditChannelMessage':{
@@ -107,7 +107,7 @@ const MessagesApiManager = new class {
         if (dialog) {
           dialog.unread_count = update.still_unread_count;
           dialog.read_inbox_max_id = update.max_id;
-          this.emitter.trigger('updateUnreadCount', {chatId: peerId, dialog});
+          this.emitter.trigger('dialogUnreadCountUpdate', {dialog});
         }
       } break;
       case 'updateUserStatus': {
@@ -158,32 +158,25 @@ const MessagesApiManager = new class {
   }
 
   async handleNewDialog(message) {
-    // const peer = this.getMessagePeer(message);
-    // const inputDialogPeer = {_: 'inputDialogPeer', peer: this.getInputPeer(peer)};
-    // const res = await ApiClient.callMethod('messages.getPeerDialogs', {peers: [inputDialogPeer]});
-    //
-    // this.updateUsers(res.users);
-    // this.updateChats(res.chats);
-    // this.updateMessages(res.messages);
-    // this.updateDialogs(res.dialogs);
-    //
-    // for (const dialog of res.dialogs) {
-    //   this.handleDialogOrder(res.dialog);
-    // }
+    const dialog = await this.loadPeerDialog(this.getMessagePeer(message));
+    this.handleDialogOrder(dialog);
+    this.emitter.trigger('dialogNewMessage', {dialog, message});
   }
 
   handleDialogOrder(dialog) {
-    // if (dialog.pFlags.pinned) {
-    //   return;
-    // }
-    // const curIndex = this.dialogs.indexOf(dialog);
-    // if (curIndex > -1) {
-    //   this.dialogs.splice(index, 1);
-    // }
-    // const newIndex = this.dialogs.findIndex((item) => {
-    //   return !item.pFlags.pinned;
-    // });
-    // this.dialogs.splice(newIndex, 0, dialog);
+    if (dialog.pFlags.pinned) {
+      return;
+    }
+    const curIndex = this.dialogs.indexOf(dialog);
+    if (curIndex > -1) {
+      this.dialogs.splice(curIndex, 1);
+    }
+    const newIndex = this.dialogs.findIndex((item) => {
+      return !item.pFlags.pinned;
+    });
+    this.dialogs.splice(newIndex, 0, dialog);
+
+    this.emitter.trigger('dialogOrderUpdate', {dialog, index: newIndex});
   }
 
   async loadDialogs(offset = {}, limit = 20) {
@@ -361,13 +354,13 @@ const MessagesApiManager = new class {
 
   getMessagePeer(message) {
     if (message.to_id._ === 'peerUser') {
-      return message.pFlags.out ? message.to_id : {_: 'peerUser', uaer_id: message.from_id};
+      return message.pFlags.out ? message.to_id : {_: 'peerUser', user_id: message.from_id};
     }
     return message.to_id;
   }
 
   getMessagePeerId(message) {
-    return this.getPeerById(this.getMessagePeer(message));
+    return this.getPeerId(this.getMessagePeer(message));
   }
 
   getPeerId(peer) {
