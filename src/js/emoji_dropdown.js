@@ -3,6 +3,8 @@ import {emojiConfig} from './emoji_config';
 import {ApiClient} from './api/api_client';
 
 const EmojiDropdown = new class {
+  stickerSets = new Map();
+
   constructor() {
     this.container = buildHtmlElement(`
       <div class="emoji_dropdown" hidden>
@@ -20,16 +22,7 @@ const EmojiDropdown = new class {
         <div class="emoji_dropdown_sections_wrap" data-js-label="sections_wrap">
           <section class="emoji_dropdown_section emoji_dropdown_section-emoji" data-js-label="section_emoji">
             <div class="emoji_dropdown_section_content"></div>
-            <div class="emoji_dropdown_bottom_nav">
-              <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-recent"></div>
-              <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-smileys"></div>
-              <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-animals"></div>
-              <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-food"></div>
-              <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-travel"></div>
-              <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-sports"></div>
-              <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-objects"></div>
-              <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-flags"></div>
-            </div>
+            <div class="emoji_dropdown_bottom_nav"></div>
           </section>
           <section class="emoji_dropdown_section emoji_dropdown_section-stickers" data-js-label="section_stickers">
             <div class="emoji_dropdown_section_content"></div>
@@ -56,16 +49,22 @@ const EmojiDropdown = new class {
 
   initEmojiSection() {
     let emojiSectionHtml = '';
-    for (const category of emojiConfig) {
+    let bottomNavHtml = '';
+    for (const category in emojiConfig) {
       let categoryItems = '';
-      for (const item of category) {
+      for (const item of emojiConfig[category]) {
         categoryItems += `<div class="emoji_dropdown_list_item">${item}</div>`;
       }
-      emojiSectionHtml += `<div class="emoji_dropdown_list">${categoryItems}</div>`;
+      emojiSectionHtml += `<div class="emoji_dropdown_list emoji_dropdown_list-${category}" data-category="${category}">${categoryItems}</div>`;
+      bottomNavHtml += `<div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-${category}" data-category="${category}"></div>`;
     }
     const container = $('.emoji_dropdown_section_content', this.dom.section_emoji);
     container.innerHTML = emojiSectionHtml;
     container.addEventListener('click', this.onEmojiClick);
+
+    const bottomNavContainer = $('.emoji_dropdown_bottom_nav', this.dom.section_emoji);
+    bottomNavContainer.innerHTML = bottomNavHtml;
+    bottomNavContainer.addEventListener('click', this.onEmojiNavClick);
   }
 
   async initStickersSection() {
@@ -80,9 +79,33 @@ const EmojiDropdown = new class {
       Storage.set('user_stickers', allStickers);
     }
 
+    let frag = document.createDocumentFragment();
+
+    for (const set of allStickers.sets) {
+      const el = buildHtmlElement(`<div class="emoji_dropdown_list" data-set-id="${set.id}"></div>`);
+      frag.appendChild(el);
+      // this.initStickerSet(set, el);
+    }
+
     const container = $('.emoji_dropdown_section_content', this.dom.section_stickers);
-    container.innerHTML = '[stickers will be here]';
+    container.appendChild(frag);
     container.addEventListener('click', this.onStickerClick);
+  }
+
+  async initStickerSet(set, container) {
+    const fullSet = await ApiClient.callMethod('messages.getStickerSet', {
+      stickerset: {_: 'inputStickerSetID', id: set.id, access_hash: set.access_hash}
+    });
+    this.stickerSets.set(set.id, fullSet);
+
+    const frag = document.createDocumentFragment();
+    fullSet.documents.forEach((document, index) => {
+      const stickerEl = buildHtmlElement(`<div class="emoji_dropdown_list_item" data-sticker-index="${index}"></div>`);
+      frag.appendChild(stickerEl);
+      FileApiManager.loadMessageDocument(document, {cache: true})
+          .then(url => stickerEl.style.backgroundImage = `url(${url})`);
+    });
+    container.appendChild(frag);
   }
 
   setSection(section) {
@@ -109,6 +132,12 @@ const EmojiDropdown = new class {
     if (event.target.classList.contains('emoji_dropdown_list_item')) {
       document.execCommand('insertText', false, event.target.innerText);
     }
+  };
+
+  onEmojiNavClick = (event) => {
+    const category = event.target.dataset.category;
+    const list = $(`.emoji_dropdown_list-${category}`, this.dom.section_emoji);
+    list.scrollIntoView();
   };
 
   onStickerClick = (event) => {

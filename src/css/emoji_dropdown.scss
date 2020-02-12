@@ -60,20 +60,34 @@
   background-color: #F1F3F4;
 }
 
+.emoji_dropdown_section-stickers .emoji_dropdown_list {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  padding: 10px;
+}
+
+.emoji_dropdown_section-stickers .emoji_dropdown_list_item {
+  width: 70px;
+  height: 70px;
+  cursor: pointer;
+  background: no-repeat center;
+  background-size: cover;
+}
+
 .emoji_dropdown_bottom_nav {
   height: 47px;
   border-top: 1px solid #DADCE0;
   display: flex;
-  justify-content: space-evenly;
 }
 
 .emoji_dropdown_bottom_nav_item {
-  width: 48px;
+  width: 100%;
   background: no-repeat center;
   cursor: pointer;
 }
 .emoji_dropdown_bottom_nav_item:hover {
-  opacity: .8;
+  background-color: rgba(0, 0, 0, .05);
 }
 
 .emoji_dropdown_bottom_nav_item-recent {
