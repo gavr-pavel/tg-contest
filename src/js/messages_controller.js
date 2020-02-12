@@ -364,10 +364,18 @@ const MessagesController = new class {
         }
       } break;
       case 'messageMediaWebPage': {
-        if (['video', 'gif'].includes(media.webpage.type) && media.webpage.document) {
+        if (media.webpage.type !== 'photo' && media.webpage.document) {
           const document = media.webpage.document;
-          return {type: media.webpage.type, object: document, sizes: document.thumbs};
-        } else if (media.webpage.photo) {
+          if (media.webpage.type === 'video' || media.webpage.type === 'gif') {
+            return {type: media.webpage.type, object: document, sizes: document.thumbs};
+          } else {
+            const docAttributes = this.getDocumentAttributes(document);
+            if (docAttributes.type === 'video' || docAttributes.type === 'gif') {
+              return {type: docAttributes.type, object: document, sizes: document.thumbs};
+            }
+          }
+        }
+        if (media.webpage.photo) {
           const photo = media.webpage.photo;
           return {type: 'photo', object: photo, sizes: photo.sizes};
         }
@@ -511,14 +519,9 @@ const MessagesController = new class {
           <div class="wepbage_title">${webpage.title || ''}</div>
           <div class="webpage_description">${this.replaceLineBreaks(webpage.description)}</div>
         `;
-      case 'photo':
-      case 'video':
-      case 'gif':
-      case 'document':
-        if (formattedThumb) {
-          return formattedThumb;
-        }
-        break;
+    }
+    if (formattedThumb) {
+      return formattedThumb;
     }
     return '[' + webpage.type + ']';
   }

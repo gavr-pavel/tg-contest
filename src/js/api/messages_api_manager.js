@@ -1,5 +1,5 @@
 import {ApiClient} from './api_client';
-import {Emitter} from '../utils';
+import {Emitter, wait} from '../utils';
 import {App} from '../app';
 
 const MessagesApiManager = new class {
@@ -9,6 +9,7 @@ const MessagesApiManager = new class {
   users = new Map();
   peerDialogs = new Map();
   chatMessages = new Map();
+  chatsFull = new Map();
 
   emitter = new Emitter();
 
@@ -256,6 +257,7 @@ const MessagesApiManager = new class {
     for (const dialog of dialogs) {
       if (!this.chatMessages.has(this.getPeerId(dialog.peer))) {
         await this.loadChatMessages(dialog, 0, 10);
+        await wait(500);
       }
     }
   }
@@ -288,6 +290,10 @@ const MessagesApiManager = new class {
 
   updateChats(chats) {
     for (const chat of chats) {
+      if (chat._ === 'channel' && this.chats.has(chat.id)) {
+        // fix for wrong channel access_hash coming from updates
+        continue;
+      }
       this.chats.set(chat.id, chat);
     }
   }
@@ -490,6 +496,29 @@ const MessagesApiManager = new class {
   isMegagroup(channelId) {
     const channel = this.chats.get(channelId);
     return !!channel.pFlags.megagroup;
+  }
+
+  async getChatFull(chatId) {
+    if (this.chatsFull.has(chatId)) {
+      return this.chatsFull.get(chatId);
+    }
+    const inputPeer = this.getInputPeerById(chatId);
+    let res;
+    if (inputPeer._ === 'inputPeerChannel') {
+      res = await ApiClient.callMethod('channels.getFullChannel', {
+        channel: inputPeer
+      });
+    } else {
+      res = await ApiClient.callMethod('chats.getFullChat', {
+        chat_id: chatId
+      });
+    }
+
+    this.updateUsers(res.users);
+    this.updateChats(res.chats);
+    const fullChat = res.full_chat;
+    this.chatsFull.set(chatId, fullChat);
+    return fullChat;
   }
 };
 

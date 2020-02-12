@@ -2,6 +2,7 @@ import {$, debounce} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
 import {EmojiDropdown} from './emoji_dropdown';
+import {AudioRecorder} from './audio_recorder';
 import {MDCRipple} from '@material/ripple';
 
 const MessagesFormController = new class {

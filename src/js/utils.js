@@ -103,6 +103,10 @@ function cmpStrNum(a, b) {
   return a > b ? 1 : -1;
 }
 
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export {
   Storage,
   Emitter,
@@ -113,4 +117,5 @@ export {
   buildHtmlElement,
   getLabeledElements,
   cmpStrNum,
+  wait
 };

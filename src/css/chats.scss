@@ -31,17 +31,6 @@
   margin-top: 13px;
 }
 
-.chats_item_pinned + .chats_item:not(.chats_item_pinned):before {
-  border-top: 1px solid #E5E7E9;
-  content: '';
-  position: absolute;
-  display: block;
-  left: -10px;
-  right: -10px;
-  top: -7px;
-  pointer-events: none;
-}
-
 .chats_item_photo,
 .contact_item_photo {
   flex: 0 0 54px;

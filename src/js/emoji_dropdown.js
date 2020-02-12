@@ -61,6 +61,7 @@ const EmojiDropdown = new class {
     const container = $('.emoji_dropdown_section_content', this.dom.section_emoji);
     container.innerHTML = emojiSectionHtml;
     container.addEventListener('click', this.onEmojiClick);
+    container.addEventListener('scroll', this.onEmojiScroll);
 
     const bottomNavContainer = $('.emoji_dropdown_bottom_nav', this.dom.section_emoji);
     bottomNavContainer.innerHTML = bottomNavHtml;
@@ -84,7 +85,7 @@ const EmojiDropdown = new class {
     for (const set of allStickers.sets) {
       const el = buildHtmlElement(`<div class="emoji_dropdown_list" data-set-id="${set.id}"></div>`);
       frag.appendChild(el);
-      // this.initStickerSet(set, el);
+      this.initStickerSet(set, el);
     }
 
     const container = $('.emoji_dropdown_section_content', this.dom.section_stickers);
@@ -102,8 +103,8 @@ const EmojiDropdown = new class {
     fullSet.documents.forEach((document, index) => {
       const stickerEl = buildHtmlElement(`<div class="emoji_dropdown_list_item" data-sticker-index="${index}"></div>`);
       frag.appendChild(stickerEl);
-      FileApiManager.loadMessageDocument(document, {cache: true})
-          .then(url => stickerEl.style.backgroundImage = `url(${url})`);
+      // FileApiManager.loadMessageDocument(document, {cache: true})
+      //     .then(url => stickerEl.style.backgroundImage = `url(${url})`);
     });
     container.appendChild(frag);
   }
@@ -140,6 +141,26 @@ const EmojiDropdown = new class {
     list.scrollIntoView();
   };
 
+  onEmojiScroll = (event) => {
+    const container = event.currentTarget;
+    const containerHeight = container.offsetHeight;
+    const scrollTop = container.scrollTop;
+    let currentList;
+    for (const list of container.children) {
+      if (list.offsetTop > scrollTop + containerHeight / 2) {
+        break;
+      }
+      currentList = list;
+    }
+    const category = currentList.dataset.category;
+    const prevNavItem = $(`.emoji_dropdown_bottom_nav_item-active`, this.dom.section_emoji);
+    if (prevNavItem) {
+      prevNavItem.classList.remove('emoji_dropdown_bottom_nav_item-active');
+    }
+    const newNavItem = $(`.emoji_dropdown_bottom_nav_item-${category}`, this.dom.section_emoji);
+    newNavItem.classList.add('emoji_dropdown_bottom_nav_item-active');
+  };
+
   onStickerClick = (event) => {
 
   };
@@ -153,6 +174,11 @@ const EmojiDropdown = new class {
     this.button.classList.add('messages_new_message_emoji_button-active');
     document.addEventListener('mousedown', this.onGlobalClick);
     this.input.focus();
+
+    const scrollContainers = this.container.querySelectorAll('.emoji_dropdown_section_content');
+    for (const scrollContainer of scrollContainers) {
+      scrollContainer.dispatchEvent(new Event('scroll')); // update bottom nav
+    }
   };
 
   hide() {
