@@ -24,10 +24,13 @@
 }
 
 .messages_header_peer {
+  cursor: pointer;
   display: flex;
   align-items: center;
 }
+
 .messages_header_peer_photo {
+  flex-shrink: 0;
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -57,6 +60,10 @@
   background: url('../icons/search_svg.svg') no-repeat center;
   border-radius: 50%;
   overflow: hidden;
+}
+
+.messages_header_actions {
+  white-space: nowrap;
 }
 
 .messages_header_action_more {

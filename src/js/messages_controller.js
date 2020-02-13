@@ -6,6 +6,7 @@ import {MediaViewController} from './media_view_controller';
 import {emojiRegex} from './emoji_config';
 import {MessagesFormController} from './messages_form_controller';
 import {ChatsController} from "./chats_controller";
+import {ChatInfoController} from "./chat_info_contoller";
 
 const MessagesController = new class {
   dialog = null;
@@ -68,6 +69,8 @@ const MessagesController = new class {
       chatEl.classList.remove('chats_item-selected');
     }
 
+    ChatInfoController.onClose();
+
     this.header.hidden = true;
     this.footer.hidden = true;
     this.messageElements.clear();
@@ -99,9 +102,12 @@ const MessagesController = new class {
 
   showHeader(dialog) {
     const peer = dialog.peer;
+    const peerId = MessagesApiManager.getPeerId(dialog.peer);
     const peerName = MessagesApiManager.getPeerName(peer);
+
     let peerStatus = '';
     let peerStatusClass = '';
+
     if (peer._ === 'peerUser') {
       const user = MessagesApiManager.getPeerData(peer);
       if (user.pFlags.bot) {
@@ -133,7 +139,7 @@ const MessagesController = new class {
 
     const peerEl = $('.messages_header_peer');
     peerEl.addEventListener('click', () => {
-
+      ChatInfoController.init(this.chatId);
     });
 
     const photoEl = $('.messages_header_peer_photo', this.header);
@@ -143,6 +149,9 @@ const MessagesController = new class {
           .then((url) => {
             photoEl.style.backgroundImage = `url(${url})`;
           });
+    } else {
+      ChatsController.setChatPhotoPlaceholder(photoEl, peerId);
+      return;
     }
 
     if (peer._ === 'peerChannel' || peer._ === 'peerChat') {
@@ -374,7 +383,7 @@ const MessagesController = new class {
 
   onThumbClick = (event) => {
     const thumb = event.currentTarget;
-    const msgId = +thumb.closest('.messages_item').dataset.id;
+    const msgId = +thumb.dataset.messageId || +thumb.closest('.messages_item').dataset.id;
     const message = MessagesApiManager.messages.get(msgId);
     const thumbData = this.getMessageMediaThumb(message.media);
     if (thumbData.type === 'photo') {

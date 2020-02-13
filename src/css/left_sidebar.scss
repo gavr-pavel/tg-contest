@@ -31,20 +31,8 @@
   outline: none;
 }
 
-.left_sidebar_back_button {
-  background-image: url('../icons/back_svg_gray.svg');
-  background-position: center;
-  background-repeat: no-repeat;
-  position: absolute;
-  z-index: 10;
-}
-
 .left_sidebar_menu_button[hidden] {
   visibility: hidden;
-}
-
-.left_sidebar_back_button[hidden] {
-  display: none;
 }
 
 .main_menu_list {

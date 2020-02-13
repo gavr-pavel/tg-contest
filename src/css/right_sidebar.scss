@@ -1,0 +1,91 @@
+.right_sidebar {
+  border-left: 1px solid #E0E3E6;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  margin-right: 0;
+  overflow: hidden;
+  position: relative;
+  transition: margin 110ms;
+  width: 420px;
+}
+
+.right_sidebar[hidden] {
+  display: block;
+  margin-right: -420px;
+  visibility: hidden;
+}
+
+.chat_info_desc {
+  margin-top: 35px;
+  padding: 8px;
+  padding-right: 32px;
+}
+
+.chat_info_desc_row {
+  display: flex;
+}
+
+.chat_info_desc_checkbox + .chat_info_desc_row_block {
+  cursor: pointer;
+}
+
+.chat_info_desc_icon {
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 24px;
+
+}
+
+.chat_info_desc_checkbox,
+.chat_info_desc_icon{
+  min-width: 48px;
+}
+
+.chat_info_desc_row {
+  margin-bottom: 40px;
+}
+
+.chat_info_desc_row_block {
+  padding-left: 24px;
+}
+
+.chat_info_desc_row_text {
+  font-size: 15px;
+}
+
+.chat_info_desc_row_subtitle {
+  color: #707579;
+  font-size: 13px;
+  margin-top: 3px;
+  text-transform:capitalize;
+}
+
+.chat_info_desc_icon__bio {
+  background-image: url('../icons/info_svg_gray.svg');
+}
+
+.chat_info_desc_icon__phone {
+  background-image: url('../icons/phone_svg_gray.svg');
+}
+
+.chat_info_desc_icon__username {
+  background-image: url('../icons/username_svg_gray.svg');
+}
+
+.chat_info_media {
+  display: grid;
+  grid-gap: 4px;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  margin: 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.chat_info_media_photo {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  height: 132px;
+  width: 132px;
+}

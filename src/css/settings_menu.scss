@@ -14,13 +14,6 @@
   display: flex;
 }
 
-.settings_extra_menu_button {
-  background-image: url('../icons/more_svg_gray.svg');
-  background-position: center;
-  background-repeat: no-repeat;
-  flex-shrink: 0;
-}
-
 .settings_extra_menu_item-log_out {
   background-image: url('../icons/logout_svg_gray.svg');
   background-position: 18px center;
@@ -29,42 +22,8 @@
   padding-left: 72px;
 }
 
-.settings_menu_title {
-  color: #050505;
-  flex-basis: 100%;
-  font-size: 18px;
-  font-weight: 500;
-  line-height: 48px;
-  padding-left: 72px;
-}
-
-.settings_extra_menu_list {
+.sidebar_extra_menu_list {
   width: 172px;
-}
-
-.settings_menu_user_info {
-  text-align: center;
-}
-
-.settings_menu_user_name {
-  font-size: 18px;
-  font-weight: 500;
-  margin-bottom: 5px;
-  margin-top: 15px;
-}
-
-.settings_menu_user_phone {
-  color: #777B7F;
-  font-size: 12px;
-}
-
-.settings_menu_user_photo {
-  background-position: center;
-  background-size: contain;
-  border-radius: 50%;
-  height: 120px;
-  display: inline-block;
-  width: 120px;
 }
 
 .settings_main_menu_item-edit {

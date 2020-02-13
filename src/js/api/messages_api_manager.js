@@ -10,6 +10,7 @@ const MessagesApiManager = new class {
   peerDialogs = new Map();
   chatMessages = new Map();
   chatsFull = new Map();
+  usersFull = new Map();
 
   emitter = new Emitter();
 
@@ -510,6 +511,7 @@ const MessagesApiManager = new class {
     if (this.chatsFull.has(chatId)) {
       return this.chatsFull.get(chatId);
     }
+
     const inputPeer = this.getInputPeerById(chatId);
     let res;
     if (inputPeer._ === 'inputPeerChannel') {
@@ -527,6 +529,21 @@ const MessagesApiManager = new class {
     const fullChat = res.full_chat;
     this.chatsFull.set(chatId, fullChat);
     return fullChat;
+  }
+
+  async loadUserFull(userId) {
+    if (this.usersFull.has(userId)) {
+      return this.usersFull.get(userId);
+    }
+
+    const inputPeer = this.getInputPeerById(userId);
+    const user = await ApiClient.callMethod('users.getFullUser', {
+      id: inputPeer,
+    });
+
+    this.usersFull.set(userId, user);
+
+    return user;
   }
 };
 

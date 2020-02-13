@@ -271,6 +271,7 @@ const ChatsController = new class {
 
   loadChatPhoto(el, dialog) {
     const photoEl = $('.chats_item_photo', el);
+    const peerId = MessagesApiManager.getPeerId(dialog.peer);
 
     if (this.isPeerMe(dialog.peer)) {
       photoEl.classList.add('chats_item_photo_saved_messages');
@@ -279,7 +280,7 @@ const ChatsController = new class {
 
     const photo = MessagesApiManager.getPeerPhoto(dialog.peer);
     if (!photo || photo._ === 'chatPhotoEmpty') {
-      this.setChatPhotoPlaceholder(photoEl, dialog);
+      this.setChatPhotoPlaceholder(photoEl, peerId);
       return;
     }
 
@@ -289,15 +290,16 @@ const ChatsController = new class {
       })
       .catch((error) => {
         console.warn('chat photo load error', error);
-        this.setChatPhotoPlaceholder(photoEl, dialog);
+        this.setChatPhotoPlaceholder(photoEl, peerId);
       });
   }
 
-  setChatPhotoPlaceholder(photoEl, dialog) {
-    const peerId = MessagesApiManager.getPeerId(dialog.peer);
-    const peerTitle = MessagesApiManager.getPeerName(dialog.peer);
+  setChatPhotoPlaceholder(photoEl, peerId) {
+    const peer = MessagesApiManager.getPeerById(peerId);
+    const peerTitle = MessagesApiManager.getPeerName(peer);
+
     photoEl.style.backgroundColor = this.getPlaceholderColor(peerId);
-    photoEl.innerHTML = '<div class="chats_item_photo_placeholder">' + peerTitle.charAt(0) + '</div>';
+    photoEl.innerHTML = '<div class="photo_empty_placeholder">' + peerTitle.charAt(0) + '</div>';
   }
 
   getPlaceholderColor(peerId) {

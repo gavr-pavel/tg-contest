@@ -6,7 +6,7 @@ import {ChatsController} from "./chats_controller";
 
 const ContactsController = new class {
   init() {
-    const backButtonEl = $('.left_sidebar_back_button');
+    const backButtonEl = $('.left_sidebar .sidebar_back_button');
 
     ApiClient.callMethod('contacts.getContacts').then((res) => {
       ChatsController.container.hidden = true;
@@ -58,7 +58,7 @@ const ContactsController = new class {
 
     const photo = user.photo;
     if (!photo) {
-      this.setContactPhotoPlaceholder(photoEl, user);
+      ChatsController.setChatPhotoPlaceholder(photoEl, user.id);
       return;
     }
 
@@ -87,17 +87,11 @@ const ContactsController = new class {
     `;
   }
 
-  setContactPhotoPlaceholder(photoEl, user) {
-    const name = MessagesApiManager.getUserName(user);
-    photoEl.style.backgroundColor = ChatsController.getPlaceholderColor(user.id);
-    photoEl.innerHTML = '<div class="contacts_item_photo_placeholder">' + name.charAt(0) + '</div>';
-  }
-
   onBack = () => {
     this.container.hidden = true;
     ChatsController.container.hidden = false;
 
-    const backButtonEl = $('.left_sidebar_back_button');
+    const backButtonEl = $('.left_sidebar .sidebar_back_button');
     backButtonEl.hidden = true;
     backButtonEl.removeEventListener('click', this.onBack);
 
