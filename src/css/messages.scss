@@ -80,9 +80,9 @@
   flex-direction: column-reverse;
   align-items: end;
   align-content: end;
-  max-width: 700px;
+  max-width: 740px;
   margin: 0 auto;
-  padding: 25px 0;
+  padding: 25px 20px;
   box-sizing: border-box;
 }
 
@@ -364,8 +364,10 @@
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  max-width: 700px;
+  max-width: 740px;
   margin: 0 auto;
+  padding: 0 20px;
+  box-sizing: border-box;
 }
 .messages_form_input {
   display: block;

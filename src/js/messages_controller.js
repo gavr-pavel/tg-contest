@@ -225,7 +225,7 @@ const MessagesController = new class {
 
   onScroll = () => {
     const scrollContainer = this.scrollContainer;
-    this.scrolling = scrollContainer.scrollTop < scrollContainer.scrollWidth - scrollContainer.offsetHeight;
+    this.scrolling = scrollContainer.scrollTop < scrollContainer.scrollHeight - scrollContainer.offsetHeight;
     if (!this.loading && !this.noMore && scrollContainer.scrollTop < 150) {
       this.loadMore();
     }
