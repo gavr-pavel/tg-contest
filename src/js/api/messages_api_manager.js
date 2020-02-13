@@ -161,6 +161,41 @@ const MessagesApiManager = new class {
     });
   }
 
+  handleUpdateShortSentMessage(updates, peer, randomId) {
+    this.handleUpdate({
+      _: 'updateMessageID',
+      random_id: randomId,
+      id: updates.id
+    });
+
+    const isChannel = !!peer.channel_id;
+    const isMegagroup = isChannel && this.isMegagroup(peer.channel_id);
+
+    const message = {
+      _: 'message',
+      id: updates.id,
+      from_id: isChannel && !isMegagroup ? 0 : App.getAuthUserId(),
+      to_id: peer,
+      flags: updates.flags,
+      pFlags: updates.pFlags,
+      date: updates.date,
+      message: text
+    };
+    if (updates.media && updates.media._ !== 'messageMediaEmpty') {
+      message.media = updates.media;
+    }
+    if (updates.entities) {
+      message.entities = updates.entities;
+    }
+
+    this.handleUpdate({
+      _: isChannel ? 'updateNewChannelMessage' : 'updateNewMessage',
+      message: message,
+      pts: updates.pts,
+      pts_count: updates.pts_count
+    });
+  }
+
   async handleNewDialog(message) {
     if (message.to_id._ === 'peerChannel') {
       // workaround for broken channel access_hash in updates
@@ -348,37 +383,25 @@ const MessagesApiManager = new class {
       random_id: randomId
     });
 
-    const isChannel = !!peer.channel_id;
-    const isMegagroup = isChannel && this.isMegagroup(peer.channel_id);
+    if (updates._ === 'updateShortSentMessage') {
+      this.handleUpdateShortSentMessage(updates, peer, randomId);
+    } else {
+      this.onUpdates(updates);
+    }
+  }
+
+  async sendMedia(peer, inputMedia, text) {
+    const randomId = randomLong();
+
+    const updates = await ApiClient.callMethod('messages.sendMedia', {
+      message: text,
+      media: inputMedia,
+      peer: this.getInputPeer(peer),
+      random_id: randomId
+    });
 
     if (updates._ === 'updateShortSentMessage') {
-      this.handleUpdate({
-        _: 'updateMessageID',
-        random_id: randomId,
-        id: updates.id
-      });
-      const message = {
-        _: 'message',
-        id: updates.id,
-        from_id: isChannel && !isMegagroup ? 0 : App.getAuthUserId(),
-        to_id: peer,
-        flags: updates.flags,
-        pFlags: updates.pFlags,
-        date: updates.date,
-        message: text
-      };
-      if (updates.media && updates.media._ !== 'messageMediaEmpty') {
-        message.media = updates.media;
-      }
-      if (updates.entities) {
-        message.entities = updates.entities;
-      }
-      this.handleUpdate({
-        _: isChannel ? 'updateNewChannelMessage' : 'updateNewMessage',
-        message: message,
-        pts: updates.pts,
-        pts_count: updates.pts_count
-      });
+      this.handleUpdateShortSentMessage(updates, peer, randomId);
     } else {
       this.onUpdates(updates);
     }

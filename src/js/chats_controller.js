@@ -246,7 +246,7 @@ const ChatsController = new class {
   }
 
   getMessageContentDocumentLabel(document) {
-    const attrs = MessagesController.getDocumentAttributes(document);
+    const attrs = MediaApiManager.getDocumentAttributes(document);
     switch (attrs.type) {
       case 'video':
         return 'Video';

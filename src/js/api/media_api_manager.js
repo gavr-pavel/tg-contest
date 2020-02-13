@@ -21,6 +21,105 @@ const MediaApiManager = new class {
     }
   }
 
+  getDocumentAttributes(document) {
+    const result = {};
+
+    const hasThumb = document.thumbs && document.thumbs.length;
+
+    for (const attribute of document.attributes) {
+      switch (attribute._) {
+        case 'documentAttributeFilename':
+          result.file_name = attribute.file_name;
+          break;
+        case 'documentAttributeAudio':
+          result.duration = attribute.duration;
+          result.audioTitle = attribute.title;
+          result.audioPerformer = attribute.performer;
+          result.type = attribute.pFlags.voice ? 'voice' : 'audio';
+          break;
+        case 'documentAttributeVideo':
+          result.duration = attribute.duration;
+          result.w = attribute.w;
+          result.h = attribute.h;
+          if (hasThumb && attribute.pFlags.round_message) {
+            result.type = 'round';
+          } else if (hasThumb) {
+            result.type = 'video';
+          }
+          break;
+        case 'documentAttributeSticker':
+          result.sticker = true;
+          if (attribute.alt !== undefined) {
+            result.stickerEmoji = attribute.alt;
+          }
+          if (attribute.stickerset) {
+            if (attribute.stickerset._ === 'inputStickerSetEmpty') {
+              delete attribute.stickerset;
+            } else if (attribute.stickerset._ === 'inputStickerSetID') {
+              result.stickerSetInput = attribute.stickerset;
+            }
+          }
+          if (hasThumb && document.mime_type === 'image/webp') {
+            result.type = 'sticker';
+          }
+          break;
+        case 'documentAttributeImageSize':
+          result.w = attribute.w;
+          result.h = attribute.h;
+          if (hasThumb && document.mime_type === 'application/x-tgsticker') { // todo animated sticker support
+            result.type = 'sticker';
+          }
+          break;
+        case 'documentAttributeAnimated':
+          if ((document.mime_type === 'image/gif' || document.mime_type === 'video/mp4') && hasThumb) {
+            result.type = 'gif';
+          }
+          result.animated = true;
+          break;
+      }
+    }
+
+    if (!result.mime_type) {
+      switch (result.type) {
+        case 'gif':
+          result.mime_type = 'video/mp4';
+          break;
+        case 'video':
+        case 'round':
+          result.mime_type = 'video/mp4';
+          break;
+        case 'sticker':
+          result.mime_type = 'image/webp';
+          break;
+        case 'audio':
+          result.mime_type = 'audio/mpeg';
+          break;
+        case 'voice':
+          result.mime_type = 'audio/ogg';
+          break;
+        default:
+          result.mime_type = 'application/octet-stream';
+          break;
+      }
+    }
+
+    if (!result.file_name) {
+      result.file_name = '';
+    }
+
+    return result;
+  }
+
+  async uploadVoice(blob, duration = 0) {
+    const inputFile = await FileApiManager.uploadFile(blob);
+    return {
+      _: 'inputMediaUploadedDocument',
+      file: inputFile,
+      mime_type: blob.type,
+      attributes: [{_: 'documentAttributeAudio', voice: true, duration}]
+    }
+  }
+
   jpegHeader = base64Decode(
       '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDACgcHiMeGSgjISMtKygwPGRBPDc3PHtYXUlkkYCZlo+AjIqgtObDoKrarYqMyP/L2u71////' +
       'm8H///' +

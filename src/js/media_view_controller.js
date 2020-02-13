@@ -1,5 +1,6 @@
 import {FileApiManager} from './api/file_api_manager.js';
 import {buildHtmlElement, getLabeledElements, $} from './utils';
+import {MediaApiManager} from './api/media_api_manager';
 
 const MediaViewController = new class {
   constructor() {
@@ -139,15 +140,25 @@ const MediaViewController = new class {
   };
 
   download = () => {
-    if (this.url) {
+    if (this.state.url) {
       const a = document.createElement('a');
-      a.href = this.url;
-      a.download = this.object._ + this.object.id;
+      a.href = this.state.url;
+      a.download = this.getDownloadFilename(this.state.object);
       a.click();
     }
   };
+
+  getDownloadFilename(object) {
+    if (object._ === 'document') {
+      const attributes = MediaApiManager.getDocumentAttributes(object);
+      if (attributes.file_name) {
+        return attributes.file_name;
+      }
+    }
+    return object._ + object.id;
+  }
 };
 
-window.MediaViewcontroller = MediaViewController;
+window.MediaViewController = MediaViewController;
 
 export {MediaViewController};

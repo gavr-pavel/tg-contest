@@ -240,23 +240,30 @@ const FileApiManager = new class {
     return this.loadFile(location, document.dc_id, options);
   }
 
-  async uploadFile(blob) {
+  async uploadFile(blob, name = '') {
     const randomId = randomLong();
 
     const isBigFile = blob.size > 10 * 1024 * 1024;
-    const totalParts = Math.ceil(blob.size / PART_SIZE);
+    const partSize = 256 * 1024;
+    const totalParts = Math.ceil(blob.size / partSize);
 
-    const apiConnection = this.getConnection(dcId);
-    for (let partIndex = 0, offset = 0; offset < blob.size; partIndex++, offset += PART_SIZE) {
+    const apiConnection = this.getConnection(ApiClient.getDcId());
+    for (let partIndex = 0, offset = 0; offset < blob.size; partIndex++, offset += partSize) {
       await apiConnection.callMethod(isBigFile ? 'upload.saveBigFilePart' : 'upload.saveFilePart', {
         file_id: randomId,
         file_part: partIndex,
         file_total_parts: totalParts,
-        bytes: await blob.slice(offset, offset + PART_SIZE).arrayBuffer()
+        bytes: await blob.slice(offset, offset + partSize).arrayBuffer()
       });
     }
 
-    return randomId;
+    return {
+      _: isBigFile ? 'inputFileBig' : 'inputFile',
+      id: randomId,
+      parts: totalParts,
+      name,
+      md5_checksum: ''
+    };
   }
 };
 

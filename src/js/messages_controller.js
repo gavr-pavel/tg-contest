@@ -400,7 +400,7 @@ const MessagesController = new class {
     const message = MessagesApiManager.messages.get(msgId);
     if (message) {
       const document = message.media.document;
-      const attributes = this.getDocumentAttributes(document);
+      const attributes = MediaApiManager.getDocumentAttributes(document);
       FileApiManager.loadMessageDocument(document)
           .then((url) => {
             console.log('downloaded', url);
@@ -424,7 +424,7 @@ const MessagesController = new class {
         return {type: 'photo', object: photo, sizes: photo.sizes};
       case 'messageMediaDocument': {
         const document = media.document;
-        const docAttributes = this.getDocumentAttributes(document);
+        const docAttributes = MediaApiManager.getDocumentAttributes(document);
         if (['video', 'gif', 'sticker'].includes(docAttributes.type)) {
           return {type: docAttributes.type, object: document, sizes: document.thumbs};
         }
@@ -435,7 +435,7 @@ const MessagesController = new class {
           if (media.webpage.type === 'video' || media.webpage.type === 'gif') {
             return {type: media.webpage.type, object: document, sizes: document.thumbs};
           } else {
-            const docAttributes = this.getDocumentAttributes(document);
+            const docAttributes = MediaApiManager.getDocumentAttributes(document);
             if (docAttributes.type === 'video' || docAttributes.type === 'gif') {
               return {type: docAttributes.type, object: document, sizes: document.thumbs};
             }
@@ -522,7 +522,7 @@ const MessagesController = new class {
       return this.formatThumb(mediaThumbData, caption);
     }
 
-    const attributes = this.getDocumentAttributes(media.document);
+    const attributes = MediaApiManager.getDocumentAttributes(media.document);
 
     switch (attributes.type) {
       case 'video':
@@ -699,95 +699,6 @@ const MessagesController = new class {
   formatMessageDate(ts) {
     const date = new Date(ts * 1000);
     return date.toLocaleString().replace(/\//g, '.');
-  }
-
-  getDocumentAttributes(document) {
-    const result = {};
-
-    const hasThumb = document.thumbs && document.thumbs.length;
-
-    for (const attribute of document.attributes) {
-      switch (attribute._) {
-        case 'documentAttributeFilename':
-          result.file_name = attribute.file_name;
-          break;
-        case 'documentAttributeAudio':
-          result.duration = attribute.duration;
-          result.audioTitle = attribute.title;
-          result.audioPerformer = attribute.performer;
-          result.type = attribute.pFlags.voice ? 'voice' : 'audio';
-          break;
-        case 'documentAttributeVideo':
-          result.duration = attribute.duration;
-          result.w = attribute.w;
-          result.h = attribute.h;
-          if (hasThumb && attribute.pFlags.round_message) {
-            result.type = 'round';
-          } else if (hasThumb) {
-            result.type = 'video';
-          }
-          break;
-        case 'documentAttributeSticker':
-          result.sticker = true;
-          if (attribute.alt !== undefined) {
-            result.stickerEmoji = attribute.alt;
-          }
-          if (attribute.stickerset) {
-            if (attribute.stickerset._ === 'inputStickerSetEmpty') {
-              delete attribute.stickerset;
-            } else if (attribute.stickerset._ === 'inputStickerSetID') {
-              result.stickerSetInput = attribute.stickerset;
-            }
-          }
-          if (hasThumb && document.mime_type === 'image/webp') {
-            result.type = 'sticker';
-          }
-          break;
-        case 'documentAttributeImageSize':
-          result.w = attribute.w;
-          result.h = attribute.h;
-          if (hasThumb && document.mime_type === 'application/x-tgsticker') { // todo animated sticker support
-            result.type = 'sticker';
-          }
-          break;
-        case 'documentAttributeAnimated':
-          if ((document.mime_type === 'image/gif' || document.mime_type === 'video/mp4') && hasThumb) {
-            result.type = 'gif';
-          }
-          result.animated = true;
-          break;
-      }
-    }
-
-    if (!result.mime_type) {
-      switch (result.type) {
-        case 'gif':
-          result.mime_type = 'video/mp4';
-          break;
-        case 'video':
-        case 'round':
-          result.mime_type = 'video/mp4';
-          break;
-        case 'sticker':
-          result.mime_type = 'image/webp';
-          break;
-        case 'audio':
-          result.mime_type = 'audio/mpeg';
-          break;
-        case 'voice':
-          result.mime_type = 'audio/ogg';
-          break;
-        default:
-          result.mime_type = 'application/octet-stream';
-          break;
-      }
-    }
-
-    if (!result.file_name) {
-      result.file_name = '';
-    }
-
-    return result;
   }
 
   compareMessagesDate(message1, message2) {
