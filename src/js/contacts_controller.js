@@ -75,7 +75,7 @@ const ContactsController = new class {
 
   renderPreviewContent(el, user) {
     const name = MessagesApiManager.getUserName(user) || `+${user.phone}`;
-    const status = user.status ? MessagesController.getUserStatus(user.status) : 'last seen a long time ago';
+    const status = MessagesController.getUserStatus(user.status);
 
     $('.contacts_item_text', el).innerHTML = `
       <div class="contacts_item_text_row">

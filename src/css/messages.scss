@@ -42,6 +42,7 @@
   font-weight: 500;
 }
 .messages_header_peer_status {
+  height: 16px;
   font-size: 13px;
   color: #787B7F;
 }
@@ -70,6 +71,7 @@
 .messages_scroll {
   height: 100%;
   overflow: auto;
+  transform: translateZ(0);
 }
 
 .messages_list {

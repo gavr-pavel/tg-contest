@@ -10,6 +10,7 @@
   overflow: hidden;
   transition: transform .2s, opacity .2s, visibility .2s;
   transform-origin: 29px 455px;
+  will-change: transform;
 }
 .emoji_dropdown[hidden] {
   display: block;

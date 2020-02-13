@@ -116,6 +116,7 @@ const MessagesApiManager = new class {
         const user = this.users.get(update.user_id);
         if (user) {
           user.status = update.status;
+          this.emitter.trigger('userStatusUpdate', {user});
         }
       } break;
       case 'updateDraftMessage': {
@@ -205,7 +206,6 @@ const MessagesApiManager = new class {
     this.emitter.trigger('dialogsUpdate', this.dialogs);
 
     this.preloadDialogsMessages(dialogs);
-    this.preloadFullChats(dialogs);
 
     return dialogs;
   }
@@ -258,15 +258,6 @@ const MessagesApiManager = new class {
     for (const dialog of dialogs) {
       if (!this.chatMessages.has(this.getPeerId(dialog.peer))) {
         await this.loadChatMessages(dialog, 0, 10);
-        await wait(500);
-      }
-    }
-  }
-
-  async preloadFullChats(dialogs) {
-    for (const dialog of dialogs) {
-      if (dialog.peer._ === 'peerChannel' || dialog.peer._ === 'peerChat') {
-        await this.loadChatFull(this.getPeerId(dialog.peer));
         await wait(500);
       }
     }

@@ -32,6 +32,7 @@ const MessagesController = new class {
     MessagesApiManager.initUpdatesState();
     MessagesApiManager.emitter.on('chatMessagesUpdate', this.onChatMessagesUpdate);
     MessagesApiManager.emitter.on('chatNewMessage', this.onNewMessage);
+    MessagesApiManager.emitter.on('userStatusUpdate', this.onUserStatusUpdate);
   }
 
   setChat(dialog) {
@@ -210,6 +211,15 @@ const MessagesController = new class {
     const {chatId, message} = event.detail;
     if (chatId === this.chatId) {
 
+    }
+  };
+
+  onUserStatusUpdate =(event) => {
+    const {user} = event.detail;
+    if (this.chatId === user.id) {
+      const statusEl = $('.messages_header_peer_status', this.header);
+      statusEl.innerText = this.getUserStatus(user.status);
+      statusEl.classList.toggle('messages_header_peer_status-online', user.status._ === 'userStatusOnline');
     }
   };
 
@@ -852,17 +862,19 @@ const MessagesController = new class {
   }
 
   getUserStatus(status) {
-    switch (status._) {
-      case 'userStatusOnline':
-        return 'online';
-      case 'userStatusOffline':
-        return 'offline';
-      case 'userStatusRecently':
-        return 'last seen recently';
-      case 'userStatusLastWeek':
-        return 'last seen last week';
-      case 'userStatusLastMonth':
-        return 'last seen last month';
+    if (status) {
+      switch (status._) {
+        case 'userStatusOnline':
+          return 'online';
+        case 'userStatusOffline':
+          return 'offline';
+        case 'userStatusRecently':
+          return 'last seen recently';
+        case 'userStatusLastWeek':
+          return 'last seen last week';
+        case 'userStatusLastMonth':
+          return 'last seen last month';
+      }
     }
     return 'last seen a long time ago';
   }
