@@ -333,6 +333,11 @@ const MessagesController = new class {
 
     if (mediaThumbData) {
       this.loadMessageMediaThumb(el, mediaThumbData);
+    } else if (message.media && message.media.document) {
+      const docBtn = $('.document_icon', el);
+      if (docBtn) {
+        docBtn.addEventListener('click', this.onFileClick);
+      }
     }
   }
 
@@ -364,9 +369,14 @@ const MessagesController = new class {
     const message = MessagesApiManager.messages.get(msgId);
     if (message) {
       const document = message.media.document;
+      const attributes = this.getDocumentAttributes(document);
       FileApiManager.loadMessageDocument(document)
           .then((url) => {
             console.log('downloaded', url);
+            const a = window.document.createElement('a');
+            a.href = url;
+            a.download = attributes.file_name;
+            a.click();
           });
       console.log(`started loading ${document.mime_type} file`);
     }

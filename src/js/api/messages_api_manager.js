@@ -1,5 +1,5 @@
 import {ApiClient} from './api_client';
-import {Emitter, wait} from '../utils';
+import {Emitter, randomLong, wait} from '../utils';
 import {App} from '../app';
 
 const MessagesApiManager = new class {
@@ -346,7 +346,7 @@ const MessagesApiManager = new class {
   }
 
   async sendMessage(peer, text) {
-    const randomId = Math.floor(Math.random() * 1e9);
+    const randomId = randomLong();
 
     const updates = await ApiClient.callMethod('messages.sendMessage', {
       message: text,
@@ -508,7 +508,7 @@ const MessagesApiManager = new class {
 
   async reloadChannel(channelId) {
     const res = await ApiClient.callMethod('channels.getChannels', {
-      channels: [this.getInputPeerById(channelId)]
+      id: [this.getInputPeerById(channelId)]
     });
     this.updateChats(res.chats, true);
   }

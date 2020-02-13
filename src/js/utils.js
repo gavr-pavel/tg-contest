@@ -107,6 +107,10 @@ function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function randomLong() {
+  return crypto.getRandomValues(new Uint32Array(2)).buffer;
+}
+
 export {
   Storage,
   Emitter,
@@ -117,5 +121,6 @@ export {
   buildHtmlElement,
   getLabeledElements,
   cmpStrNum,
-  wait
+  wait,
+  randomLong
 };

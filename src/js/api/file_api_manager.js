@@ -1,4 +1,4 @@
-import {getDeferred} from '../utils';
+import {getDeferred, randomLong} from '../utils';
 import {ApiConnection} from '../mtproto/api_connection';
 import {MessagesApiManager} from './messages_api_manager';
 
@@ -90,7 +90,7 @@ const FileApiManager = new class {
         if (aborted) {
           throw new Error('File download aborted');
         }
-        parts.push(res.bytes);
+        parts.push(new Blob([res.bytes]));
         loaded += res.bytes.byteLength;
         if (onProgress) {
           onProgress(loaded);
@@ -238,6 +238,25 @@ const FileApiManager = new class {
     };
     Object.assign(options, {mimeType: document.mime_type, size: document.size});
     return this.loadFile(location, document.dc_id, options);
+  }
+
+  async uploadFile(blob) {
+    const randomId = randomLong();
+
+    const isBigFile = blob.size > 10 * 1024 * 1024;
+    const totalParts = Math.ceil(blob.size / PART_SIZE);
+
+    const apiConnection = this.getConnection(dcId);
+    for (let partIndex = 0, offset = 0; offset < blob.size; partIndex++, offset += PART_SIZE) {
+      await apiConnection.callMethod(isBigFile ? 'upload.saveBigFilePart' : 'upload.saveFilePart', {
+        file_id: randomId,
+        file_part: partIndex,
+        file_total_parts: totalParts,
+        bytes: await blob.slice(offset, offset + PART_SIZE).arrayBuffer()
+      });
+    }
+
+    return randomId;
   }
 };
 

@@ -478,11 +478,12 @@ class MTProto {
         this.updateServerSalt(object.new_server_salt);
         const sentMessage = this.sentMessages.get(object.bad_msg_id);
         if (sentMessage) {
+          console.warn('[MTProto] bad_server_salt. Have message to resend');
           this.sendRequest(sentMessage);
-          return;
+        } else {
+          console.warn('[MTProto] bad_server_salt. No message to resend');
+          this.sendRequest(Array.from(this.sentMessages.values()));
         }
-        console.trace();
-        console.warn('[MTProto] bad_server_salt. No message to resend');
         break;
       case 'ping':
         this.sendRequest(this.wrapObjectMessage('pong', {ping_id: object.ping_id}));

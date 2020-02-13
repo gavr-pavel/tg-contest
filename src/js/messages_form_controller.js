@@ -16,27 +16,31 @@ const MessagesFormController = new class {
       MessagesApiManager.saveDraft(peer, message);
     });
 
-    this.dom.input.addEventListener('input', this.onInput);
-    this.dom.input.addEventListener('change', this.onInput);
-    this.dom.input.addEventListener('keydown', this.onKeyDown);
+    const input = this.dom.input;
+
+    input.addEventListener('input', this.onInput);
+    input.addEventListener('change', this.onInput);
+    input.addEventListener('keydown', this.onKeyDown);
     this.dom.submit_button.addEventListener('click', this.onSubmit);
 
     new MDCRipple(this.dom.submit_button).unbounded = true;
 
-    EmojiDropdown.bind(this.dom.emoji_button, this.dom.input);
+    EmojiDropdown.bind(this.dom.emoji_button, input);
 
     this.initMediaMenu();
 
-    this.dom.input.parentNode.appendChild(EmojiDropdown.container);
+    input.parentNode.appendChild(EmojiDropdown.container);
   }
 
   onInput = () => {
-    this.dom.input.style.height = '';
-    this.dom.input.style.height = this.input.scrollHeight + 'px';
+    const input = this.dom.input;
+    input.style.height = '';
+    input.style.height = input.scrollHeight + 'px';
 
-    const message = this.input.value.trim();
+    const message = input.value.trim();
     this.dom.submit_button.classList.toggle('messages_form_button-send', !!message);
-    this.dom.saveDraft(MessagesController.dialog.peer, message);
+
+    this.saveDraft(MessagesController.dialog.peer, message);
   };
 
   onSubmit = () => {
