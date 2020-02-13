@@ -51,19 +51,31 @@
           <div class="contacts_sidebar" hidden></div>
         </div>
         <div class="messages_container">
-          <div class="messages_bg"></div>
           <div class="messages_header" hidden></div>
           <div class="messages_scroll">
             <div class="messages_list"></div>
           </div>
           <div class="messages_footer" hidden>
-            <div class="messages_new_message_form">
-              <div class="messages_new_message_input_wrap">
-                <textarea class="messages_new_message_input" placeholder="Message"></textarea>
-                <button class="messages_new_message_emoji_button"></button>
-                <button class="messages_new_message_media_button"></button>
+            <div class="messages_form">
+              <div class="messages_form_input_wrap">
+                <textarea class="messages_form_input" placeholder="Message" data-js-label="input"></textarea>
+                <button class="messages_form_emoji_button" data-js-label="emoji_button"></button>
+                <button class="messages_form_media_button" data-js-label="media_button"></button>
+                <div class="mdc-menu mdc-menu-surface messages_form_media_menu" data-js-label="media_menu">
+                  <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">
+                    <li class="mdc-list-item messages_form_media_menu_item-picture" role="menuitem">
+                      <span class="mdc-list-item__text">Photo or Video</span>
+                    </li>
+                    <li class="mdc-list-item messages_form_media_menu_item-file" role="menuitem">
+                      <span class="mdc-list-item__text">Document</span>
+                    </li>
+                    <li class="mdc-list-item messages_form_media_menu_item-poll" role="menuitem">
+                      <span class="mdc-list-item__text">Poll</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
-              <button class="messages_new_message_button mdc-icon-button"></button>
+              <button class="messages_form_button mdc-icon-button" data-js-label="submit_button"></button>
             </div>
           </div>
         </div>

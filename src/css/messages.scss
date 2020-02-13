@@ -4,20 +4,9 @@
   flex-direction: column;
   overflow: hidden;
   position: relative;
-  z-index: 1;
-}
-
-.messages_bg {
-  position: absolute;
-  z-index: -1;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: #E7EBEE url('../img/bg.jpg') center;
+  //background: #E7EBEE;
+  background: #91b087 center;
   background-size: cover;
-  //filter: blur(10px);
-  //transform: translateZ(0) scale(1.1);
 }
 
 .messages_header {
@@ -369,14 +358,14 @@
   padding: 10px 0 20px;
 }
 
-.messages_new_message_form {
+.messages_form {
   display: flex;
   justify-content: center;
   align-items: flex-end;
   max-width: 700px;
   margin: 0 auto;
 }
-.messages_new_message_input {
+.messages_form_input {
   display: block;
   border: none;
   outline: none;
@@ -391,15 +380,15 @@
   box-sizing: border-box;
   box-shadow: 0 1px 2px rgba(0,0,0,.15);
 }
-.messages_new_message_input::placeholder {
+.messages_form_input::placeholder {
   color: #A3ACB3;
 }
-.messages_new_message_input_wrap {
+.messages_form_input_wrap {
   width: 100%;
   margin-right: 9px;
   position: relative;
 }
-.messages_new_message_emoji_button {
+.messages_form_emoji_button {
   position: absolute;
   border: none;
   outline: none;
@@ -411,10 +400,10 @@
   cursor: pointer;
   background: url('../icons/smile_svg_gray.svg');
 }
-.messages_new_message_emoji_button-active {
+.messages_form_emoji_button-active {
   background: url('../icons/smile_svg_blue.svg');
 }
-.messages_new_message_media_button {
+.messages_form_media_button {
   position: absolute;
   border: none;
   outline: none;
@@ -426,10 +415,10 @@
   cursor: pointer;
   background: url('../icons/attach_svg_gray.svg');
 }
-.messages_new_message_media_button-active {
+.messages_form_media_button-active {
   background: url('../icons/attach_svg_blue.svg');
 }
-.messages_new_message_button {
+.messages_form_button {
   border: none;
   outline: none;
   padding: 0;
@@ -441,7 +430,7 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
   background: #fff url('../icons/microphone2_svg_gray.svg') no-repeat center;
 }
-.messages_new_message_button_send {
+.messages_form_button-send {
   background-image: url('../icons/send_svg_blue.svg');
 }
 

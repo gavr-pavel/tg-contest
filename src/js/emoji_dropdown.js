@@ -171,7 +171,7 @@ const EmojiDropdown = new class {
 
   show() {
     this.container.hidden = false;
-    this.button.classList.add('messages_new_message_emoji_button-active');
+    this.button.classList.add('messages_form_emoji_button-active');
     document.addEventListener('mousedown', this.onGlobalClick);
     this.input.focus();
 
@@ -183,7 +183,7 @@ const EmojiDropdown = new class {
 
   hide() {
     this.container.hidden = true;
-    this.button.classList.remove('messages_new_message_emoji_button-active');
+    this.button.classList.remove('messages_form_emoji_button-active');
     document.removeEventListener('mousedown', this.onGlobalClick);
   };
 

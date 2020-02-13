@@ -25,6 +25,8 @@ const MessagesController = new class {
 
     this.initPlaceholder();
 
+    this.initBackground();
+
     MessagesFormController.init();
 
     MessagesApiManager.initUpdatesState();
@@ -95,11 +97,12 @@ const MessagesController = new class {
   }
 
   showHeader(dialog) {
-    const peerName = MessagesApiManager.getPeerName(dialog.peer);
+    const peer = dialog.peer;
+    const peerName = MessagesApiManager.getPeerName(peer);
     let peerStatus = '';
     let peerStatusClass = '';
-    if (dialog.peer._ === 'peerUser') {
-      const user = MessagesApiManager.getPeerData(dialog.peer);
+    if (peer._ === 'peerUser') {
+      const user = MessagesApiManager.getPeerData(peer);
       if (user.pFlags.bot) {
         peerStatus = 'bot';
       } else if (user.status) {
@@ -110,9 +113,6 @@ const MessagesController = new class {
       } else {
         peerStatus = 'last seen a long time ago';
       }
-    } else {
-      const chat = MessagesApiManager.getPeerData(dialog.peer);
-      peerStatus = dialog.peer._ === 'peerChannel' ?  (chat.pFlags.megagroup ? 'supergroup' :  'channel') : 'group';
     }
 
     this.header.innerHTML = `
@@ -144,6 +144,24 @@ const MessagesController = new class {
           });
     }
 
+    if (peer._ === 'peerChannel' || peer._ === 'peerChat') {
+      const chatId = peer.channel_id || peer.chat_id;
+      MessagesApiManager.loadChatFull(chatId)
+          .then((fullChat) => {
+            let statusText;
+            if (fullChat.participants_count) {
+              if (MessagesApiManager.isMegagroup(chatId)) {
+                statusText = `${this.formatCount(fullChat.participants_count)} members, ${this.formatCount(fullChat.online_count)} online`;
+              } else {
+                statusText =`${this.formatCount(fullChat.participants_count)} followers`;
+              }
+            } else if (fullChat.participants.participants) {
+              statusText = `${this.formatCount(fullChat.participants.participants.length)} members`;
+            }
+            $('.messages_header_peer_status', this.header).innerText = statusText;
+          });
+    }
+
     Array.from($('.messages_header_actions', this.header).children)
         .forEach((button) => {
           new MDCRipple(button).unbounded = true;
@@ -153,6 +171,11 @@ const MessagesController = new class {
   loadMore() {
     this.loading = true;
     MessagesApiManager.loadChatMessages(this.dialog, this.offsetMsgId, 30)
+        .then((messages) => {
+          if (!messages.length) {
+            this.noMore = true;
+          }
+        })
         .catch((error) => {
           const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
           App.alert(errorText);
@@ -209,11 +232,6 @@ const MessagesController = new class {
       return;
     }
 
-    if (this.offsetMsgId && messages[messages.length - 1].id === this.offsetMsgId && messages[0].id === this.lastMsgId) {
-      this.noMore = true;
-      return;
-    }
-
     const prevScrollHeight = this.scrollContainer.scrollHeight;
 
     if (this.lastMsgId) {
@@ -242,8 +260,15 @@ const MessagesController = new class {
       // }
       const nextMessage = messages[i - 1];
       const prevMessage = messages[i + 1];
-      const stickToNext = message.from_id && nextMessage && nextMessage.from_id === message.from_id;
-      const stickToPrev = message.from_id && prevMessage && prevMessage.from_id === message.from_id;
+
+      let stickToNext = false;
+      let stickToPrev = false;
+      if (nextMessage && this.compareMessagesDate(message, nextMessage)) {
+        frag.append(this.buildDateMessageEl(nextMessage.date));
+      } else {
+        stickToNext = message.from_id && nextMessage && nextMessage.from_id === message.from_id;
+        stickToPrev = message.from_id && prevMessage && prevMessage.from_id === message.from_id;
+      }
       const el = this.buildMessageEl(message, {stickToNext, stickToPrev});
       frag.append(el);
     });
@@ -724,6 +749,47 @@ const MessagesController = new class {
     return result;
   }
 
+  compareMessagesDate(message1, message2) {
+    const date1 = new Date(message1.date * 1000);
+    const date2 = new Date(message2.date * 1000);
+    if (date1.toDateString() !== date2.toDateString()) {
+      return message1.date > message2.date ? 1 : -1;
+    }
+    return 0;
+  }
+
+  buildDateMessageEl(messageDate) {
+    const todayMidnight = new Date().setHours(0, 0, 0, 0) / 1000;
+
+    let dateText;
+    if (messageDate > todayMidnight) {
+      dateText = 'Today';
+    } else if (messageDate > todayMidnight - 86400) {
+      dateText = 'Yesterday';
+    } else {
+      const date = new Date(messageDate * 1000);
+      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      dateText = months[date.getMonth()] + ' ' + date.getDate();
+    }
+
+    return buildHtmlElement(`
+      <div class="messages_item-type-date">${dateText}</div>
+    `);
+  }
+
+  formatCount(count) {
+    let str = '';
+    do {
+      let part = (count % 1000).toString();
+      if (count > 1000) {
+        part = part.padStart(3, '0');
+      }
+      str = part + ' ' + str;
+      count = Math.floor(count / 1000);
+    } while (count);
+    return str.trim();
+  }
+
   getServiceMessageText(message) {
     switch (message.action._) {
       case 'messageActionChatCreate':
@@ -777,6 +843,29 @@ const MessagesController = new class {
         return 'last seen last month';
     }
     return 'last seen a long time ago';
+  }
+
+  initBackground() {
+    const img = document.createElement('img');
+    img.src = 'bg.jpg';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ratio = img.width / img.height;
+      if (screen.width > screen.height) {
+        canvas.width = screen.width;
+        canvas.height = screen.width / ratio;
+      } else {
+        canvas.width = screen.height * ratio;
+        canvas.height = screen.height;
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.filter = 'blur(10px)';
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        $('.messages_container').style.backgroundImage = `url(${url})`;
+      });
+    };
   }
 };
 

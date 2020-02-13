@@ -160,6 +160,10 @@ const MessagesApiManager = new class {
   }
 
   async handleNewDialog(message) {
+    if (message.to_id._ === 'peerChannel') {
+      // workaround for broken channel access_hash in updates
+      await this.reloadChannel(message.to_id.channel_id);
+    }
     const dialog = await this.loadPeerDialog(this.getMessagePeer(message));
     this.handleDialogOrder(dialog);
     this.emitter.trigger('dialogNewMessage', {dialog, message});
@@ -201,6 +205,7 @@ const MessagesApiManager = new class {
     this.emitter.trigger('dialogsUpdate', this.dialogs);
 
     this.preloadDialogsMessages(dialogs);
+    this.preloadFullChats(dialogs);
   }
 
   async loadChatMessages(dialog, offsetId, limit) {
@@ -212,7 +217,7 @@ const MessagesApiManager = new class {
       chatMessages = this.chatMessages.get(chatId);
       if (!offsetId || offsetId > chatMessages[chatMessages.length - 1].id) {
         this.emitter.trigger('chatMessagesUpdate', {chatId, messages: chatMessages});
-        return;
+        return chatMessages;
       }
     } else {
       chatMessages = [];
@@ -227,10 +232,6 @@ const MessagesApiManager = new class {
       this.emitter.trigger('chatMessagesUpdate', {chatId, messages: chatMessages});
     }
 
-    if (window.debugMessagesLoader) {
-      debugger;
-    }
-
     const response = await ApiClient.callMethod('messages.getHistory', {
       peer: this.getInputPeer(dialog.peer),
       offset_id: offsetId,
@@ -238,15 +239,13 @@ const MessagesApiManager = new class {
       offset_date: 0,
     });
 
-    if (window.debugMessagesLoader) {
-      debugger;
-    }
-
     this.updateMessages(response.messages);
     this.updateUsers(response.users);
     this.updateChats(response.chats);
 
     this.updateChatMessages(chatId, response.messages, true);
+
+    return response.messages;
   }
 
   async preloadDialogsMessages(dialogs) {
@@ -257,6 +256,15 @@ const MessagesApiManager = new class {
     for (const dialog of dialogs) {
       if (!this.chatMessages.has(this.getPeerId(dialog.peer))) {
         await this.loadChatMessages(dialog, 0, 10);
+        await wait(500);
+      }
+    }
+  }
+
+  async preloadFullChats(dialogs) {
+    for (const dialog of dialogs) {
+      if (dialog.peer._ === 'peerChannel' || dialog.peer._ === 'peerChat') {
+        await this.loadChatFull(this.getPeerId(dialog.peer));
         await wait(500);
       }
     }
@@ -288,9 +296,9 @@ const MessagesApiManager = new class {
     }
   }
 
-  updateChats(chats) {
+  updateChats(chats, force = false) {
     for (const chat of chats) {
-      if (chat._ === 'channel' && this.chats.has(chat.id)) {
+      if (!force && chat._ === 'channel' && this.chats.has(chat.id)) {
         // fix for wrong channel access_hash coming from updates
         continue;
       }
@@ -498,7 +506,14 @@ const MessagesApiManager = new class {
     return !!channel.pFlags.megagroup;
   }
 
-  async getChatFull(chatId) {
+  async reloadChannel(channelId) {
+    const res = await ApiClient.callMethod('channels.getChannels', {
+      channels: [this.getInputPeerById(channelId)]
+    });
+    this.updateChats(res.chats, true);
+  }
+
+  async loadChatFull(chatId) {
     if (this.chatsFull.has(chatId)) {
       return this.chatsFull.get(chatId);
     }

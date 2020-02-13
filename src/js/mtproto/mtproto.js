@@ -481,6 +481,7 @@ class MTProto {
           this.sendRequest(sentMessage);
           return;
         }
+        console.trace();
         console.warn('[MTProto] bad_server_salt. No message to resend');
         break;
       case 'ping':
