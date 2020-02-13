@@ -37,22 +37,24 @@ const ContactsController = new class {
 
   buildPreviewElement(user) {
     const el = buildHtmlElement(`
-      <div class="contact_item mdc-ripple-surface" data-user-id="${user.id}">
-        <div class="contact_item_photo"></div>
-        <div class="contact_item_text"></div>
+      <div class="contacts_item" data-user-id="${user.id}">
+        <div class="contacts_item_content mdc-ripple-surface">
+          <div class="contacts_item_photo"></div>
+          <div class="contacts_item_text"></div>      
+        </div>
       </div>
     `);
     this.renderPreviewContent(el, user);
     this.loadContactPhoto(el, user);
 
     el.addEventListener('click', this.onContactClick);
-    new MDCRipple(el);
+    new MDCRipple(el.firstElementChild);
 
     return el;
   }
 
   loadContactPhoto(el, user) {
-    const photoEl = $('.contact_item_photo', el);
+    const photoEl = $('.contacts_item_photo', el);
 
     const photo = user.photo;
     if (!photo) {
@@ -64,7 +66,7 @@ const ContactsController = new class {
 
     FileApiManager.loadPeerPhoto(peer, photo.photo_small, false, photo.dc_id, {priority: 10, cache: true})
       .then((url) => {
-        photoEl.innerHTML = `<img src="${url}" alt class="contact_item_photo_img">`;
+        photoEl.innerHTML = `<img src="${url}" alt class="contacts_item_photo_img">`;
       })
       .catch((error) => {
         console.warn('contact photo load error', error);
@@ -75,12 +77,12 @@ const ContactsController = new class {
     const name = MessagesApiManager.getUserName(user) || `+${user.phone}`;
     const status = user.status ? MessagesController.getUserStatus(user.status) : 'last seen a long time ago';
 
-    $('.contact_item_text', el).innerHTML = `
-      <div class="contact_item_text_row">
-        <div class="contact_item_title">${name}</div>
+    $('.contacts_item_text', el).innerHTML = `
+      <div class="contacts_item_text_row">
+        <div class="contacts_item_title">${name}</div>
       </div>
-      <div class="contact_item_text_row">
-        <div class="contact_item_status">${status}</div>
+      <div class="contacts_item_text_row">
+        <div class="contacts_item_status">${status}</div>
       </div>
     `;
   }
@@ -88,7 +90,7 @@ const ContactsController = new class {
   setContactPhotoPlaceholder(photoEl, user) {
     const name = MessagesApiManager.getUserName(user);
     photoEl.style.backgroundColor = ChatsController.getPlaceholderColor(user.id);
-    photoEl.innerHTML = '<div class="contact_item_photo_placeholder">' + name.charAt(0) + '</div>';
+    photoEl.innerHTML = '<div class="contacts_item_photo_placeholder">' + name.charAt(0) + '</div>';
   }
 
   onBack = () => {

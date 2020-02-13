@@ -10,19 +10,22 @@
 }
 
 .chats_item,
-.contact_item {
+.contacts_item {
   margin: 2px 0;
-  height: 54px;
-  padding: 9px;
   border-radius: 5px;
-  display: flex;
-  flex-direction: row;
   cursor: pointer;
   position: relative;
 }
 
-.chats_item:hover,
-.contact_item:hover,
+.chats_item_content,
+.contacts_item_content {
+  display: flex;
+  flex-direction: row;
+  height: 54px;
+  padding: 9px;
+  border-radius: 5px;
+}
+
 .chats_item-selected {
   background: #F4F4F5;
 }
@@ -31,8 +34,17 @@
   margin-top: 13px;
 }
 
+.chats_item_pinned + .chats_item:not(.chats_item_pinned)::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  right: -10px;
+  top: -7px;
+  border-top: 1px solid #E5E7E9;
+}
+
 .chats_item_photo,
-.contact_item_photo {
+.contacts_item_photo {
   flex: 0 0 54px;
   width: 54px;
   height: 54px;
@@ -49,14 +61,14 @@
 }
 
 .chats_item_photo_img,
-.contact_item_photo_img {
+.contacts_item_photo_img {
   width: 100%;
   height: 100%;
   border-radius: 50%;
 }
 
 .chats_item_photo_placeholder,
-.contact_item_photo_placeholder {
+.contacts_item_photo_placeholder {
   width: 100%;
   height: 100%;
   display: flex;
@@ -68,12 +80,12 @@
 }
 
 .chats_item_text_row,
-.contact_item_text_row {
+.contacts_item_text_row {
   display: flex;
 }
 
 .chats_item_text,
-.contact_item_text {
+.contacts_item_text {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -82,7 +94,7 @@
 }
 
 .chats_item_title,
-.contact_item_title {
+.contacts_item_title {
   flex: 1;
   font-size: 15px;
   font-weight: 500;
@@ -125,14 +137,10 @@
 }
 
 .chats_item_message,
-.contact_item_status {
+.contacts_item_status {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   color: #717579;
 }
-
-//.chats_item_message_content_label {
-//  color: #999;
-//}

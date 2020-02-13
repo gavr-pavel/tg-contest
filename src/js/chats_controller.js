@@ -117,15 +117,17 @@ const ChatsController = new class {
   buildChatPreviewElement(dialog) {
     const peerId = MessagesApiManager.getPeerId(dialog.peer);
     const el = buildHtmlElement(`
-      <div class="chats_item ${dialog.pFlags.pinned ? ' chats_item_pinned' : ''} mdc-ripple-surface" data-peer-id="${peerId}">
-        <div class="chats_item_photo"></div>
-        <div class="chats_item_text"></div>
+      <div class="chats_item ${dialog.pFlags.pinned ? ' chats_item_pinned' : ''}" data-peer-id="${peerId}">
+        <div class="chats_item_content mdc-ripple-surface">
+          <div class="chats_item_photo"></div>
+          <div class="chats_item_text"></div>        
+        </div>
       </div>
     `);
     this.renderChatPreviewContent(el, dialog);
     this.loadChatPhoto(el, dialog);
     el.addEventListener('click', this.onChatClick);
-    new MDCRipple(el);
+    new MDCRipple(el.firstElementChild);
     this.chatElements.set(peerId, el);
     return el;
   }
