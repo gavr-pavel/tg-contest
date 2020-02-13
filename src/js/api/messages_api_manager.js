@@ -206,6 +206,8 @@ const MessagesApiManager = new class {
 
     this.preloadDialogsMessages(dialogs);
     this.preloadFullChats(dialogs);
+
+    return dialogs;
   }
 
   async loadChatMessages(dialog, offsetId, limit) {
@@ -524,7 +526,7 @@ const MessagesApiManager = new class {
         channel: inputPeer
       });
     } else {
-      res = await ApiClient.callMethod('chats.getFullChat', {
+      res = await ApiClient.callMethod('messages.getFullChat', {
         chat_id: chatId
       });
     }

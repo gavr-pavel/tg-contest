@@ -248,29 +248,37 @@ const MessagesController = new class {
       this.container.prepend(frag);
     }
 
+    let newElementsAdded = false;
     const frag = document.createDocumentFragment();
     messages.forEach((message, i) => {
       if (this.offsetMsgId && message.id >= this.offsetMsgId) {
-        // console.log('message.id >= this.offsetMsgId', message.id, this.offsetMsgId);
         return;
       }
-      // if (this.lastMsgId && message.id >= this.lastMsgId) {
-      //   console.log('message.id >= this.lastMsgId', message.id, this.lastMsgId);
-      //   return;
-      // }
+
       const nextMessage = messages[i - 1];
       const prevMessage = messages[i + 1];
 
-      let stickToNext = false;
-      let stickToPrev = false;
-      if (nextMessage && this.compareMessagesDate(message, nextMessage)) {
-        frag.append(this.buildDateMessageEl(nextMessage.date));
-      } else {
-        stickToNext = message.from_id && nextMessage && nextMessage.from_id === message.from_id;
-        stickToPrev = message.from_id && prevMessage && prevMessage.from_id === message.from_id;
+      let stickToNext = message.from_id && nextMessage && nextMessage.from_id === message.from_id;
+      let stickToPrev = message.from_id && prevMessage && prevMessage.from_id === message.from_id;
+      const messageMidnight = new Date(message.date * 1000).setHours(0, 0, 0, 0) / 1000;
+      let dateMessageEl = '';
+      if (!prevMessage || prevMessage.date < messageMidnight) {
+        dateMessageEl = this.buildDateMessageEl(message.date);
+      }
+      if (!nextMessage || nextMessage.date > messageMidnight + 86400) {
+        stickToNext = false;
+      }
+      if (!newElementsAdded) {
+        if (nextMessage && !this.compareMessagesDate(message, nextMessage)) {
+          const lastEl = this.container.lastElementChild;
+          if (lastEl.classList.contains('messages_item-type-service')) {
+            lastEl.remove();
+          }
+        }
+        newElementsAdded = true;
       }
       const el = this.buildMessageEl(message, {stickToNext, stickToPrev});
-      frag.append(el);
+      frag.append(el, dateMessageEl);
     });
     this.container.append(frag);
 
@@ -286,6 +294,10 @@ const MessagesController = new class {
         this.scrollToBottom();
       }
     }
+  }
+
+  renderNewMessage(message) {
+
   }
 
   buildMessageEl(message, options) {
@@ -783,7 +795,7 @@ const MessagesController = new class {
     }
 
     return buildHtmlElement(`
-      <div class="messages_item-type-date">${dateText}</div>
+      <div class="messages_item-type-service messages_item-type-date">${dateText}</div>
     `);
   }
 

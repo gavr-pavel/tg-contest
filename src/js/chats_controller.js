@@ -21,6 +21,9 @@ const ChatsController = new class {
     MessagesApiManager.emitter.on('dialogUnreadCountUpdate', this.onDialogUnreadCountUpdate);
     MessagesApiManager.emitter.on('dialogOrderUpdate', this.onDialogOrderUpdate);
 
+    this.loader = buildHtmlElement('<div class="lds-ring"><div></div><div></div><div></div><div></div></div>');
+    this.container.append(this.loader);
+
     this.loadMore();
   }
 
@@ -76,7 +79,7 @@ const ChatsController = new class {
 
   onScroll = (event) => {
     const container = this.container;
-    if (!this.loading && container.scrollTop + container.offsetHeight > container.scrollHeight - 150) {
+    if (!this.loading && !this.noMore && container.scrollTop + container.offsetHeight > container.scrollHeight - 150) {
       this.loadMore();
     }
   };
@@ -84,6 +87,11 @@ const ChatsController = new class {
   loadMore() {
     this.loading = true;
     MessagesApiManager.loadDialogs(this.offset, 20)
+        .then((dialogs) => {
+          if (!dialogs.length) {
+            this.noMore = true;
+          }
+        })
         .catch((error) => {
           const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
           App.alert(errorText);
@@ -94,6 +102,8 @@ const ChatsController = new class {
   }
 
   renderChats(dialogs) {
+    this.loader.remove();
+
     const frag = document.createDocumentFragment();
     for (const dialog of dialogs) {
       const peerId = MessagesApiManager.getPeerId(dialog.peer);
