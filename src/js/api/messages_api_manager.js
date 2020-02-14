@@ -45,6 +45,7 @@ const MessagesApiManager = new class {
     switch (object._) {
       case 'updates':
       case 'updatesCombined':
+        console.log(object._, object.seq);
         this.updateChats(object.chats);
         this.updateUsers(object.users);
         for (const update of object.updates) {

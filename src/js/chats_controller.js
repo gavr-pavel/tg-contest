@@ -223,6 +223,8 @@ const ChatsController = new class {
     if (message.to_id._ === 'peerChannel' && message.from_id) {
       const user = MessagesApiManager.users.get(message.from_id);
       text = encodeHtmlEntities(user.first_name) + ': ' + text;
+    } else if (message.pFlags.out) {
+      text = 'You: ' + text;
     }
     return text;
   }
