@@ -1,4 +1,4 @@
-import {$, buildHtmlElement} from "./utils";
+import {$, buildHtmlElement, encodeHtmlEntities} from "./utils";
 import {MDCCheckbox} from '@material/checkbox';
 import {MDCMenu} from "@material/menu";
 import {MessagesApiManager} from "./api/messages_api_manager";
@@ -14,16 +14,16 @@ const ChatInfoController = new class {
 
   show(peerId) {
     this.container = $('.right_sidebar');
-    this.container.hidden = !this.container.hidden;
+    this.container.hidden = false;
 
-    if (this.container.hidden) {
+    if (peerId === this.peerId) {
       return;
     }
+    this.peerId = peerId;
 
     this.loadingMedia = true;
     this.noMoreMedia = false;
     this.offsetMsgId = 0;
-    this.peerId = peerId;
 
     const peer = MessagesApiManager.getPeerById(peerId);
     const peerName = MessagesApiManager.getPeerName(peer);
@@ -82,7 +82,7 @@ const ChatInfoController = new class {
 
   bindListeners() {
     const closeButtonEl = $('.sidebar_close_button', this.container);
-    closeButtonEl.addEventListener('click', this.onClose);
+    closeButtonEl.addEventListener('click', this.close);
     new MDCRipple(closeButtonEl).unbounded = true;
 
     document.addEventListener('keyup', this.onKeyUp);
@@ -224,7 +224,7 @@ const ChatInfoController = new class {
     thumbEl.style.backgroundImage = `url(${url})`;
   }
 
-  onClose = () => {
+  close = () => {
     if (!this.container || this.container.hidden) {
       return;
     }
@@ -234,7 +234,7 @@ const ChatInfoController = new class {
 
   onKeyUp = (event) => {
     if (event.keyCode === 27 && MediaViewController.isOpen()) {
-      this.onClose();
+      this.close();
     }
   };
 

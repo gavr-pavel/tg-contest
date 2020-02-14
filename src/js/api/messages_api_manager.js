@@ -75,8 +75,8 @@ const MessagesApiManager = new class {
           if (!message.pFlags.out && message.id > dialog.read_inbox_max_id) {
             dialog.unread_count++;
           }
-          this.handleDialogOrder(dialog);
           this.updateChatMessages(dialog, [message]);
+          this.handleDialogOrder(dialog);
           this.emitter.trigger('chatNewMessage', {dialog, message});
         } else {
           this.handleNewDialog(message);
@@ -202,8 +202,10 @@ const MessagesApiManager = new class {
       await this.reloadChannel(message.to_id.channel_id);
     }
     const dialog = await this.loadPeerDialog(this.getMessagePeer(message));
-    this.handleDialogOrder(dialog);
-    this.emitter.trigger('chatNewMessage', {dialog, message});
+    if (dialog) {
+      this.handleDialogOrder(dialog);
+      this.emitter.trigger('chatNewMessage', {dialog, message});
+    }
   }
 
   handleDialogOrder(dialog) {
@@ -224,7 +226,7 @@ const MessagesApiManager = new class {
     const newIndex = this.dialogs.findIndex((item) => {
       if (!item.pFlags.pinned && item.top_message) {
         const itemMessage = this.messages.get(item.top_message);
-        return itemMessage && itemMessage.date > lastMessage.date;
+        return itemMessage && itemMessage.date < lastMessage.date;
       }
       return false;
     });
@@ -399,7 +401,7 @@ const MessagesApiManager = new class {
     }
 
     if (dialog.top_message === message.id) {
-      if (chatMessages.length) {
+      if (chatMessages && chatMessages.length) {
         dialog.top_message = chatMessages[0].id;
       } else {
         delete dialog.top_message;

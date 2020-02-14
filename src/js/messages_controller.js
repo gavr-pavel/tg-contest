@@ -7,6 +7,7 @@ import {emojiRegex} from './emoji_config';
 import {MessagesFormController} from './messages_form_controller';
 import {ChatsController} from "./chats_controller";
 import {ChatInfoController} from "./chat_info_contoller";
+import {MessagesSearchController} from './messages_search_controller';
 
 const MessagesController = new class {
   dialog = null;
@@ -71,7 +72,7 @@ const MessagesController = new class {
       chatEl.classList.remove('chats_item-selected');
     }
 
-    ChatInfoController.onClose();
+    ChatInfoController.close();
 
     this.header.hidden = true;
     this.footer.hidden = true;
@@ -172,6 +173,10 @@ const MessagesController = new class {
         .forEach((button) => {
           new MDCRipple(button).unbounded = true;
         });
+
+    $('.messages_header_action_search', this.header).addEventListener('click', () => {
+      // MessagesSearchController.show(this.chatId);
+    });
   }
 
   loadMore() {
