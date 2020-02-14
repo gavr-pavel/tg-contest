@@ -1,5 +1,7 @@
 import {$, buildHtmlElement, debounce, encodeHtmlEntities} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
+import {ChatsController} from './chats_controller';
+import {I18n} from './i18n';
 
 const MessagesSearchController = new class {
   show(peerId) {
@@ -14,11 +16,9 @@ const MessagesSearchController = new class {
     this.container.innerHTML = `
       <div class="sidebar_header">
         <button type="button" class="sidebar_close_button mdc-icon-button"></button>
-        <input class="messages_search_input" type="text">
+        <input class="sidebar_search messages_search_input" type="text" placeholder="Start typing...">
       </div>
-      <div class="messages_search_results_list">
-        <div class="messages_search_results_list_placeholder">Start typing...</div>
-      </div>
+      <div class="messages_search_results_list"></div>
     `;
 
     const closeButton = $('.sidebar_close_button', this.container);
@@ -27,17 +27,26 @@ const MessagesSearchController = new class {
     this.input = $('.messages_search_input', this.container);
     this.input.addEventListener('input', debounce(this.onInput, 100));
 
+    this.container.addEventListener('transitionend', () => {
+      this.input.focus();
+    }, {once: true});
+
     this.listWrap = $('.messages_search_results_list', this.container);
   }
 
   close = () => {
-    this.container.hidden = true;
+    if (this.container) {
+      this.container.hidden = true;
+      this.peerId = null;
+    }
   };
 
   onInput = () => {
     const q = this.input.value.trim();
     this.listWrap.innerHTML = '';
-    this.loadResults(q);
+    if (q) {
+      this.loadResults(q);
+    }
   };
 
   async loadResults(text) {
@@ -46,7 +55,7 @@ const MessagesSearchController = new class {
       q: text,
       filter: {_: 'inputMessagesFilterEmpty'},
       offset_id: 0,
-      limit: 10,
+      limit: 30,
     });
 
     MessagesApiManager.updateMessages(res.messages);
@@ -59,8 +68,9 @@ const MessagesSearchController = new class {
   }
 
   renderResultsHeader(count) {
-    this.listWrap.prepend(`
-      <div class="messages_search_results_header">${count} messages found</div>
+    const text = I18n.getPlural('messages_search_results_found', count)
+    this.listWrap.insertAdjacentHTML('afterbegin', `
+      <div class="messages_search_results_header">${text}</div>
     `);
   }
 
@@ -68,16 +78,37 @@ const MessagesSearchController = new class {
     const frag = document.createDocumentFragment();
 
     for (const message of messages) {
-      const peer = MessagesApiManager.getMessagePeer(message);
-      const peerName = MessagesApiManager.getPeerName(peer);
+      const peer = message.from_id ? MessagesApiManager.getPeerById(message.from_id) : MessagesApiManager.getMessagePeer(message);
+      const title = MessagesApiManager.getPeerName(peer);
+      const date = ChatsController.formatMessageDate(message);
+      const messagePreview = ChatsController.getMessagePreview(message);
       const el = buildHtmlElement(`
-        <div class="messages_search_results_item">${encodeHtmlEntities(peerName)}: ${encodeHtmlEntities(message.message)}}</div>
+        <div class="messages_search_results_item">
+          <div class="messages_search_results_item_content mdc-ripple-surface">
+            <div class="messages_search_results_item_photo"></div>
+            <div class="messages_search_results_item_text">
+              <div class="messages_search_results_item_text_row">
+                <div class="messages_search_results_item_title">${encodeHtmlEntities(title)}</div>
+                <div class="messages_search_results_item_date">${date}</div>
+              </div>
+              <div class="messages_search_results_item_text_row">
+                <div class="messages_search_results_item_message">${messagePreview}</div>
+              </div>
+            </div>      
+          </div>
+        </div>
       `);
+      this.loadMessagePeerPhoto(el, peer);
       frag.append(el);
     }
 
     const listWrap = $('.messages_search_results_list', this.container);
     listWrap.append(frag);
+  }
+
+  loadMessagePeerPhoto(messageEl, peer) {
+    const photoEl = $('.messages_search_results_item_photo', messageEl);
+    ChatsController.loadPeerPhoto(photoEl, peer);
   }
 };
 

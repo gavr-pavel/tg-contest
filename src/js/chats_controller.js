@@ -49,7 +49,10 @@ const ChatsController = new class {
   };
 
   onDialogNewMessage = (event) => {
-    const {dialog} = event.detail;
+    const {dialog, message} = event.detail;
+    if (message._ === 'messageService') {
+      return;
+    }
     const chatId = MessagesApiManager.getPeerId(dialog.peer);
     let el = this.chatElements.get(chatId);
     if (el) {
@@ -172,9 +175,13 @@ const ChatsController = new class {
 
   formatDate(dialog) {
     const message = MessagesApiManager.messages.get(dialog.top_message);
-    if (!message) {
-      return '';
+    if (message) {
+      return this.formatMessageDate(message);
     }
+    return '';
+  }
+
+  formatMessageDate(message) {
     const messageDate = new Date(message.date * 1000);
     const now = Date.now();
     if (messageDate.getTime() > now - 86400000) {
@@ -272,36 +279,31 @@ const ChatsController = new class {
     return 'File';
   }
 
-  updateChatPreview(chat) {
-    const el = this.chatsElements.get(chat.id);
-    if (el) {
-      this.renderChatPreviewContent(el, chat);
+  loadChatPhoto(el, dialog) {
+    const photoEl = $('.chats_item_photo', el);
+    if (this.isPeerMe(dialog.peer)) {
+      photoEl.classList.add('chats_item_photo_saved_messages');
+    } else {
+      this.loadPeerPhoto(photoEl, dialog.peer);
     }
   }
 
-  loadChatPhoto(el, dialog) {
-    const photoEl = $('.chats_item_photo', el);
-    const peerId = MessagesApiManager.getPeerId(dialog.peer);
-
-    if (this.isPeerMe(dialog.peer)) {
-      photoEl.classList.add('chats_item_photo_saved_messages');
-      return;
-    }
-
-    const photo = MessagesApiManager.getPeerPhoto(dialog.peer);
+  loadPeerPhoto(el, peer, big = false) {
+    const peerId = MessagesApiManager.getPeerId(peer);
+    const photo = MessagesApiManager.getPeerPhoto(peer);
     if (!photo || photo._ === 'chatPhotoEmpty') {
-      this.setChatPhotoPlaceholder(photoEl, peerId);
+      this.setChatPhotoPlaceholder(el, peerId);
       return;
     }
 
-    FileApiManager.loadPeerPhoto(dialog.peer, photo.photo_small, false, photo.dc_id, {priority: 10, cache: true})
-      .then((url) => {
-        photoEl.innerHTML = `<img src="${url}" alt class="chats_item_photo_img">`;
-      })
-      .catch((error) => {
-        console.warn('chat photo load error', error);
-        this.setChatPhotoPlaceholder(photoEl, peerId);
-      });
+    FileApiManager.loadPeerPhoto(peer, photo, big, photo.dc_id, {priority: 10, cache: true})
+        .then((url) => {
+          el.innerHTML = `<img src="${url}" alt class="peer_photo_img">`;
+        })
+        .catch((error) => {
+          console.warn('chat photo load error', error);
+          this.setChatPhotoPlaceholder(el, peerId);
+        });
   }
 
   setChatPhotoPlaceholder(photoEl, peerId) {
@@ -309,7 +311,7 @@ const ChatsController = new class {
     const peerTitle = MessagesApiManager.getPeerName(peer);
 
     photoEl.style.backgroundColor = this.getPlaceholderColor(peerId);
-    photoEl.innerHTML = '<div class="photo_empty_placeholder">' + peerTitle.charAt(0) + '</div>';
+    photoEl.innerHTML = '<div class="peer_photo_placeholder">' + peerTitle.charAt(0) + '</div>';
   }
 
   getPlaceholderColor(peerId) {

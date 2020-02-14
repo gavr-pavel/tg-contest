@@ -3,6 +3,8 @@ const keys = {
   'login_flood_pluralize_minutes': ['', 'Try again in {} minute', 'Try again in {} minutes'],
   'login_flood_pluralize_hours': ['', 'Try again in {} hour', 'Try again in {} hours'],
 
+  'messages_search_results_found': ['', '{} message found', '{} messages found'],
+
   'country_select_country_ab': 'Abkhazia',
   'country_select_country_af': 'Afghanistan',
   'country_select_country_ax': 'Åland Islands',
@@ -273,7 +275,7 @@ const I18n = new class {
   }
 
   getPlural(key, n, tokens) {
-    const options = JSON.parse(keys[key]);
+    const options = keys[key];
     let string;
     if (!n && options[0]) {
       string = options[0];
@@ -283,7 +285,7 @@ const I18n = new class {
       string = options[2];
     }
     string = string.replace('{}', n);
-    this.replaceTokens(string, tokens)
+    return this.replaceTokens(string, tokens)
   }
 };
 

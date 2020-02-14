@@ -6,7 +6,7 @@ const PART_SIZE = 512 * 1024;
 const MAX_CONNECTIONS = 2;
 
 const FileApiManager = new class {
-  files = new Map();
+  blobUrls = new Map();
 
   queue = [];
 
@@ -61,9 +61,9 @@ const FileApiManager = new class {
   async loadFile(location, dcId, {priority = 1, cache = false, mimeType = '', size = 0, onProgress, signal} = {}) {
     if (cache) {
       try {
-        const blob = await this.getFromCache(location);
-        if (blob) {
-          return FileApiManager.getBlobUrl(blob);
+        const url = await this.getFromCache(location);
+        if (url) {
+          return url;
         }
       } catch (e) {
         console.warn(e);
@@ -108,16 +108,17 @@ const FileApiManager = new class {
     }
 
     const blob = new Blob(parts, {type: mimeType});
+    const url = FileApiManager.getBlobUrl(blob);
 
     if (cache) {
       try {
-        this.saveToCache(location, blob);
+        this.saveToCache(location, blob, url);
       } catch (e) {
         console.warn(e);
       }
     }
 
-    return FileApiManager.getBlobUrl(blob);
+    return url;
   }
 
   getMimeType(storageFileType) {
@@ -144,19 +145,35 @@ const FileApiManager = new class {
   }
 
   async getFromCache(location) {
+    const dbFileName = this.getDbFileName(location);
+
+    if (this.blobUrls.has(dbFileName)) {
+      return this.blobUrls.get(dbFileName);
+    }
+
     const db = await this.openDb();
     const request = db.transaction(['files'], 'readonly')
         .objectStore('files')
-        .get(this.getDbFileName(location));
+        .get(dbFileName);
 
-    return this.getDbRequestPromise(request);
+    const blob = await this.getDbRequestPromise(request);
+    if (blob) {
+      const url = this.getBlobUrl(blob);
+      this.blobUrls.set(dbFileName, url);
+      return url;
+    }
   }
 
-  async saveToCache(location, blob) {
+  async saveToCache(location, blob, url) {
+    const dbFileName = this.getDbFileName(location);
+
     const db = await this.openDb();
     const request = db.transaction(['files'], 'readwrite')
         .objectStore('files')
         .put(blob, this.getDbFileName(location));
+
+    this.blobUrls.set(dbFileName, url);
+
     return this.getDbRequestPromise(request);
   }
 
@@ -192,18 +209,16 @@ const FileApiManager = new class {
   }
 
   loadPeerPhoto(peer, photo, big, dcId, options) {
+    const photoSize = big ? photo.photo_big : photo.photo_small;
     const location = {
       _: 'inputPeerPhotoFileLocation',
       peer: MessagesApiManager.getInputPeer(peer),
-      volume_id: photo.volume_id,
-      local_id: photo.local_id,
+      volume_id: photoSize.volume_id,
+      local_id: photoSize.local_id,
     };
-
     if (big) {
       location.big = true;
-      location.flags = 1;
     }
-
     return this.loadFile(location, dcId, options);
   }
 

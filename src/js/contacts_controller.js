@@ -58,22 +58,8 @@ const ContactsController = new class {
 
   loadContactPhoto(el, user) {
     const photoEl = $('.contacts_item_photo', el);
-
-    const photo = user.photo;
-    if (!photo) {
-      ChatsController.setChatPhotoPlaceholder(photoEl, user.id);
-      return;
-    }
-
     const peer = MessagesApiManager.getUserPeer(user);
-
-    FileApiManager.loadPeerPhoto(peer, photo.photo_small, false, photo.dc_id, {priority: 10, cache: true})
-      .then((url) => {
-        photoEl.innerHTML = `<img src="${url}" alt class="contacts_item_photo_img">`;
-      })
-      .catch((error) => {
-        console.warn('contact photo load error', error);
-      });
+    ChatsController.loadPeerPhoto(photoEl, peer);
   }
 
   renderPreviewContent(el, user) {

@@ -38,6 +38,29 @@
   display: none;
 }
 
+.sidebar_search {
+  background-color: #F4F4F5;
+  background-image: url('../icons/search_svg_light_gray.svg');
+  background-position: 12px center;
+  background-repeat: no-repeat;
+  border: 2px solid transparent;
+  border-radius: 50px;
+  display: inline-block;
+  flex-basis: 100%;
+  font: inherit;
+  height: 44px;
+  outline: none;
+  padding-left: 42px;
+  box-sizing: border-box;
+}
+.sidebar_search::placeholder {
+  color: #8E969B;
+}
+.sidebar_search:focus {
+  border: 2px solid #5FA1E3;
+  background-image: url('../icons/search_svg_blue.svg');
+}
+
 .sidebar_user_info {
   text-align: center;
   margin-bottom: 10px;

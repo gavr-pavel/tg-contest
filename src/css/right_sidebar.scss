@@ -91,3 +91,21 @@
   width: 132px;
   position: relative;
 }
+
+.messages_search_input {
+  margin-left: 64px;
+}
+
+.messages_search_results_header {
+  padding: 8px 16px;
+  color: #717579;
+  font-weight: 500;
+}
+
+.messages_search_results_list {
+  box-sizing: border-box;
+  width: 420px;
+  padding: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}

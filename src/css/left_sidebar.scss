@@ -89,21 +89,3 @@
   background-color: #F1F3F4;
   cursor: pointer;
 }
-
-.left_sidebar_search {
-  background-color: #F4F4F5;
-  background-image: url('../icons/search_svg_light_gray.svg');
-  background-position: 12px center;
-  background-repeat: no-repeat;
-  border: none;
-  border-radius: 50px;
-  display: inline-block;
-  flex-basis: 100%;
-  font: inherit;
-  height: 44px;
-  outline: none;
-  padding-left: 42px;
-}
-.left_sidebar_search::placeholder {
-  color: #8E969B;
-}

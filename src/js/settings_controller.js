@@ -1,6 +1,7 @@
 import {$, buildHtmlElement, encodeHtmlEntities} from "./utils";
 import {MDCMenu} from '@material/menu';
 import {MessagesApiManager} from "./api/messages_api_manager";
+import {ChatsController} from './chats_controller';
 
 const SettingsController = new class {
   show() {
@@ -66,15 +67,9 @@ const SettingsController = new class {
   }
 
   loadUserPhoto(user) {
-    const photo = user.photo;
-    if (!photo) {
-      return;
-    }
-    const peerUser = MessagesApiManager.getUserPeer(user);
-    FileApiManager.loadPeerPhoto(peerUser, photo.photo_big, true, photo.dc_id, {priority: 10, cache: true})
-        .then((url) => {
-          $('.sidebar_user_photo', this.container).style.backgroundImage = `url(${url})`;
-        });
+    const photoEl = $('.sidebar_user_photo', this.container);
+    const peer = MessagesApiManager.getUserPeer(user);
+    ChatsController.loadPeerPhoto(photoEl, peer, true);
   }
 
   onBack = (event) => {

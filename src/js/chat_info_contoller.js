@@ -70,7 +70,7 @@ const ChatInfoController = new class {
       <div class="chat_info_media"></div>
     `;
 
-    this.renderPeerPhoto(peer, peerData);
+    this.renderPeerPhoto(peer);
     this.bindListeners();
 
     this.loadPeerFullInfo(peerData).then((peerInfo) => {
@@ -160,18 +160,9 @@ const ChatInfoController = new class {
     checkbox.checked = notificationsEnabled;
   }
 
-  renderPeerPhoto(peer, peerData) {
-    const photo = MessagesApiManager.getPeerPhoto(peer);
+  renderPeerPhoto(peer) {
     const photoEl = $('.sidebar_user_photo', this.container);
-
-    if (!photo || photo._ === 'chatPhotoEmpty') {
-      ChatsController.setChatPhotoPlaceholder(photoEl, peerData.id);
-      return;
-    }
-
-    FileApiManager.loadPeerPhoto(peer, photo.photo_big, true, photo.dc_id, {priority: 10, cache: true}).then((url) => {
-      photoEl.style.backgroundImage = `url(${url})`;
-    });
+    ChatsController.loadPeerPhoto(photoEl, peer, true);
   }
 
   async loadMoreMedia() {
@@ -225,15 +216,16 @@ const ChatInfoController = new class {
   }
 
   close = () => {
-    if (!this.container || this.container.hidden) {
+    if (!this.container) {
       return;
     }
     this.container.hidden = true;
-    document.removeEventListener('keyup', this.onCloseByEsc);
+    this.peerId = null;
+    document.removeEventListener('keyup', this.onKeyUp);
   };
 
   onKeyUp = (event) => {
-    if (event.keyCode === 27 && MediaViewController.isOpen()) {
+    if (event.keyCode === 27 && !MediaViewController.isOpen()) {
       this.close();
     }
   };

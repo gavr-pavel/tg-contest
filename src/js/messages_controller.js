@@ -73,6 +73,7 @@ const MessagesController = new class {
     }
 
     ChatInfoController.close();
+    MessagesSearchController.close();
 
     this.header.hidden = true;
     this.footer.hidden = true;
@@ -136,20 +137,12 @@ const MessagesController = new class {
 
     const peerEl = $('.messages_header_peer');
     peerEl.addEventListener('click', () => {
+      MessagesSearchController.close();
       ChatInfoController.show(this.chatId);
     });
 
     const photoEl = $('.messages_header_peer_photo', this.header);
-    const photo = MessagesApiManager.getPeerPhoto(dialog.peer);
-    if (photo && photo._ !== 'chatPhotoEmpty') {
-      FileApiManager.loadPeerPhoto(dialog.peer, photo.photo_small, false, photo.dc_id, {priority: 10, cache: true})
-          .then((url) => {
-            photoEl.style.backgroundImage = `url(${url})`;
-          });
-    } else {
-      ChatsController.setChatPhotoPlaceholder(photoEl, peerId);
-      return;
-    }
+    ChatsController.loadPeerPhoto(photoEl, dialog.peer);
 
     if (peer._ === 'peerChannel' || peer._ === 'peerChat') {
       const chatId = peer.channel_id || peer.chat_id;
@@ -175,7 +168,8 @@ const MessagesController = new class {
         });
 
     $('.messages_header_action_search', this.header).addEventListener('click', () => {
-      // MessagesSearchController.show(this.chatId);
+      ChatInfoController.close();
+      MessagesSearchController.show(this.chatId);
     });
   }
 

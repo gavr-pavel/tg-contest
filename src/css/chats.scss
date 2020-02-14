@@ -2,7 +2,6 @@
 .contacts_sidebar {
   box-sizing: border-box;
   width: 420px;
-  height: 100vh;
   padding: 8px;
   border-right: 1px solid #E0E3E6;
   overflow-y: auto;
@@ -10,7 +9,8 @@
 }
 
 .chats_item,
-.contacts_item {
+.contacts_item,
+.messages_search_results_item {
   margin: 2px 0;
   border-radius: 5px;
   cursor: pointer;
@@ -18,7 +18,8 @@
 }
 
 .chats_item_content,
-.contacts_item_content {
+.contacts_item_content,
+.messages_search_results_item_content {
   display: flex;
   flex-direction: row;
   height: 54px;
@@ -44,8 +45,9 @@
 }
 
 .chats_item_photo,
-.contacts_item_photo {
-  flex: 0 0 54px;
+.contacts_item_photo,
+.messages_search_results_item_photo {
+  flex-shrink: 0;
   width: 54px;
   height: 54px;
   margin-right: 10px;
@@ -60,20 +62,15 @@
   background-position: center;
 }
 
-.chats_item_photo_img,
-.contacts_item_photo_img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-}
-
 .chats_item_text_row,
-.contacts_item_text_row {
+.contacts_item_text_row,
+.messages_search_results_item_text_row {
   display: flex;
 }
 
 .chats_item_text,
-.contacts_item_text {
+.contacts_item_text,
+.messages_search_results_item_text {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -82,14 +79,16 @@
 }
 
 .chats_item_title,
-.contacts_item_title {
+.contacts_item_title,
+.messages_search_results_item_title {
   flex: 1;
   font-size: 15px;
   font-weight: 500;
   margin-bottom: 5px;
 }
 
-.chats_item_date {
+.chats_item_date,
+.messages_search_results_item_date {
   color: #676B70;
   font-size: 12px;
 }
@@ -125,7 +124,8 @@
 }
 
 .chats_item_message,
-.contacts_item_status {
+.contacts_item_status,
+.messages_search_results_item_message {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
