@@ -33,6 +33,8 @@ const MessagesController = new class {
     MessagesApiManager.initUpdatesState();
     MessagesApiManager.emitter.on('chatMessagesUpdate', this.onChatMessagesUpdate);
     MessagesApiManager.emitter.on('chatNewMessage', this.onNewMessage);
+    MessagesApiManager.emitter.on('chatEditMessage', this.onEditMessage);
+    MessagesApiManager.emitter.on('chatDeleteMessage', this.onDeleteMessage);
     MessagesApiManager.emitter.on('userStatusUpdate', this.onUserStatusUpdate);
   }
 
@@ -204,16 +206,37 @@ const MessagesController = new class {
   }
 
   onChatMessagesUpdate = (event) => {
-    const {chatId, messages} = event.detail;
-    if (chatId === this.chatId) {
+    const {dialog, messages} = event.detail;
+    if (dialog === this.dialog) {
       this.renderMessages(messages);
     }
   };
 
   onNewMessage = (event) => {
-    const {chatId, message} = event.detail;
-    if (chatId === this.chatId) {
+    const {dialog, message} = event.detail;
+    if (dialog === this.dialog) {
+      this.renderNewMessage(message);
+    }
+  };
 
+  onEditMessage = (event) => {
+    const {dialog, message} = event.detail;
+    if (dialog === this.dialog) {
+      let el = this.messageElements.get(message.id);
+      if (el) {
+        this.renderMessageContent(el, message);
+      }
+    }
+  };
+
+  onDeleteMessage = (event) => {
+    const {dialog, message} = event.detail;
+    if (dialog === this.dialog) {
+      const el = this.messageElements.get(message.id);
+      if (el) {
+        el.remove();
+        this.messageElements.delete(message.id);
+      }
     }
   };
 
@@ -344,7 +367,7 @@ const MessagesController = new class {
     return className;
   }
 
-  renderMessageContent(el, message, options) {
+  renderMessageContent(el, message, options = {}) {
     const authorName = !options.stickToPrev ? this.formatAuthorName(message) : '';
     const mediaThumbData = this.getMessageMediaThumb(message.media);
 

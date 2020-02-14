@@ -17,9 +17,10 @@ const ChatsController = new class {
     this.initMenu();
 
     MessagesApiManager.emitter.on('dialogsUpdate', this.onDialogsUpdate);
-    MessagesApiManager.emitter.on('dialogNewMessage', this.onDialogNewMessage);
-    MessagesApiManager.emitter.on('dialogUnreadCountUpdate', this.onDialogUnreadCountUpdate);
     MessagesApiManager.emitter.on('dialogOrderUpdate', this.onDialogOrderUpdate);
+    MessagesApiManager.emitter.on('dialogTopMessageUpdate', this.onDialogTopMessageUpdate);
+    MessagesApiManager.emitter.on('chatNewMessage', this.onDialogNewMessage);
+    MessagesApiManager.emitter.on('chatUnreadCountUpdate', this.onDialogUnreadCountUpdate);
 
     this.loader = buildHtmlElement('<div class="lds-ring"><div></div><div></div><div></div><div></div></div>');
     this.container.append(this.loader);
@@ -43,7 +44,7 @@ const ChatsController = new class {
   }
 
   onDialogsUpdate = (event) => {
-    const dialogs = event.detail;
+    const {dialogs} = event.detail;
     this.renderChats(dialogs);
   };
 
@@ -68,6 +69,15 @@ const ChatsController = new class {
       el = this.buildChatPreviewElement(dialog);
     }
     this.container.insertBefore(el, this.container.children[index]);
+  };
+
+  onDialogTopMessageUpdate = (event) => {
+    const {dialog} = event.detail;
+    const chatId = MessagesApiManager.getPeerId(dialog.peer);
+    const el = this.chatElements.get(chatId);
+    if (el) {
+      this.renderChatPreviewContent(el, dialog);
+    }
   };
 
   onDialogUnreadCountUpdate = (event) => {

@@ -116,7 +116,7 @@ function wait(ms) {
 }
 
 function randomLong() {
-  return crypto.getRandomValues(new Uint32Array(2)).buffer;
+  return crypto.getRandomValues(new Uint32Array(2));
 }
 
 export {

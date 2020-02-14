@@ -76,21 +76,21 @@ const MessagesApiManager = new class {
             dialog.unread_count++;
           }
           this.handleDialogOrder(dialog);
-          this.emitter.trigger('dialogNewMessage', {dialog, message});
+          this.updateChatMessages(dialog, [message]);
+          this.emitter.trigger('chatNewMessage', {dialog, message});
         } else {
           this.handleNewDialog(message);
         }
-        this.updateChatMessages(chatId, [message]);
       } break;
       case 'updateEditMessage':
       case 'updateEditChannelMessage':{
         const msgId = update.message.id;
         const message = this.messages.get(msgId);
         if (message) {
+          this.messages.set(msgId, update.message);
           const chatId = this.getPeerId(message.to_id);
           this.updateChatEditedMessage(chatId, message, update.message);
         }
-        this.messages.set(msgId, update.message);
       } break;
       case 'updateDeleteMessages':
       case 'updateDeleteChannelMessages': {
@@ -110,7 +110,7 @@ const MessagesApiManager = new class {
         if (dialog) {
           dialog.unread_count = update.still_unread_count;
           dialog.read_inbox_max_id = update.max_id;
-          this.emitter.trigger('dialogUnreadCountUpdate', {dialog});
+          this.emitter.trigger('chatUnreadCountUpdate', {dialog});
         }
       } break;
       case 'updateUserStatus': {
@@ -203,19 +203,30 @@ const MessagesApiManager = new class {
     }
     const dialog = await this.loadPeerDialog(this.getMessagePeer(message));
     this.handleDialogOrder(dialog);
-    this.emitter.trigger('dialogNewMessage', {dialog, message});
+    this.emitter.trigger('chatNewMessage', {dialog, message});
   }
 
   handleDialogOrder(dialog) {
     if (dialog.pFlags.pinned) {
       return;
     }
+
+    const lastMessage = dialog.top_message && this.messages.get(dialog.top_message);
+    if (!lastMessage) {
+      return;
+    }
+
     const curIndex = this.dialogs.indexOf(dialog);
     if (curIndex > -1) {
       this.dialogs.splice(curIndex, 1);
     }
+
     const newIndex = this.dialogs.findIndex((item) => {
-      return !item.pFlags.pinned;
+      if (!item.pFlags.pinned && item.top_message) {
+        const itemMessage = this.messages.get(item.top_message);
+        return itemMessage && itemMessage.date > lastMessage.date;
+      }
+      return false;
     });
     this.dialogs.splice(newIndex, 0, dialog);
 
@@ -239,7 +250,7 @@ const MessagesApiManager = new class {
     this.updateDialogs(dialogs);
 
     this.dialogs = this.dialogs.concat(dialogs);
-    this.emitter.trigger('dialogsUpdate', this.dialogs);
+    this.emitter.trigger('dialogsUpdate', {dialogs: this.dialogs});
 
     this.preloadDialogsMessages(dialogs);
 
@@ -254,7 +265,7 @@ const MessagesApiManager = new class {
     if (this.chatMessages.has(chatId)) {
       chatMessages = this.chatMessages.get(chatId);
       if (!offsetId || offsetId > chatMessages[chatMessages.length - 1].id) {
-        this.emitter.trigger('chatMessagesUpdate', {chatId, messages: chatMessages});
+        this.emitter.trigger('chatMessagesUpdate', {dialog, messages: chatMessages});
         return chatMessages;
       }
     } else {
@@ -267,7 +278,7 @@ const MessagesApiManager = new class {
         }
       }
       this.chatMessages.set(chatId, chatMessages);
-      this.emitter.trigger('chatMessagesUpdate', {chatId, messages: chatMessages});
+      this.emitter.trigger('chatMessagesUpdate', {dialog, messages: chatMessages});
     }
 
     const response = await ApiClient.callMethod('messages.getHistory', {
@@ -281,7 +292,7 @@ const MessagesApiManager = new class {
     this.updateUsers(response.users);
     this.updateChats(response.chats);
 
-    this.updateChatMessages(chatId, response.messages, true);
+    this.updateChatMessages(dialog, response.messages, true);
 
     return response.messages;
   }
@@ -341,8 +352,9 @@ const MessagesApiManager = new class {
     }
   }
 
-  updateChatMessages(chatId, newMessages, history = false) {
-    const chatMessages = this.chatMessages.get(chatId);
+  updateChatMessages(dialog, newMessages, history = false) {
+    const peerId = this.getPeerId(dialog.peer);
+    const chatMessages = this.chatMessages.get(peerId);
     if (!chatMessages) {
       return;
     }
@@ -351,26 +363,48 @@ const MessagesApiManager = new class {
     } else {
       chatMessages.unshift(...newMessages);
     }
-    this.emitter.trigger('chatMessagesUpdate', {chatId, messages: chatMessages});
+    this.emitter.trigger('chatMessagesUpdate', {dialog, messages: chatMessages});
   }
 
   updateChatEditedMessage(chatId, message, newMessage) {
+    const dialog = this.peerDialogs.get(chatId);
+    if (!dialog) {
+      return;
+    }
     const chatMessages = this.chatMessages.get(chatId);
     if (chatMessages) {
       const index = chatMessages.indexOf(message);
       if (index > -1) {
         chatMessages.splice(index, 1, newMessage);
       }
+      this.emitter.trigger('chatEditMessage', {dialog, message: newMessage});
+    }
+    if (dialog.top_message === message.id) {
+      this.emitter.trigger('dialogTopMessageUpdate', {dialog});
     }
   }
 
   updateChatDeletedMessage(chatId, message) {
+    const dialog = this.peerDialogs.get(chatId);
+    if (!dialog) {
+      return;
+    }
     const chatMessages = this.chatMessages.get(chatId);
     if (chatMessages) {
       const index = chatMessages.indexOf(message);
       if (index > -1) {
         chatMessages.splice(index, 1);
       }
+      this.emitter.trigger('chatDeleteMessage', {dialog, message});
+    }
+
+    if (dialog.top_message === message.id) {
+      if (chatMessages.length) {
+        dialog.top_message = chatMessages[0].id;
+      } else {
+        delete dialog.top_message;
+      }
+      this.emitter.trigger('dialogTopMessageUpdate', {dialog});
     }
   }
 
@@ -486,6 +520,9 @@ const MessagesApiManager = new class {
     const peerData = this.getPeerData(peer);
     switch (peer._) {
       case 'peerUser':
+        if (peer.user_id === App.getAuthUserId()) {
+          return {_: 'inputPeerSelf'};
+        }
         return {_: 'inputPeerUser', user_id: peer.user_id, access_hash: peerData && peerData.access_hash || 0};
       case 'peerChat':
         return {_: 'inputPeerChat', chat_id: peer.chat_id, access_hash: peerData && peerData.access_hash || 0};
