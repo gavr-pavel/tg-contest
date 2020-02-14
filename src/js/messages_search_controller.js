@@ -43,9 +43,10 @@ const MessagesSearchController = new class {
 
   onInput = () => {
     const q = this.input.value.trim();
-    this.listWrap.innerHTML = '';
     if (q) {
       this.loadResults(q);
+    } else {
+      this.listWrap.innerHTML = '';
     }
   };
 
@@ -63,6 +64,8 @@ const MessagesSearchController = new class {
     MessagesApiManager.updateUsers(res.users);
 
     const count = res.count || res.messages.length;
+
+    this.listWrap.innerHTML = '';
     this.renderResultsHeader(count);
     this.renderResults(res.messages);
   }

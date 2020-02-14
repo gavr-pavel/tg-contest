@@ -3,7 +3,7 @@ const keys = {
   'login_flood_pluralize_minutes': ['', 'Try again in {} minute', 'Try again in {} minutes'],
   'login_flood_pluralize_hours': ['', 'Try again in {} hour', 'Try again in {} hours'],
 
-  'messages_search_results_found': ['', '{} message found', '{} messages found'],
+  'messages_search_results_found': ['No messages found', '{} message found', '{} messages found'],
 
   'country_select_country_ab': 'Abkhazia',
   'country_select_country_af': 'Afghanistan',
