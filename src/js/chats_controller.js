@@ -154,7 +154,7 @@ const ChatsController = new class {
         <div class="chats_item_date">${date}</div>
       </div>
       <div class="chats_item_text_row">
-        <div class="chats_item_message">${encodeHtmlEntities(lastMessagePreview)}</div>
+        <div class="chats_item_message">${lastMessagePreview}</div>
         ${badge}
       </div>
     `;
@@ -200,14 +200,14 @@ const ChatsController = new class {
   }
 
   getMessagePreview(message) {
-    let text = message.message;
+    let text = encodeHtmlEntities(message.message);
     if (!text) {
       const label = this.getMessageContentTypeLabel(message.media);
       text = `<span class="chats_item_message_content_label">${label}</span>`;
     }
     if (message.to_id._ === 'peerChannel' && message.from_id) {
       const user = MessagesApiManager.users.get(message.from_id);
-      text = user.first_name + ': ' + text;
+      text = encodeHtmlEntities(user.first_name) + ': ' + text;
     }
     return text;
   }
