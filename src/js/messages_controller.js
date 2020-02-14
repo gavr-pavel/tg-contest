@@ -412,7 +412,7 @@ const MessagesController = new class {
   };
 
   onFileClick = (event) => {
-    const msgId = +event.currentTarget.closest('.messages_item').dataset.id;
+    const msgId = +event.currentTarget.dataset.messageId || +event.currentTarget.closest('.messages_item').dataset.id;
     const message = MessagesApiManager.messages.get(msgId);
     if (message) {
       const document = message.media.document;
@@ -724,7 +724,7 @@ const MessagesController = new class {
     return 0;
   }
 
-  buildDateMessageEl(messageDate) {
+  formatMessageDateFull(messageDate) {
     const todayMidnight = new Date().setHours(0, 0, 0, 0) / 1000;
 
     let dateText;
@@ -738,8 +738,16 @@ const MessagesController = new class {
       dateText = months[date.getMonth()] + ' ' + date.getDate();
     }
 
+    return dateText;
+  }
+
+  formatMessageDateTime(date) {
+    return `${this.formatMessageDateFull(date)} at ${this.formatMessageTime(date)}`;
+  }
+
+  buildDateMessageEl(messageDate) {
     return buildHtmlElement(`
-      <div class="messages_item-type-service messages_item-type-date">${dateText}</div>
+      <div class="messages_item-type-service messages_item-type-date">${ this.formatMessageDateFull(messageDate) }</div>
     `);
   }
 

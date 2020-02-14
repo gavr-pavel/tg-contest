@@ -75,8 +75,12 @@ const MediaApiManager = new class {
         case 'documentAttributeImageSize':
           result.w = attribute.w;
           result.h = attribute.h;
-          if (hasThumb && document.mime_type === 'application/x-tgsticker') { // todo animated sticker support
-            result.type = 'sticker';
+
+          if (hasThumb) {
+            result.type = 'image';
+            if (document.mime_type === 'application/x-tgsticker') { // todo animated sticker support
+              result.type = 'sticker';
+            }
           }
           break;
         case 'documentAttributeAnimated':
@@ -117,6 +121,15 @@ const MediaApiManager = new class {
     }
 
     return result;
+  }
+
+  getFileExtension(mimeType) {
+    return mimeType.split('/').pop().split('.')[0];
+  }
+
+  getFormatFileSize(bytes) {
+    const i = bytes === 0 ? 0 : Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${ (bytes / Math.pow(1024, i)).toFixed(1) * 1 } ${ ['B', 'kB', 'MB', 'GB', 'TB'][i] }`;
   }
 
   async uploadVoice(blob, duration = 0) {

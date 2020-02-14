@@ -587,6 +587,19 @@ const MessagesApiManager = new class {
     return this.getInputPeer(this.getPeerById(peerId));
   }
 
+  getInputMessagesFilter(type) {
+    switch (type) {
+      case 'media':
+        return {_: 'inputMessagesFilterPhotos'};
+      case 'docs':
+        return {_: 'inputMessagesFilterDocument'};
+      case 'links':
+        return {_: 'inputMessagesFilterUrl'};
+      case 'audio':
+        return {_: 'inputMessagesFilterMusic'};
+    }
+  }
+
   getUserPeer(user) {
     return {_: 'peerUser', user_id: user.id};
   }

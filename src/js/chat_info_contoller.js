@@ -1,4 +1,4 @@
-import {$, buildHtmlElement, encodeHtmlEntities} from "./utils";
+import {$, buildHtmlElement, encodeHtmlEntities, getLabeledElements} from "./utils";
 import {MDCCheckbox} from '@material/checkbox';
 import {MDCMenu} from "@material/menu";
 import {MessagesApiManager} from "./api/messages_api_manager";
@@ -10,7 +10,12 @@ import {MediaViewController} from "./media_view_controller";
 import {MDCRipple} from '@material/ripple/component';
 
 const ChatInfoController = new class {
-  mediaStep = 30;
+  sharedSteps = {
+    media: 30,
+    docs: 15,
+    links: 15,
+    audio: 15,
+  };
 
   show(peerId) {
     this.container = $('.right_sidebar');
@@ -21,9 +26,32 @@ const ChatInfoController = new class {
     }
     this.peerId = peerId;
 
-    this.loadingMedia = true;
-    this.noMoreMedia = false;
-    this.offsetMsgId = 0;
+    this.sharedLoading = {
+      loading: {
+        media: true,
+        docs: false,
+        links: false,
+        audio: false,
+      },
+      noMore: {
+        media: false,
+        docs: false,
+        links: false,
+        audio: false,
+      },
+      offsetMsgId: {
+        media: 0,
+        docs: 0,
+        links: 0,
+        audio: 0,
+      },
+      scrollTop: {
+        media: 0,
+        docs: 0,
+        links: 0,
+        audio: 0,
+      }
+    };
 
     const peer = MessagesApiManager.getPeerById(peerId);
     const peerName = MessagesApiManager.getPeerName(peer);
@@ -53,21 +81,26 @@ const ChatInfoController = new class {
         <div class="sidebar_user_desc">${encodeHtmlEntities(peerDesc)}</div>
       </div>
       <div class="chat_info_desc"></div>
-      <div class="nav_tabs_container">
-        <div class="nav_tabs_item nav_tabs_item-active">
+      <div class="nav_tabs_container nav_tabs_container__shared">
+        <div class="nav_tabs_item" data-js-label="nav_media">
           <div class="nav_tabs_item_label">Media</div>
         </div>
-        <div class="nav_tabs_item">
+        <div class="nav_tabs_item" data-js-label="nav_docs">
           <div class="nav_tabs_item_label">Docs</div>
         </div>
-        <div class="nav_tabs_item">
+        <div class="nav_tabs_item" data-js-label="nav_links">
           <div class="nav_tabs_item_label">Links</div>
         </div>
-        <div class="nav_tabs_item">
+        <div class="nav_tabs_item" data-js-label="nav_audio">
           <div class="nav_tabs_item_label">Audio</div>
         </div>
       </div>
-      <div class="chat_info_media"></div>
+      <div class="chat_info_shared_wrap">
+        <div class="chat_info_shared chat_info_shared_media"></div>
+        <div class="chat_info_shared chat_info_shared_docs" hidden></div>
+        <div class="chat_info_shared chat_info_shared_links" hidden></div>
+        <div class="chat_info_shared chat_info_shared_audio" hidden></div>
+      </div>
     `;
 
     this.renderPeerPhoto(peer);
@@ -76,11 +109,11 @@ const ChatInfoController = new class {
     this.loadPeerFullInfo(peerData).then((peerInfo) => {
       this.renderDesc(peerData, peerInfo);
     });
-
-    this.loadMoreMedia();
   };
 
   bindListeners() {
+    this.sharedScrollEl = $('.chat_info_shared_wrap');
+
     const closeButtonEl = $('.sidebar_close_button', this.container);
     closeButtonEl.addEventListener('click', this.close);
     new MDCRipple(closeButtonEl).unbounded = true;
@@ -91,14 +124,13 @@ const ChatInfoController = new class {
     extraMenuButtonEl.addEventListener('click', this.onExtraMenuClick);
     new MDCRipple(extraMenuButtonEl).unbounded = true;
 
-    $('.chat_info_media').addEventListener('scroll', this.onMediaScroll);
-  }
+    this.sharedScrollEl.addEventListener('scroll', this.onSharedScroll);
 
-  async loadPeerFullInfo(peerData) {
-    if (peerData._ === 'user') {
-      return await MessagesApiManager.loadUserFull(this.peerId);
+    this.sharedTabsDom = getLabeledElements(this.container);
+    for (let tabKey in this.sharedTabsDom) {
+      this.sharedTabsDom[tabKey].addEventListener('click', this.onSharedTabClick);
     }
-    return await MessagesApiManager.loadChatFull(this.peerId);
+    this.setSharedSection('media');
   }
 
   getNotificationsCheckboxHtml() {
@@ -165,36 +197,54 @@ const ChatInfoController = new class {
     ChatsController.loadPeerPhoto(photoEl, peer, true);
   }
 
-  async loadMoreMedia() {
-    const inputPeer = MessagesApiManager.getInputPeerById(this.peerId);
+  async loadPeerFullInfo(peerData) {
+    if (peerData._ === 'user') {
+      return await MessagesApiManager.loadUserFull(this.peerId);
+    }
+    return await MessagesApiManager.loadChatFull(this.peerId);
+  }
+
+  async loadMoreShared() {
+    const type = this.sharedSection;
+    console.log(`loading ${type}`);
 
     let res;
     try {
       res = await ApiClient.callMethod('messages.search', {
-        peer: inputPeer,
-        filter: {_: 'inputMessagesFilterPhotos'},
-        limit: this.mediaStep,
-        offset_id: this.offsetMsgId,
+        peer: MessagesApiManager.getInputPeerById(this.peerId),
+        filter: MessagesApiManager.getInputMessagesFilter(type),
+        limit: this.sharedSteps[type],
+        offset_id: this.sharedLoading.offsetMsgId[type],
       });
     } finally {
-      this.loadingMedia = false;
+      this.sharedLoading.loading[type] = false;
     }
+    console.log(res);
 
-    if (res.count < this.mediaStep || res.messages.length < this.mediaStep) {
-      this.noMoreMedia = true;
+    if (res.count < this.sharedSteps[type] || res.messages.length < this.sharedSteps[type]) {
+      this.sharedLoading.noMore[type] = true;
       if (!res.messages.length) {
         return;
       }
     }
 
     const messages = res.messages;
-    this.offsetMsgId = messages[messages.length - 1].id;
+    this.sharedLoading.offsetMsgId[type] = messages[messages.length - 1].id;
     MessagesApiManager.updateMessages(messages);
 
+    switch (type) {
+      case 'media':
+        return this.renderSharedMedia(messages);
+      case 'docs':
+        return this.renderSharedDocs(messages);
+    }
+  }
+
+  renderSharedMedia(messages) {
     const frag = document.createDocumentFragment();
     messages.forEach((message) => {
       const thumbEl = buildHtmlElement(`
-        <div class="chat_info_media_photo" data-message-id="${message.id}"></div>
+        <div class="chat_info_shared_media_item" data-message-id="${message.id}"></div>
       `);
       thumbEl.addEventListener('click', MessagesController.onThumbClick);
 
@@ -203,7 +253,37 @@ const ChatInfoController = new class {
       this.loadMediaThumb(message, thumbEl);
     });
 
-    $('.chat_info_media').append(frag);
+    $('.chat_info_shared_media').append(frag);
+  }
+
+  renderSharedDocs(messages) {
+    const frag = document.createDocumentFragment();
+    messages.forEach((message) => {
+      const attrs = MediaApiManager.getDocumentAttributes(message.media.document);
+      const fileName = attrs.file_name;
+      const type = MediaApiManager.getFileExtension(message.media.document.mime_type);
+      const size = MediaApiManager.getFormatFileSize(+message.media.document.size);
+
+      const dateTime = MessagesController.formatMessageDateTime(message.date);
+
+      const docEl = buildHtmlElement(`
+        <div class="chat_info_shared_docs_item" data-message-id="${ message.id }">
+          <div class="chat_info_shared_docs_item_icon">${ type }</div>
+          <div class="chat_info_shared_docs_item_info">
+            <div class="chat_info_shared_docs_item_name">${ encodeHtmlEntities(fileName) }</div>
+            <div class="chat_info_shared_docs_item_desc">${ size } &middot; ${ dateTime }</div>
+          </div>
+        </div>
+      `);
+      docEl.addEventListener('click', MessagesController.onFileClick);
+      frag.append(docEl);
+
+      if (attrs.type === 'image') {
+        this.loadDocThumb(message.media.document, $('.chat_info_shared_docs_item_icon', docEl));
+      }
+    });
+
+    $('.chat_info_shared_docs').append(frag);
   }
 
   async loadMediaThumb(message, thumbEl) {
@@ -213,6 +293,36 @@ const ChatInfoController = new class {
     const url = await FileApiManager.loadMessagePhoto(thumb.object, photoSize.type, {cache: true});
 
     thumbEl.style.backgroundImage = `url(${url})`;
+  }
+
+  async loadDocThumb(doc, thumbEl) {
+    const url = await FileApiManager.loadMessageDocumentThumb(doc, doc.type, {cache: true});
+
+    thumbEl.classList.add('chat_info_shared_docs_item_icon__thumb');
+    thumbEl.style.backgroundImage = `url(${url})`;
+  }
+
+  setSharedSection(sectionNew) {
+    const sectionPrev = this.sharedSection;
+
+    if (sectionPrev === sectionNew) {
+      return;
+    }
+    if (sectionPrev) {
+      this.sharedTabsDom[`nav_${sectionPrev}`].classList.remove('nav_tabs_item-active');
+    }
+
+    if (sectionPrev) {
+      this.sharedLoading.scrollTop[sectionPrev] = this.sharedScrollEl.scrollTop;
+      $(`.chat_info_shared_${sectionPrev}`).hidden = true;
+      $(`.chat_info_shared_${sectionNew}`).hidden = false;
+    }
+
+    this.sharedSection = sectionNew;
+    this.sharedTabsDom[`nav_${sectionNew}`].classList.add('nav_tabs_item-active');
+    this.sharedScrollEl.scrollTop = this.sharedLoading.scrollTop[sectionNew];
+
+    this.loadMoreShared();
   }
 
   close = () => {
@@ -240,13 +350,19 @@ const ChatInfoController = new class {
     }
   };
 
-  onMediaScroll = () => {
-    const scrollContainer = $('.chat_info_media');
+  onSharedScroll = () => {
+    const scrollContainer = this.sharedScrollEl;
+    const scrollFine = scrollContainer.scrollTop + scrollContainer.offsetHeight > scrollContainer.scrollHeight - 150;
 
-    if (!this.loadingMedia && !this.noMoreMedia && scrollContainer.scrollTop + scrollContainer.offsetHeight > scrollContainer.scrollHeight - 150) {
-      this.loadingMedia = true;
-      this.loadMoreMedia();
+    if (!this.sharedLoading.loading[this.sharedSection] && !this.sharedLoading.noMore[this.sharedSection] && scrollFine) {
+      this.sharedLoading.loading[this.sharedSection] = true;
+      this.loadMoreShared();
     }
+  };
+
+  onSharedTabClick = (event) => {
+    const section = event.currentTarget.dataset.jsLabel.replace(/^nav_/, '');
+    this.setSharedSection(section);
   };
 };
 
