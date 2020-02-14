@@ -120,6 +120,19 @@ const MessagesApiManager = new class {
           this.emitter.trigger('userStatusUpdate', {user});
         }
       } break;
+      case 'updatePinnedDialogs': {
+        if (update.order) {
+          this.handlePinnedDialogsOrder(update.order);
+        }
+      } break;
+      case 'updateDialogPinned': {
+        const peerId = this.getPeerId(update.peer);
+        const dialog = this.peerDialogs.get(peerId);
+        if (dialog) {
+          dialog.pFlags.pinned = update.pFlags.pinned;
+          this.handleDialogOrder(dialog);
+        }
+      } break;
       case 'updateDraftMessage': {
         const peerId = this.getPeerId(update.peer);
         const dialog = this.peerDialogs.get(peerId);
@@ -206,6 +219,42 @@ const MessagesApiManager = new class {
       this.handleDialogOrder(dialog);
       this.emitter.trigger('chatNewMessage', {dialog, message});
     }
+  }
+
+  async handlePinnedDialogsOrder(order) {
+    const unpinnedDialogs = [];
+    const pinnedDialogs = [];
+
+    for (const item of order) {
+      let dialog = this.peerDialogs.get(this.getPeerId(item.peer));
+      if (!dialog) {
+        dialog = await this.loadPeerDialog(item.peer);
+      }
+      dialog.pFlags.pinned = true;
+      pinnedDialogs.push(dialog);
+    }
+
+    let prevPinnedCount = 0;
+    for (const dialog of this.dialogs) {
+      if (!dialog.pFlags.pinned) {
+        break;
+      }
+      prevPinnedCount++;
+      if (pinnedDialogs.indexOf(dialog) === -1) {
+        delete dialog.pFlags.pinned;
+        unpinnedDialogs.push(dialog);
+      }
+    }
+
+    this.dialogs.splice(0, prevPinnedCount, ...pinnedDialogs);
+
+    pinnedDialogs.forEach((dialog, index) => {
+      this.emitter.trigger('dialogOrderUpdate', {dialog, index});
+    });
+
+    unpinnedDialogs.forEach((dialog) => {
+      this.handleDialogOrder(dialog);
+    });
   }
 
   handleDialogOrder(dialog) {

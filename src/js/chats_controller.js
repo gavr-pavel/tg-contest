@@ -66,9 +66,7 @@ const ChatsController = new class {
     const {dialog, index} = event.detail;
     const chatId = MessagesApiManager.getPeerId(dialog.peer);
     let el = this.chatElements.get(chatId);
-    if (el) {
-      this.renderChatPreviewContent(el, dialog);
-    } else {
+    if (!el) {
       el = this.buildChatPreviewElement(dialog);
     }
     this.container.insertBefore(el, this.container.children[index]);
