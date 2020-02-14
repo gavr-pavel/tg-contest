@@ -5,7 +5,7 @@ import {ApiClient} from './api/api_client';
 const EmojiDropdown = new class {
   stickerSets = new Map();
 
-  constructor() {
+  init() {
     this.container = buildHtmlElement(`
       <div class="emoji_dropdown" hidden>
         <div class="emoji_dropdown_top_nav nav_tabs_container">
@@ -37,12 +37,11 @@ const EmojiDropdown = new class {
     `);
 
     this.dom = getLabeledElements(this.container);
+    this.dom.nav_emoji.addEventListener('click', this.onTopNavClick);
+    this.dom.nav_stickers.addEventListener('click', this.onTopNavClick);
 
     this.initEmojiSection();
     this.initStickersSection();
-
-    this.dom.nav_emoji.addEventListener('click', this.onTopNavClick);
-    this.dom.nav_stickers.addEventListener('click', this.onTopNavClick);
 
     this.setSection('emoji');
   }
@@ -80,20 +79,31 @@ const EmojiDropdown = new class {
       Storage.set('user_stickers', allStickers);
     }
 
-    let frag = document.createDocumentFragment();
+    const frag = document.createDocumentFragment();
+    const bottomNavFrag = document.createDocumentFragment();
 
+    let index = 0;
     for (const set of allStickers.sets) {
       const el = buildHtmlElement(`<div class="emoji_dropdown_list" data-set-id="${set.id}"></div>`);
       frag.appendChild(el);
-      this.initStickerSet(set, el);
+
+      const bottomButton = buildHtmlElement(`<div class="emoji_dropdown_bottom_nav_item" data-set-id="${set.id}"></div>`);
+      bottomNavFrag.append(bottomButton);
+
+      this.initStickerSet(set, el, bottomButton, !index);
+      index++;
     }
 
     const container = $('.emoji_dropdown_section_content', this.dom.section_stickers);
     container.appendChild(frag);
     container.addEventListener('click', this.onStickerClick);
+
+    const bottomNavContainer = $('.emoji_dropdown_bottom_nav', this.dom.section_stickers);
+    bottomNavContainer.append(bottomNavFrag);
+    bottomNavContainer.addEventListener('click', this.onStickerNavClick);
   }
 
-  async initStickerSet(set, container) {
+  async initStickerSet(set, container, bottomButton, load = false) {
     const fullSet = await ApiClient.callMethod('messages.getStickerSet', {
       stickerset: {_: 'inputStickerSetID', id: set.id, access_hash: set.access_hash}
     });
@@ -103,10 +113,22 @@ const EmojiDropdown = new class {
     fullSet.documents.forEach((document, index) => {
       const stickerEl = buildHtmlElement(`<div class="emoji_dropdown_list_item" data-sticker-index="${index}"></div>`);
       frag.appendChild(stickerEl);
-      // FileApiManager.loadMessageDocument(document, {cache: true})
-      //     .then(url => stickerEl.style.backgroundImage = `url(${url})`);
+      if (load) {
+        this.loadSticker(stickerEl, document);
+      }
     });
     container.appendChild(frag);
+
+    this.loadSticker(bottomButton, fullSet.documents[0]);
+  }
+
+  onStickerNavClick = (event) => {
+
+  };
+
+  async loadSticker(el, document) {
+    const url = await FileApiManager.loadMessageDocument(document, {cache: true});
+    el.innerHTML = `<img class="emoji_dropdown_sticker_img" src="${url}">`;
   }
 
   setSection(section) {

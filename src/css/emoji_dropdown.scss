@@ -30,7 +30,7 @@
 }
 
 .emoji_dropdown_section {
-  width: 100%;
+  width: 420px;
 }
 
 .emoji_dropdown_section_content {
@@ -74,6 +74,11 @@
   cursor: pointer;
   background: no-repeat center;
   background-size: cover;
+  border-radius: 5px;
+}
+
+.emoji_dropdown_section-stickers .emoji_dropdown_list_item:hover {
+  background-color: #F4F4F5;
 }
 
 .emoji_dropdown_bottom_nav {
@@ -139,4 +144,15 @@
 }
 .emoji_dropdown_bottom_nav_item-flags.emoji_dropdown_bottom_nav_item-active {
   background-image: url('../icons/flag_svg_blue.svg');
+}
+
+.emoji_dropdown_sticker_img {
+  object-fit: contain;
+  width: 100%;
+  height: 100%;
+}
+
+.emoji_dropdown_section-stickers .emoji_dropdown_bottom_nav_item {
+  width: 56px;
+  height: 100%;
 }

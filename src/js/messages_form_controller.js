@@ -25,6 +25,7 @@ const MessagesFormController = new class {
 
     new MDCRipple(this.dom.submit_button).unbounded = true;
 
+    EmojiDropdown.init();
     EmojiDropdown.bind(this.dom.emoji_button, input);
 
     this.initMediaMenu();
