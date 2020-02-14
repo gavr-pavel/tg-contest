@@ -1,4 +1,4 @@
-import {$, buildHtmlElement} from "./utils";
+import {$, buildHtmlElement, encodeHtmlEntities} from "./utils";
 import {MDCMenu} from '@material/menu';
 import {MessagesApiManager} from "./api/messages_api_manager";
 
@@ -25,7 +25,7 @@ const SettingsController = new class {
         </div>
         <div class="sidebar_user_info">
           <div class="sidebar_user_photo"></div>
-          <div class="sidebar_user_name">${userName}</div>
+          <div class="sidebar_user_name">${encodeHtmlEntities(userName)}</div>
           <div class="sidebar_user_desc">+${user.phone}</div>
         </div>
         <ul class="settings_main_menu_list mdc-list">

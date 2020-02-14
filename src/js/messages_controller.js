@@ -1,4 +1,4 @@
-import {$, buildHtmlElement} from './utils';
+import {$, buildHtmlElement, encodeHtmlEntities} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple';
 import {MediaApiManager} from './api/media_api_manager';
@@ -370,7 +370,7 @@ const MessagesController = new class {
     if (message.from_id && this.dialog.peer._ !== 'peerUser') {
       const userId = message.from_id;
       const title = MessagesApiManager.getPeerName({_: 'peerUser', user_id: userId});
-      return `<a class="messages_item_author" href="#user/${userId}">${title}</a>`;
+      return `<a class="messages_item_author" href="#user/${userId}">${encodeHtmlEntities(title)}</a>`;
     }
     return '';
   }
@@ -536,7 +536,7 @@ const MessagesController = new class {
           <div class="document_icon"></div>
         </div>
         <div class="document_col">
-          <div class="document_filename">${attributes.file_name}</div>
+          <div class="document_filename">${encodeHtmlEntities(attributes.file_name)}</div>
           <div class="document_size">${this.formatDocSize(media.document.size)}</div>        
         </div>      
       </div>
@@ -560,7 +560,7 @@ const MessagesController = new class {
     const webpage = media.webpage;
     if (webpage._ === 'webPage') {
       return `
-        <!--a href="${webpage.url}" target="_blank">${webpage.display_url}</a-->
+        <!--a href="${encodeURI(webpage.url)}" target="_blank">${webpage.display_url}</a-->
         <div class="webpage">${this.formatWebpageContent(webpage, mediaThumbData)}</div>
       `;
     } else if (webpage._ === 'webPagePending') {
@@ -577,9 +577,9 @@ const MessagesController = new class {
       case 'article':
         return `
           ${formattedThumb}
-          <a class="wepbage_site_name" href="${webpage.url}" target="_blank">${webpage.site_name}</a>
-          <div class="wepbage_title">${webpage.title || ''}</div>
-          <div class="webpage_description">${this.replaceLineBreaks(webpage.description)}</div>
+          <a class="wepbage_site_name" href="${encodeURI(webpage.url)}" target="_blank">${encodeHtmlEntities(webpage.site_name)}</a>
+          <div class="wepbage_title">${encodeHtmlEntities(webpage.title || '')}</div>
+          <div class="webpage_description">${this.replaceLineBreaks(encodeHtmlEntities(webpage.description))}</div>
         `;
     }
     if (formattedThumb) {
@@ -592,10 +592,6 @@ const MessagesController = new class {
     return text.replace(/\n/g, '<br>')
   }
 
-  safeText(text) {
-    return text.replace(/</g, '&lt;').replace('>', '&gt;');
-  }
-
   formatText(message) {
     const sourceText = message.message;
     let text = '';
@@ -603,14 +599,14 @@ const MessagesController = new class {
     if (message.entities) {
       let offset = 0;
       for (const entity of message.entities) {
-        text += this.safeText(sourceText.substring(offset, entity.offset));
+        text += encodeHtmlEntities(sourceText.substring(offset, entity.offset));
         offset = entity.offset + entity.length;
-        const entityText = this.safeText(sourceText.substr(entity.offset, entity.length));
+        const entityText = encodeHtmlEntities(sourceText.substr(entity.offset, entity.length));
         text += this.processEntity(entityText, entity);
       }
-      text += this.safeText(sourceText.substring(offset));
+      text += encodeHtmlEntities(sourceText.substring(offset));
     } else {
-      text = sourceText;
+      text = encodeHtmlEntities(sourceText);
     }
     if (text) {
       text = this.replaceLineBreaks(text);

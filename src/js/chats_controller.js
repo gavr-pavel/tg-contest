@@ -1,4 +1,4 @@
-import {$, buildHtmlElement} from './utils';
+import {$, buildHtmlElement, encodeHtmlEntities} from './utils';
 import {App} from './app';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
@@ -77,7 +77,7 @@ const ChatsController = new class {
     this.renderChatPreviewContent(el, dialog);
   };
 
-  onScroll = (event) => {
+  onScroll = () => {
     const container = this.container;
     if (!this.loading && !this.noMore && container.scrollTop + container.offsetHeight > container.scrollHeight - 150) {
       this.loadMore();
@@ -150,11 +150,11 @@ const ChatsController = new class {
     const lastMessagePreview = lastMessage ? this.getMessagePreview(lastMessage) : '';
     $('.chats_item_text', el).innerHTML = `
       <div class="chats_item_text_row">
-        <div class="chats_item_title">${title}</div>
+        <div class="chats_item_title">${encodeHtmlEntities(title)}</div>
         <div class="chats_item_date">${date}</div>
       </div>
       <div class="chats_item_text_row">
-        <div class="chats_item_message">${lastMessagePreview}</div>
+        <div class="chats_item_message">${encodeHtmlEntities(lastMessagePreview)}</div>
         ${badge}
       </div>
     `;

@@ -1,4 +1,4 @@
-import {$, debounce, getLabeledElements} from './utils';
+import {$, buildHtmlElement, debounce, getLabeledElements} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
 import {EmojiDropdown} from './emoji_dropdown';
@@ -44,12 +44,13 @@ const MessagesFormController = new class {
   };
 
   onSubmit = () => {
-    const message = this.dom.input.value.trim();
+    const input = this.dom.input;
+    const message = input.value.trim();
     if (!message) {
       return;
     }
     MessagesApiManager.sendMessage(MessagesController.dialog.peer, message);
-    this.dom.input.value = '';
+    input.value = '';
     this.onInput();
   };
 
@@ -77,6 +78,33 @@ const MessagesFormController = new class {
     // });
     //
     // new MDCRipple(button).unbounded = true;
+  }
+
+  /**
+   * @param {FileList} files
+   */
+  showFilesUploadPopup(files) {
+    let itemsHtml = '';
+    for (const file of files) {
+      const fileExt = file.name.split('.').pop() || '';
+      itemsHtml += `
+        <div class="messages_upload_popup_files_item">
+          <div class="messages_upload_popup_files_item_thumb"></div>
+          <div class="messages_upload_popup_files_item_name">${file.name}</div>
+          <div class="messages_upload_popup_files_item_size">${file.size}</div>
+        </div>
+      `;
+    }
+
+    const popup = buildHtmlElement(`
+      <div class="messages_upload_popup">
+        <div class="messages_upload_popup_header">Send ${files.length} Files</div>
+        <button class="messages_upload_popup_send_button">Send</button>
+        <button class="messages_upload_popup_close_button"></button>
+        ${itemsHtml}
+        <input class="messages_upload_popup_caption_input">
+      </div>
+    `);
   }
 };
 

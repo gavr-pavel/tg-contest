@@ -161,7 +161,7 @@ const MessagesApiManager = new class {
     });
   }
 
-  handleUpdateShortSentMessage(updates, peer, randomId) {
+  handleUpdateShortSentMessage(updates, peer, text, randomId) {
     this.handleUpdate({
       _: 'updateMessageID',
       random_id: randomId,
@@ -384,7 +384,7 @@ const MessagesApiManager = new class {
     });
 
     if (updates._ === 'updateShortSentMessage') {
-      this.handleUpdateShortSentMessage(updates, peer, randomId);
+      this.handleUpdateShortSentMessage(updates, peer, text, randomId);
     } else {
       this.onUpdates(updates);
     }
@@ -401,7 +401,7 @@ const MessagesApiManager = new class {
     });
 
     if (updates._ === 'updateShortSentMessage') {
-      this.handleUpdateShortSentMessage(updates, peer, randomId);
+      this.handleUpdateShortSentMessage(updates, peer, text, randomId);
     } else {
       this.onUpdates(updates);
     }

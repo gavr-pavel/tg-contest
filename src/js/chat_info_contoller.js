@@ -49,8 +49,8 @@ const ChatInfoController = new class {
       </div>
       <div class="sidebar_user_info">
         <div class="sidebar_user_photo"></div>
-        <div class="sidebar_user_name">${peerName}</div>
-        <div class="sidebar_user_desc">${peerDesc}</div>
+        <div class="sidebar_user_name">${encodeHtmlEntities(peerName)}</div>
+        <div class="sidebar_user_desc">${encodeHtmlEntities(peerDesc)}</div>
       </div>
       <div class="chat_info_desc"></div>
       <div class="nav_tabs_container">
@@ -137,7 +137,7 @@ const ChatInfoController = new class {
       <div class="chat_info_desc_row">
         <div class="chat_info_desc_icon chat_info_desc_icon__${field}"></div>
         <div class="chat_info_desc_row_block">
-          <div class="chat_info_desc_row_text">${value}</div>
+          <div class="chat_info_desc_row_text">${encodeHtmlEntities(value)}</div>
           <div class="chat_info_desc_row_subtitle">${field}</div>
         </div>
       </div>

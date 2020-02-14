@@ -67,6 +67,14 @@ function $(selector, parent = document) {
   return parent.querySelector(selector);
 }
 
+function encodeHtmlEntities(text) {
+  return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+}
+
 function importTemplate(id) {
   const template = $('#template_' + id);
   return document.importNode(template.content, true);
@@ -119,6 +127,7 @@ export {
   $,
   importTemplate,
   buildHtmlElement,
+  encodeHtmlEntities,
   getLabeledElements,
   cmpStrNum,
   wait,
