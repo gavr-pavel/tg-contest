@@ -426,6 +426,12 @@
   cursor: pointer;
   background: url('../icons/attach_svg_gray.svg');
 }
+.messages_form_media_button_wrap {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  top: 0;
+}
 .messages_form_media_button-active {
   background: url('../icons/attach_svg_blue.svg');
 }

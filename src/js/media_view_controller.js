@@ -107,10 +107,9 @@ const MediaViewController = new class {
   }
 
   onLoaded(url) {
-    document.addEventListener('keyup', this.closeByEsc);
-
     this.container.hidden = false;
     this.state.url = url;
+    document.addEventListener('keyup', this.onKeyUp);
   }
 
   abort() {
@@ -120,7 +119,7 @@ const MediaViewController = new class {
     this.state = null;
   }
 
-  isOpened() {
+  isOpen() {
     return !this.container.hidden;
   }
 
@@ -128,15 +127,13 @@ const MediaViewController = new class {
     this.state = null;
     this.dom.content.innerHTML = '';
     this.container.hidden = true;
+    document.removeEventListener('keyup', this.onKeyUp);
   };
 
-  closeByEsc = (event) => {
-    if (event && event.type === 'keyup' && event.keyCode !== 27) {
-      return;
+  onKeyUp = (event) => {
+    if (event.keyCode === 27) {
+      this.close();
     }
-
-    document.removeEventListener('keyup', this.closeByEsc);
-    this.close();
   };
 
   download = () => {

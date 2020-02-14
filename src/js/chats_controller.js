@@ -322,11 +322,11 @@ const ChatsController = new class {
   };
 
   onMenuContactsClick = () => {
-    ContactsController.init();
+    ContactsController.show();
   };
 
   onMenuSettingsClick = () => {
-    SettingsController.init();
+    SettingsController.show();
   };
 
   isPeerMe(peer) {

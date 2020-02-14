@@ -3,7 +3,7 @@ import {MDCMenu} from '@material/menu';
 import {MessagesApiManager} from "./api/messages_api_manager";
 
 const SettingsController = new class {
-  init() {
+  show() {
     this.leftSidebar = $('.left_sidebar');
 
     const userId = App.getAuthUserId();
@@ -49,41 +49,42 @@ const SettingsController = new class {
     `);
     this.leftSidebar.appendChild(this.container);
 
-    this.renderUserPhoto(user);
+    this.loadUserPhoto(user);
     this.bindListeners();
   }
 
   bindListeners() {
     const backButtonEl = $('.sidebar_back_button', this.leftSidebar);
-    backButtonEl.addEventListener('click', this.onBack);
+    backButtonEl.addEventListener('click', this.onBack, {once: true});
     backButtonEl.hidden = false;
 
-    const extraMenuButtonEl = $('.sidebar_extra_menu_button', this.leftSidebar);
+    const extraMenuButtonEl = $('.sidebar_extra_menu_button', this.container);
     extraMenuButtonEl.addEventListener('click', this.onExtraMenuClick);
 
-    const logoutButtonEl = $('.settings_extra_menu_item-log_out');
+    const logoutButtonEl = $('.settings_extra_menu_item-log_out', this.container);
     logoutButtonEl.addEventListener('click', this.onLogoutClick);
   }
 
-  renderUserPhoto(user) {
-    FileApiManager.loadPeerPhoto({
-      _: 'peerUser',
-      user_id: user.id,
-    }, user.photo.photo_big, true, user.photo.dc_id, {priority: 10, cache: true}).then((url) => {
-      $('.sidebar_user_photo', this.leftSidebar).style.backgroundImage = `url(${url})`;
-    });
+  loadUserPhoto(user) {
+    const photo = user.photo;
+    if (!photo) {
+      return;
+    }
+    const peerUser = MessagesApiManager.getUserPeer(user);
+    FileApiManager.loadPeerPhoto(peerUser, photo.photo_big, true, photo.dc_id, {priority: 10, cache: true})
+        .then((url) => {
+          $('.sidebar_user_photo', this.container).style.backgroundImage = `url(${url})`;
+        });
   }
 
-  onBack = () => {
+  onBack = (event) => {
     this.container.remove();
-
-    const backButtonEl = $('.sidebar_back_button', this.leftSidebar);
+    const backButtonEl = event.currentTarget;
     backButtonEl.hidden = true;
-    backButtonEl.removeEventListener('click', this.onBack);
   };
 
   onExtraMenuClick = () => {
-    const menuEl = $('.sidebar_extra_menu_list', this.leftSidebar);
+    const menuEl = $('.sidebar_extra_menu_list', this.container);
     const menu = new MDCMenu(menuEl);
 
     if (!menu.open) {

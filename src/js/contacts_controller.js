@@ -5,23 +5,26 @@ import {MessagesController} from "./messages_controller";
 import {ChatsController} from "./chats_controller";
 
 const ContactsController = new class {
-  init() {
+  show() {
+    ChatsController.container.hidden = true;
+
+    this.container = $('.contacts_sidebar');
+    this.container.innerHTML = '';
+    this.container.hidden = false;
+
+    this.loader = buildHtmlElement('<div class="lds-ring"><div></div><div></div><div></div><div></div></div>');
+    this.container.append(this.loader);
+
     const backButtonEl = $('.left_sidebar .sidebar_back_button');
+    backButtonEl.addEventListener('click', this.onBack);
+    backButtonEl.hidden = false;
+
+    $('.left_sidebar_menu_button').hidden = true;
 
     ApiClient.callMethod('contacts.getContacts').then((res) => {
-      ChatsController.container.hidden = true;
-
-      this.container = $('.contacts_sidebar');
-      this.container.innerHTML = '';
-      this.container.hidden = false;
-
       MessagesApiManager.updateUsers(res.users);
+      this.loader.remove();
       this.render(res.contacts);
-
-      backButtonEl.addEventListener('click', this.onBack);
-      backButtonEl.hidden = false;
-
-      $('.left_sidebar_menu_button').hidden = true;
     });
   }
 
@@ -75,7 +78,7 @@ const ContactsController = new class {
 
   renderPreviewContent(el, user) {
     const name = MessagesApiManager.getUserName(user) || `+${user.phone}`;
-    const status = MessagesController.getUserStatus(user.status);
+    const status = MessagesController.getUserStatusText(user);
 
     $('.contacts_item_text', el).innerHTML = `
       <div class="contacts_item_text_row">

@@ -6,8 +6,9 @@
   margin-right: 0;
   overflow: hidden;
   position: relative;
-  transition: margin 110ms;
+  transition: margin .1s;
   width: 420px;
+  box-sizing: border-box;
 }
 
 .right_sidebar[hidden] {
@@ -17,7 +18,7 @@
 }
 
 .chat_info_desc {
-  margin-top: 35px;
+  margin-top: 25px;
   padding: 8px;
   padding-right: 32px;
 }

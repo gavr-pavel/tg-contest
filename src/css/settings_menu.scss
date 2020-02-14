@@ -3,7 +3,6 @@
   box-sizing: border-box;
   height: 100%;
   left: 0;
-  padding: 8px;
   position: absolute;
   top: 0;
   width: 100%;
@@ -12,6 +11,7 @@
 
 .settings_menu_header {
   display: flex;
+  padding: 8px 8px 0;
 }
 
 .settings_extra_menu_item-log_out {

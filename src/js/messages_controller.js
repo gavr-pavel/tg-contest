@@ -110,15 +110,9 @@ const MessagesController = new class {
 
     if (peer._ === 'peerUser') {
       const user = MessagesApiManager.getPeerData(peer);
-      if (user.pFlags.bot) {
-        peerStatus = 'bot';
-      } else if (user.status) {
-        peerStatus = this.getUserStatus(user.status);
-        if (user.status._ === 'userStatusOnline') {
-          peerStatusClass = 'messages_header_peer_status-online';
-        }
-      } else {
-        peerStatus = 'last seen a long time ago';
+      peerStatus = this.getUserStatusText(user);
+      if (user.status && user.status._ === 'userStatusOnline') {
+        peerStatusClass = 'messages_header_peer_status-online';
       }
     }
 
@@ -139,7 +133,7 @@ const MessagesController = new class {
 
     const peerEl = $('.messages_header_peer');
     peerEl.addEventListener('click', () => {
-      ChatInfoController.init(this.chatId);
+      ChatInfoController.show(this.chatId);
     });
 
     const photoEl = $('.messages_header_peer_photo', this.header);
@@ -227,7 +221,7 @@ const MessagesController = new class {
     const {user} = event.detail;
     if (this.chatId === user.id) {
       const statusEl = $('.messages_header_peer_status', this.header);
-      statusEl.innerText = this.getUserStatus(user.status);
+      statusEl.innerText = this.getUserStatusText(user);
       statusEl.classList.toggle('messages_header_peer_status-online', user.status._ === 'userStatusOnline');
     }
   };
@@ -478,7 +472,9 @@ const MessagesController = new class {
     try {
       const photoSize = MediaApiManager.choosePhotoSize(sizes, 'm');
       let url;
-      if (mediaThumbData.object._ === 'document') {
+      if (MediaApiManager.isCachedPhotoSize(photoSize)) {
+        url = MediaApiManager.getCachedPhotoSize(photoSize);
+      } else if (mediaThumbData.object._ === 'document') {
         url = await FileApiManager.loadMessageDocumentThumb(mediaThumbData.object, photoSize.type, {cache: true});
       } else {
         url = await FileApiManager.loadMessagePhoto(mediaThumbData.object, photoSize.type, {cache: true});
@@ -781,9 +777,12 @@ const MessagesController = new class {
     return '';
   }
 
-  getUserStatus(status) {
-    if (status) {
-      switch (status._) {
+  getUserStatusText(user) {
+    if (user.pFlags.bot) {
+      return 'bot';
+    }
+    if (user.status) {
+      switch (user.status._) {
         case 'userStatusOnline':
           return 'online';
         case 'userStatusOffline':

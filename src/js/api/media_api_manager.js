@@ -9,6 +9,15 @@ const MediaApiManager = new class {
     }
   }
 
+  isCachedPhotoSize(photoSize) {
+    return photoSize._ === 'photoCachedSize';
+  }
+
+  getCachedPhotoSize(photoSize) {
+    const blob = new Blob([photoSize.bytes], {type: 'image/jpeg'});
+    return URL.createObjectURL(blob);
+  }
+
   getPhotoStrippedSize(sizes) {
     const size = this.choosePhotoSize(sizes, 'i');
     if (size && size.bytes[0] === 0x01) {
@@ -59,7 +68,7 @@ const MediaApiManager = new class {
               result.stickerSetInput = attribute.stickerset;
             }
           }
-          if (hasThumb && document.mime_type === 'image/webp') {
+          if (hasThumb) {
             result.type = 'sticker';
           }
           break;

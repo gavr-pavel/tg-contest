@@ -7,11 +7,12 @@ import {MediaApiManager} from "./api/media_api_manager";
 import {MessagesController} from "./messages_controller";
 import {ChatsController} from "./chats_controller";
 import {MediaViewController} from "./media_view_controller";
+import {MDCRipple} from '@material/ripple/component';
 
 const ChatInfoController = new class {
   mediaStep = 30;
 
-  init(peerId) {
+  show(peerId) {
     this.container = $('.right_sidebar');
     this.container.hidden = !this.container.hidden;
 
@@ -30,7 +31,7 @@ const ChatInfoController = new class {
 
     let peerDesc = '';
     if (peerData._ === 'user') {
-      peerDesc = peerData.status ? MessagesController.getUserStatus(peerData.status) : 'last seen a long time ago';
+      peerDesc = MessagesController.getUserStatusText(peerData);
     }
 
     this.container.innerHTML = `
@@ -82,35 +83,32 @@ const ChatInfoController = new class {
   bindListeners() {
     const closeButtonEl = $('.sidebar_close_button', this.container);
     closeButtonEl.addEventListener('click', this.onClose);
-    document.addEventListener('keyup', this.onCloseByEsc);
+    new MDCRipple(closeButtonEl).unbounded = true;
+
+    document.addEventListener('keyup', this.onKeyUp);
 
     const extraMenuButtonEl = $('.sidebar_extra_menu_button', this.container);
     extraMenuButtonEl.addEventListener('click', this.onExtraMenuClick);
+    new MDCRipple(extraMenuButtonEl).unbounded = true;
 
     $('.chat_info_media').addEventListener('scroll', this.onMediaScroll);
   }
 
-  async loadPeerFullInfo (peerData) {
+  async loadPeerFullInfo(peerData) {
     if (peerData._ === 'user') {
       return await MessagesApiManager.loadUserFull(this.peerId);
     }
-
-    return  await MessagesApiManager.loadChatFull(this.peerId);
+    return await MessagesApiManager.loadChatFull(this.peerId);
   }
 
-  getNotificationsCheckboxCode() {
+  getNotificationsCheckboxHtml() {
     return `
       <div class="mdc-form-field">
         <div class="mdc-checkbox">
-          <input type="checkbox"
-                 class="mdc-checkbox__native-control"
-                 id="checkbox-notifications"/>
+          <input type="checkbox" class="mdc-checkbox__native-control" id="checkbox-notifications"/>
           <div class="mdc-checkbox__background">
-            <svg class="mdc-checkbox__checkmark"
-                 viewBox="0 0 24 24">
-              <path class="mdc-checkbox__checkmark-path"
-                    fill="none"
-                    d="M1.73,12.91 8.1,19.28 22.79,4.59"/>
+            <svg class="mdc-checkbox__checkmark" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path class="mdc-checkbox__checkmark-path" fill="none" d="M1.73,12.91 8.1,19.28 22.79,4.59"/>
             </svg>
             <div class="mdc-checkbox__mixedmark"></div>
           </div>
@@ -120,7 +118,7 @@ const ChatInfoController = new class {
     `;
   }
 
-  async renderDesc(peerData, peerInfo) {
+  renderDesc(peerData, peerInfo) {
     const notificationsEnabled = !peerInfo.notify_settings.flags;
     const descMap = {
       bio: peerInfo.about,
@@ -129,18 +127,18 @@ const ChatInfoController = new class {
     };
 
     let html = '';
-    for (let title in descMap) {
-      const value = descMap[title];
+    for (const field in descMap) {
+      const value = descMap[field];
       if (!value) {
         continue;
       }
 
       html += `
       <div class="chat_info_desc_row">
-        <div class="chat_info_desc_icon chat_info_desc_icon__${title}"></div>
+        <div class="chat_info_desc_icon chat_info_desc_icon__${field}"></div>
         <div class="chat_info_desc_row_block">
-          <div class="chat_info_desc_row_text">${ value }</div>
-          <div class="chat_info_desc_row_subtitle">${ title }</div>
+          <div class="chat_info_desc_row_text">${value}</div>
+          <div class="chat_info_desc_row_subtitle">${field}</div>
         </div>
       </div>
     `;
@@ -148,7 +146,7 @@ const ChatInfoController = new class {
 
     html += `
       <div class="chat_info_desc_row">
-        <div class="chat_info_desc_checkbox">${this.getNotificationsCheckboxCode()}</div>
+        <div class="chat_info_desc_checkbox">${this.getNotificationsCheckboxHtml()}</div>
         <label for="checkbox-notifications" class="chat_info_desc_row_block">
           <div class="chat_info_desc_row_text">Notifications</div>
           <div class="chat_info_desc_row_subtitle">${notificationsEnabled ? 'Enabled' : 'Disabled'}</div>
@@ -187,14 +185,12 @@ const ChatInfoController = new class {
         limit: this.mediaStep,
         offset_id: this.offsetMsgId,
       });
-    } catch(err) {
+    } finally {
       this.loadingMedia = false;
     }
 
-    this.loadingMedia = false;
     if (res.count < this.mediaStep || res.messages.length < this.mediaStep) {
       this.noMoreMedia = true;
-
       if (!res.messages.length) {
         return;
       }
@@ -225,24 +221,21 @@ const ChatInfoController = new class {
 
     const url = await FileApiManager.loadMessagePhoto(thumb.object, photoSize.type, {cache: true});
 
-    return thumbEl.style.backgroundImage = `url(${url})`;
+    thumbEl.style.backgroundImage = `url(${url})`;
   }
 
   onClose = () => {
-    if (!this.container) {
+    if (!this.container || this.container.hidden) {
       return;
     }
-
     this.container.hidden = true;
+    document.removeEventListener('keyup', this.onCloseByEsc);
   };
 
-  onCloseByEsc = (event) => {
-    if (event && event.type === 'keyup' && (event.keyCode !== 27 || MediaViewController.isOpened())) {
-      return;
+  onKeyUp = (event) => {
+    if (event.keyCode === 27 && MediaViewController.isOpen()) {
+      this.onClose();
     }
-
-    document.removeEventListener('keyup', this.onCloseByEsc);
-    this.onClose();
   };
 
   onExtraMenuClick = () => {
