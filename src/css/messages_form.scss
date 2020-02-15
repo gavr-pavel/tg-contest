@@ -108,3 +108,21 @@
   opacity: 0;
   transform: scale(0);
 }
+
+.messages_form_media_menu_item {
+  padding-left: 72px;
+  padding-right: 38px;
+  background: no-repeat 16px center;
+}
+
+.messages_form_media_menu_item-media {
+  background-image: url('../icons/photo_svg_gray.svg');
+}
+
+.messages_form_media_menu_item-file {
+  background-image: url('../icons/document_svg_gray.svg');
+}
+
+.messages_form_media_menu_item-poll {
+  background-image: url('../icons/poll_svg_gray.svg');
+}

@@ -9,13 +9,13 @@ const FileUploadPopup = new class {
     this.menu = buildHtmlElement(`
       <div class="mdc-menu mdc-menu-surface messages_form_media_menu" hidden>
         <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">
-          <li class="mdc-list-item messages_form_media_menu_item-media" data-type="media" role="menuitem">
+          <li class="mdc-list-item messages_form_media_menu_item messages_form_media_menu_item-media" data-type="media" role="menuitem">
             <span class="mdc-list-item__text">Photo or Video</span>
           </li>
-          <li class="mdc-list-item messages_form_media_menu_item-file" data-type="file" role="menuitem">
+          <li class="mdc-list-item messages_form_media_menu_item messages_form_media_menu_item-file" data-type="file" role="menuitem">
             <span class="mdc-list-item__text">Document</span>
           </li>
-          <li class="mdc-list-item messages_form_media_menu_item-poll" data-type="poll" role="menuitem">
+          <li class="mdc-list-item messages_form_media_menu_item messages_form_media_menu_item-poll" data-type="poll" role="menuitem">
             <span class="mdc-list-item__text">Poll</span>
           </li>
         </ul>
