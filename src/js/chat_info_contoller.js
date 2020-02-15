@@ -63,45 +63,42 @@ const ChatInfoController = new class {
     }
 
     this.container.innerHTML = `
-      <div class="sidebar_header">
-        <button type="button" class="sidebar_close_button mdc-icon-button"></button>
-        <div class="sidebar_header_title">Info</div>
-        <button type="button" class="sidebar_extra_menu_button mdc-icon-button"></button>
-          <div class="sidebar_extra_menu_list mdc-menu mdc-menu-surface">
-            <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">
-              <li class="mdc-list-item" role="menuitem">
-                <span class="mdc-list-item__text">Something</span>
-              </li>
-            </ul>
+      <div class="right_sidebar_scroll_wrap">
+        <div class="sidebar_header">
+          <button type="button" class="sidebar_close_button mdc-icon-button"></button>
+          <div class="sidebar_header_title">Info</div>
+          <button type="button" class="sidebar_extra_menu_button mdc-icon-button"></button>
+        </div>
+        <div class="sidebar_user_info">
+          <div class="sidebar_user_photo"></div>
+          <div class="sidebar_user_name">${encodeHtmlEntities(peerName)}</div>
+          <div class="sidebar_user_desc">${encodeHtmlEntities(peerDesc)}</div>
+        </div>
+        <div class="chat_info_desc"></div>
+        <div class="nav_tabs_container chat_info_shared_media_nav">
+          <div class="nav_tabs_item chat_info_shared_media_nav_item" data-js-label="nav_media">
+            <div class="nav_tabs_item_label">Media</div>
           </div>
-      </div>
-      <div class="sidebar_user_info">
-        <div class="sidebar_user_photo"></div>
-        <div class="sidebar_user_name">${encodeHtmlEntities(peerName)}</div>
-        <div class="sidebar_user_desc">${encodeHtmlEntities(peerDesc)}</div>
-      </div>
-      <div class="chat_info_desc"></div>
-      <div class="nav_tabs_container nav_tabs_container__shared">
-        <div class="nav_tabs_item" data-js-label="nav_media">
-          <div class="nav_tabs_item_label">Media</div>
+          <div class="nav_tabs_item chat_info_shared_media_nav_item" data-js-label="nav_docs">
+            <div class="nav_tabs_item_label">Docs</div>
+          </div>
+          <div class="nav_tabs_item chat_info_shared_media_nav_item" data-js-label="nav_links">
+            <div class="nav_tabs_item_label">Links</div>
+          </div>
+          <div class="nav_tabs_item chat_info_shared_media_nav_item" data-js-label="nav_audio">
+            <div class="nav_tabs_item_label">Audio</div>
+          </div>
         </div>
-        <div class="nav_tabs_item" data-js-label="nav_docs">
-          <div class="nav_tabs_item_label">Docs</div>
+        <div class="chat_info_shared_wrap">
+          <div class="chat_info_shared chat_info_shared_media"></div>
+          <div class="chat_info_shared chat_info_shared_docs" hidden></div>
+          <div class="chat_info_shared chat_info_shared_links" hidden></div>
+          <div class="chat_info_shared chat_info_shared_audio" hidden></div>
         </div>
-        <div class="nav_tabs_item" data-js-label="nav_links">
-          <div class="nav_tabs_item_label">Links</div>
-        </div>
-        <div class="nav_tabs_item" data-js-label="nav_audio">
-          <div class="nav_tabs_item_label">Audio</div>
-        </div>
-      </div>
-      <div class="chat_info_shared_wrap">
-        <div class="chat_info_shared chat_info_shared_media"></div>
-        <div class="chat_info_shared chat_info_shared_docs" hidden></div>
-        <div class="chat_info_shared chat_info_shared_links" hidden></div>
-        <div class="chat_info_shared chat_info_shared_audio" hidden></div>
       </div>
     `;
+
+    this.scrollContainer = $('.right_sidebar_scroll_wrap', this.container);
 
     this.renderPeerPhoto(peer);
     this.bindListeners();
@@ -112,8 +109,6 @@ const ChatInfoController = new class {
   };
 
   bindListeners() {
-    this.sharedScrollEl = $('.chat_info_shared_wrap');
-
     const closeButtonEl = $('.sidebar_close_button', this.container);
     closeButtonEl.addEventListener('click', this.close);
     new MDCRipple(closeButtonEl).unbounded = true;
@@ -121,10 +116,9 @@ const ChatInfoController = new class {
     document.addEventListener('keyup', this.onKeyUp);
 
     const extraMenuButtonEl = $('.sidebar_extra_menu_button', this.container);
-    extraMenuButtonEl.addEventListener('click', this.onExtraMenuClick);
     new MDCRipple(extraMenuButtonEl).unbounded = true;
 
-    this.sharedScrollEl.addEventListener('scroll', this.onSharedScroll);
+    this.scrollContainer.addEventListener('scroll', this.onScroll);
 
     this.sharedTabsDom = getLabeledElements(this.container);
     for (let tabKey in this.sharedTabsDom) {
@@ -151,7 +145,7 @@ const ChatInfoController = new class {
   }
 
   renderDesc(peerData, peerInfo) {
-    const notificationsEnabled = !peerInfo.notify_settings.flags;
+    const notificationsEnabled = !peerInfo.notify_settings.pFlags.mute_until;
     const descMap = {
       bio: peerInfo.about,
       username: peerData.username,
@@ -167,7 +161,7 @@ const ChatInfoController = new class {
 
       html += `
       <div class="chat_info_desc_row">
-        <div class="chat_info_desc_icon chat_info_desc_icon__${field}"></div>
+        <div class="chat_info_desc_icon chat_info_desc_icon-${field}"></div>
         <div class="chat_info_desc_row_block">
           <div class="chat_info_desc_row_text">${encodeHtmlEntities(value)}</div>
           <div class="chat_info_desc_row_subtitle">${field}</div>
@@ -206,8 +200,7 @@ const ChatInfoController = new class {
 
   async loadMoreShared() {
     const type = this.sharedSection;
-    console.log(`loading ${type}`);
-
+    // console.time(`loading shared ${type}`);
     let res;
     try {
       res = await ApiClient.callMethod('messages.search', {
@@ -219,7 +212,7 @@ const ChatInfoController = new class {
     } finally {
       this.sharedLoading.loading[type] = false;
     }
-    console.log(res);
+    // console.timeEnd(`loading shared ${type}`);
 
     if (res.count < this.sharedSteps[type] || res.messages.length < this.sharedSteps[type]) {
       this.sharedLoading.noMore[type] = true;
@@ -242,27 +235,25 @@ const ChatInfoController = new class {
 
   renderSharedMedia(messages) {
     const frag = document.createDocumentFragment();
-    messages.forEach((message) => {
+    for (const message of messages) {
       const thumbEl = buildHtmlElement(`
         <div class="chat_info_shared_media_item" data-message-id="${message.id}"></div>
       `);
       thumbEl.addEventListener('click', MessagesController.onThumbClick);
-
       frag.append(thumbEl);
-
       this.loadMediaThumb(message, thumbEl);
-    });
-
+    }
     $('.chat_info_shared_media').append(frag);
   }
 
   renderSharedDocs(messages) {
     const frag = document.createDocumentFragment();
-    messages.forEach((message) => {
-      const attrs = MediaApiManager.getDocumentAttributes(message.media.document);
+    for (const message of messages) {
+      const document = message.media.document;
+      const attrs = MediaApiManager.getDocumentAttributes(document);
       const fileName = attrs.file_name;
-      const type = MediaApiManager.getFileExtension(message.media.document.mime_type);
-      const size = MediaApiManager.getFormatFileSize(+message.media.document.size);
+      const type = this.getFileExtension(document.mime_type);
+      const size = this.getFileSizeFormatted(document.size);
 
       const dateTime = MessagesController.formatMessageDateTime(message.date);
 
@@ -277,12 +268,10 @@ const ChatInfoController = new class {
       `);
       docEl.addEventListener('click', MessagesController.onFileClick);
       frag.append(docEl);
-
       if (attrs.type === 'image') {
         this.loadDocThumb(message.media.document, $('.chat_info_shared_docs_item_icon', docEl));
       }
-    });
-
+    }
     $('.chat_info_shared_docs').append(frag);
   }
 
@@ -298,7 +287,7 @@ const ChatInfoController = new class {
   async loadDocThumb(doc, thumbEl) {
     const url = await FileApiManager.loadMessageDocumentThumb(doc, doc.type, {cache: true});
 
-    thumbEl.classList.add('chat_info_shared_docs_item_icon__thumb');
+    thumbEl.classList.add('chat_info_shared_docs_item_icon-thumb');
     thumbEl.style.backgroundImage = `url(${url})`;
   }
 
@@ -313,14 +302,14 @@ const ChatInfoController = new class {
     }
 
     if (sectionPrev) {
-      this.sharedLoading.scrollTop[sectionPrev] = this.sharedScrollEl.scrollTop;
+      this.sharedLoading.scrollTop[sectionPrev] = this.scrollContainer.scrollTop;
       $(`.chat_info_shared_${sectionPrev}`).hidden = true;
       $(`.chat_info_shared_${sectionNew}`).hidden = false;
     }
 
     this.sharedSection = sectionNew;
     this.sharedTabsDom[`nav_${sectionNew}`].classList.add('nav_tabs_item-active');
-    this.sharedScrollEl.scrollTop = this.sharedLoading.scrollTop[sectionNew];
+    this.scrollContainer.scrollTop = this.sharedLoading.scrollTop[sectionNew];
 
     this.loadMoreShared();
   }
@@ -340,21 +329,11 @@ const ChatInfoController = new class {
     }
   };
 
-  onExtraMenuClick = () => {
-    const menuEl = $('.sidebar_extra_menu_list', this.container);
-    const menu = new MDCMenu(menuEl);
+  onScroll = () => {
+    const scrollContainer = this.scrollContainer;
+    const needMore = scrollContainer.scrollTop + scrollContainer.offsetHeight > scrollContainer.scrollHeight - 150;
 
-    if (!menu.open) {
-      menu.open = true;
-      menu.setAbsolutePosition(239, 57);
-    }
-  };
-
-  onSharedScroll = () => {
-    const scrollContainer = this.sharedScrollEl;
-    const scrollFine = scrollContainer.scrollTop + scrollContainer.offsetHeight > scrollContainer.scrollHeight - 150;
-
-    if (!this.sharedLoading.loading[this.sharedSection] && !this.sharedLoading.noMore[this.sharedSection] && scrollFine) {
+    if (!this.sharedLoading.loading[this.sharedSection] && !this.sharedLoading.noMore[this.sharedSection] && needMore) {
       this.sharedLoading.loading[this.sharedSection] = true;
       this.loadMoreShared();
     }
@@ -364,6 +343,28 @@ const ChatInfoController = new class {
     const section = event.currentTarget.dataset.jsLabel.replace(/^nav_/, '');
     this.setSharedSection(section);
   };
+
+  getFileExtension(mimeType) {
+    switch (mimeType) {
+      case 'image/jpeg':
+      case 'image/jpg':
+      case 'image/png':
+      case 'image/webp':
+      case 'video/mp4':
+      case 'video/mov':
+      case 'video/avi':
+      case 'video/mkv':
+      case 'application/pdf':
+      case 'application/doc':
+        return mimeType.split('/').pop().split('.')[0];
+    }
+    return '';
+  }
+
+  getFileSizeFormatted(bytes) {
+    const i = bytes === 0 ? 0 : Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${ (bytes / Math.pow(1024, i)).toFixed(1) } ${ ['B', 'KB', 'MB', 'GB', 'TB'][i] }`;
+  }
 };
 
 window.ChatInfoController = ChatInfoController;

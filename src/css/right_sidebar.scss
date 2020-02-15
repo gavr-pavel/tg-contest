@@ -17,6 +17,10 @@
   visibility: hidden;
 }
 
+.right_sidebar_scroll_wrap {
+  overflow: auto;
+}
+
 .chat_info_desc {
   margin-top: 25px;
   padding: 8px;
@@ -62,20 +66,37 @@
   text-transform:capitalize;
 }
 
-.chat_info_desc_icon__bio {
+.chat_info_desc_icon-bio {
   background-image: url('../icons/info_svg_gray.svg');
 }
 
-.chat_info_desc_icon__phone {
+.chat_info_desc_icon-phone {
   background-image: url('../icons/phone_svg_gray.svg');
 }
 
-.chat_info_desc_icon__username {
+.chat_info_desc_icon-username {
   background-image: url('../icons/username_svg_gray.svg');
 }
 
 .chat_info_shared[hidden] {
   display: none;
+}
+
+.chat_info_shared_media_nav {
+  background: #fff;
+  position: sticky;
+  top: 60px;
+  z-index: 1;
+}
+
+.chat_info_shared_media_nav_item {
+  border-radius: 4px 4px 0 0;
+}
+.chat_info_shared_media_nav_item:first-child {
+  border-top-left-radius: 0;
+}
+.chat_info_shared_media_nav_item:last-child {
+  border-top-right-radius: 0;
 }
 
 .chat_info_shared_wrap {
@@ -101,8 +122,7 @@
 }
 
 .chat_info_shared_media_item {
-  background-position: center;
-  background-repeat: no-repeat;
+  background: #eee no-repeat center;
   background-size: cover;
   cursor: pointer;
   height: 132px;
@@ -137,7 +157,7 @@
   width: 100%;
 }
 
-.chat_info_shared_docs_item:hover .chat_info_shared_docs_item_icon.chat_info_shared_docs_item_icon__thumb:after {
+.chat_info_shared_docs_item:hover .chat_info_shared_docs_item_icon.chat_info_shared_docs_item_icon-thumb:after {
   background-color: rgba(0, 0, 0, .5);
 }
 
@@ -163,7 +183,7 @@
   width: 48px;
 }
 
-.chat_info_shared_docs_item_icon:not(.chat_info_shared_docs_item_icon__thumb):before {
+.chat_info_shared_docs_item_icon:not(.chat_info_shared_docs_item_icon-thumb):before {
   background: #B9191A;
   border-color: #fff #fff transparent transparent;
   border-radius: 0 0 0 5px;
@@ -175,7 +195,7 @@
   top: 0;
 }
 
-.chat_info_shared_docs_item_icon__thumb {
+.chat_info_shared_docs_item_icon-thumb {
   background-position: center;
   background-size: cover;
   color: transparent;

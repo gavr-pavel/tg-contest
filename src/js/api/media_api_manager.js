@@ -123,25 +123,6 @@ const MediaApiManager = new class {
     return result;
   }
 
-  getFileExtension(mimeType) {
-    return mimeType.split('/').pop().split('.')[0];
-  }
-
-  getFormatFileSize(bytes) {
-    const i = bytes === 0 ? 0 : Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${ (bytes / Math.pow(1024, i)).toFixed(1) * 1 } ${ ['B', 'kB', 'MB', 'GB', 'TB'][i] }`;
-  }
-
-  async uploadVoice(blob, duration = 0) {
-    const inputFile = await FileApiManager.uploadFile(blob);
-    return {
-      _: 'inputMediaUploadedDocument',
-      file: inputFile,
-      mime_type: blob.type,
-      attributes: [{_: 'documentAttributeAudio', voice: true, duration}]
-    }
-  }
-
   jpegHeader = base64Decode(
       '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDACgcHiMeGSgjISMtKygwPGRBPDc3PHtYXUlkkYCZlo+AjIqgtObDoKrarYqMyP/L2u71////' +
       'm8H///' +
