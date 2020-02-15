@@ -220,6 +220,9 @@ const ChatsController = new class {
   }
 
   getMessagePreview(message) {
+    if (message._ === 'messageService') {
+      return MessagesController.getServiceMessageText(message);
+    }
     let text = encodeHtmlEntities(message.message);
     if (!text) {
       const label = this.getMessageContentTypeLabel(message.media);
