@@ -265,7 +265,7 @@ const FileApiManager = new class {
     return this.loadFile(location, set.thumb_dc_id, options);
   }
 
-  async uploadFile(blob, name = '', {onProgress}) {
+  async uploadFile(blob, name = '', {onProgress, signal}) {
     const randomId = randomLong();
 
     const isBigFile = blob.size > 10 * 1024 * 1024;
@@ -273,16 +273,31 @@ const FileApiManager = new class {
     const totalParts = Math.ceil(blob.size / partSize);
 
     const apiConnection = this.getConnection(ApiClient.getDcId());
-    for (let partIndex = 0, offset = 0; offset < blob.size; partIndex++, offset += partSize) {
-      await apiConnection.callMethod(isBigFile ? 'upload.saveBigFilePart' : 'upload.saveFilePart', {
-        file_id: randomId,
-        file_part: partIndex,
-        file_total_parts: totalParts,
-        bytes: await blob.slice(offset, offset + partSize).arrayBuffer()
-      });
-      if (onProgress) {
-        onProgress(offset + partSize);
+
+    let aborted = false;
+    if (signal) {
+      signal.addEventListener('abort', () => aborted = true);
+    }
+
+    try {
+      await this.checkQueue(100);
+      for (let partIndex = 0, offset = 0; offset < blob.size; partIndex++, offset += partSize) {
+        await apiConnection.callMethod(isBigFile ? 'upload.saveBigFilePart' : 'upload.saveFilePart', {
+          file_id: randomId,
+          file_part: partIndex,
+          file_total_parts: totalParts,
+          bytes: await blob.slice(offset, offset + partSize).arrayBuffer()
+        });
+        if (aborted) {
+          throw new Error('File upload aborted');
+        }
+        if (onProgress) {
+          onProgress(offset + partSize);
+        }
       }
+    } finally {
+      this.queueDone();
+      this.connectionDone(apiConnection);
     }
 
     return {

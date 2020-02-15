@@ -73,17 +73,24 @@ const MessagesFormController = new class {
 
   async onFileSend(file, sendAsMedia = false) {
     const peer = MessagesController.dialog.peer;
-    const pendingMessageEl = MessagesController.appendPendingMessage(el);
+
+    const abortController = new AbortController();
+
+    const progressEl = this.buildFileUploadProgressElement(file.name, file.size);
+    const pendingMessageEl = MessagesController.appendPendingMessage(progressEl);
+
+    $('.document_icon', progressEl).addEventListener('click', () => {
+      abortController.abort();
+      MessagesController.removePendingMessage(pendingMessageEl);
+    });
+
     const onProgress = (uploaded) => {
-      pendingMessageEl.innerHTML = `
-        <b>${encodeHtmlEntities(file.name)}</b> ${ChatInfoController.getFileSizeFormatted(file.size)}
-        <div>uploaded ${ Math.round(uploaded / file.size * 100) }%</div>
-      `;
+      const percent = Math.round(uploaded / file.size * 100);
+      $('.document_size_percent', progressEl).innerText = `${percent}%`;
+      $('.document_icon_progress_path', progressEl).style.strokeDasharray = `${percent}, 100`;
     };
 
-    onProgress(0);
-
-    const inputFile = await FileApiManager.uploadFile(file, file.name, {onProgress});
+    const inputFile = await FileApiManager.uploadFile(file, file.name, {onProgress, signal: abortController.signal});
     let inputMedia;
     if (sendAsMedia && file.type.startsWith('image/')) {
       inputMedia = {_: 'inputMediaUploadedPhoto', file: inputFile};
@@ -101,19 +108,22 @@ const MessagesFormController = new class {
     MessagesApiManager.sendMedia(peer, inputMedia);
   }
 
-  buildFileUploadPendingMessageContent(title, size) {
-    const el = buildHtmlElement(`
-      <div class="file_upload_progress_item">
-        <div class="file_upload_progress_item_icon">
-          <svg class="file_upload_progress_item_icon_svg" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-            <path class="messages_item_media_progress_path" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-          </svg>
+  buildFileUploadProgressElement(title, size) {
+    return buildHtmlElement(`
+      <div class="document">
+        <div class="document_col">
+          <div class="document_icon document_icon-loading">
+            <svg class="document_icon_progress_svg" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+              <path class="document_icon_progress_path" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+            </svg>
+          </div>
         </div>
-        <div class="file_upload_progress_item_title">${encodeHtmlEntities(title)}</div>
-        <div class="file_upload_progress_item_size">${ChatInfoController.getFileSizeFormatted(size)}</div>
+        <div class="document_col">
+          <div class="document_filename">${encodeHtmlEntities(title)}</div>
+          <div class="document_size"><span class="document_size_percent">0%</span> &middot; ${ChatInfoController.getFileSizeFormatted(size)}</div>        
+        </div>
       </div>
     `);
-    return el;
   }
 };
 

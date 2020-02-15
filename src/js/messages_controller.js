@@ -360,6 +360,7 @@ const MessagesController = new class {
     el.append(content);
     const list = $('.messages_pending_list');
     list.appendChild(el);
+    this.scrollToBottom();
     return el;
   }
 

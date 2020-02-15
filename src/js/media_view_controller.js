@@ -94,12 +94,12 @@ const MediaViewController = new class {
       thumb.classList.remove('messages_item_media_thumb-loading');
     };
 
-    this.state.onProgress = function (loaded) {
+    this.state.onProgress = (loaded) => {
       const percent = Math.round(Math.max(0, Math.min(1, loaded / totalSize)) * 100);
       if (percent === 100) {
         done();
       } else {
-        path.style.strokeDasharray = (percent) + ', 100';
+        path.style.strokeDasharray = `${percent}, 100`;
       }
     };
 

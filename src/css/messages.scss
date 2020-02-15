@@ -289,7 +289,6 @@
 .document {
   display: flex;
   align-items: center;
-  margin-bottom: -13px;
 }
 
 .document_icon {
@@ -300,16 +299,34 @@
   margin-right: 10px;
   cursor: pointer;
 }
+.document_icon-loading {
+  background-image: url('../icons/close3_svg_white.svg');
+}
 .messages_item-out .document_icon {
   background-color: #65AB5A;
 }
 
+.document_icon_progress_path {
+  fill: none;
+  stroke: #fff;
+  stroke-dasharray: 2, 100;
+  transition: stroke-dasharray 0.4s;
+}
+
 .document_filename {
   font-weight: 500;
+  min-width: 120px;
 }
 
 .document_size {
   color: #74787C;
+}
+.messages_item-out .document_size {
+  color: #65AB5A;
+}
+
+.document + .messages_item_date {
+  margin-top: -13px;
 }
 
 
@@ -399,7 +416,7 @@
 .messages_item_media_progress_path {
   fill: none;
   stroke: #fff;
-  stroke-dasharray: 3, 100;
+  stroke-dasharray: 2, 100;
   transition: stroke-dasharray 0.4s;
 }
 
