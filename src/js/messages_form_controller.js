@@ -62,6 +62,15 @@ const MessagesFormController = new class {
     }
   };
 
+  onStickerSend(document) {
+    console.log(document);
+    const inputMedia = {
+      _: 'inputMediaDocument',
+      id: {_: 'inputDocument', id: document.id, access_hash: document.access_hash, file_reference: document.file_reference}
+    };
+    MessagesApiManager.sendMedia(MessagesController.dialog.peer, inputMedia);
+  }
+
   initMediaMenu() {
     // this.mediaMenu = new MDCMenu(this.dom.media_menu);
     //

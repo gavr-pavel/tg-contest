@@ -476,7 +476,7 @@ const MessagesApiManager = new class {
     }
   }
 
-  async sendMedia(peer, inputMedia, text) {
+  async sendMedia(peer, inputMedia, text = '') {
     const randomId = randomLong();
 
     const updates = await ApiClient.callMethod('messages.sendMedia', {

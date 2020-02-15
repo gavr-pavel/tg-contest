@@ -1,6 +1,7 @@
 import {buildHtmlElement, getLabeledElements, $, Storage} from './utils';
 import {emojiConfig} from './emoji_config';
 import {ApiClient} from './api/api_client';
+import {MessagesFormController} from './messages_form_controller';
 
 const EmojiDropdown = new class {
   stickerSets = new Map();
@@ -90,17 +91,19 @@ const EmojiDropdown = new class {
       const bottomButton = buildHtmlElement(`<div class="emoji_dropdown_bottom_nav_item" data-set-id="${set.id}"></div>`);
       bottomNavFrag.append(bottomButton);
 
-      this.initStickerSet(set, el, bottomButton, !index);
+      this.initStickerSet(set, el, bottomButton, index < 3);
       index++;
     }
 
     const container = $('.emoji_dropdown_section_content', this.dom.section_stickers);
     container.appendChild(frag);
+    container.addEventListener('scroll', this.onStickersScroll);
     container.addEventListener('click', this.onStickerClick);
 
     const bottomNavContainer = $('.emoji_dropdown_bottom_nav', this.dom.section_stickers);
     bottomNavContainer.append(bottomNavFrag);
     bottomNavContainer.addEventListener('click', this.onStickerNavClick);
+    bottomNavContainer.addEventListener('mousewheel', this.onStickersNavScroll);
   }
 
   async initStickerSet(set, container, bottomButton, load = false) {
@@ -113,22 +116,52 @@ const EmojiDropdown = new class {
     fullSet.documents.forEach((document, index) => {
       const stickerEl = buildHtmlElement(`<div class="emoji_dropdown_list_item" data-sticker-index="${index}"></div>`);
       frag.appendChild(stickerEl);
-      if (load) {
-        this.loadSticker(stickerEl, document);
-      }
     });
     container.appendChild(frag);
 
-    this.loadSticker(bottomButton, fullSet.documents[0]);
+    if (load) {
+      this.loadStickersList(container, fullSet);
+    }
+
+    this.loadStickerSetThumb(bottomButton, fullSet);
   }
 
   onStickerNavClick = (event) => {
-
+    const setId = event.target.dataset.setId;
+    const list = $(`.emoji_dropdown_list[data-set-id="${setId}"]`, this.dom.section_stickers);
+    list.scrollIntoView();
   };
 
-  async loadSticker(el, document) {
-    const url = await FileApiManager.loadMessageDocument(document, {cache: true});
+  onStickersNavScroll = (event) => {
+    event.preventDefault();
+    const container = event.currentTarget;
+    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    container.scrollLeft += delta;
+  };
+
+  loadStickersList(container, fullSet) {
+    if (container.dataset.loaded) {
+      return;
+    }
+    container.dataset.loaded = 1;
+    for (const el of container.children) {
+      const document = fullSet.documents[el.dataset.stickerIndex];
+      this.loadStickerThumb(el, document);
+    }
+  }
+
+  async loadStickerThumb(el, document) {
+    const url = await FileApiManager.loadMessageDocumentThumb(document, 'm', {cache: true});
     el.innerHTML = `<img class="emoji_dropdown_sticker_img" src="${url}">`;
+  }
+
+  async loadStickerSetThumb(el, fullSet) {
+    if (fullSet.set.thumb) {
+      const url = await FileApiManager.loadStickerSetThumb(fullSet.set, {cache: true});
+      el.innerHTML = `<img class="emoji_dropdown_sticker_img" src="${url}">`;
+    } else {
+      return this.loadStickerThumb(el, fullSet.documents[0]);
+    }
   }
 
   setSection(section) {
@@ -183,8 +216,31 @@ const EmojiDropdown = new class {
     newNavItem.classList.add('emoji_dropdown_bottom_nav_item-active');
   };
 
-  onStickerClick = (event) => {
+  onStickersScroll = (event) => {
+    const container = event.currentTarget;
+    const containerHeight = container.offsetHeight;
+    const scrollTop = container.scrollTop;
+    let currentList;
+    for (const list of container.children) {
+      if (list.offsetTop > scrollTop + containerHeight / 2) {
+        break;
+      }
+      currentList = list;
+    }
+    const fullSet = this.stickerSets.get(currentList.dataset.setId);
+    this.loadStickersList(currentList, fullSet);
+  };
 
+  onStickerClick = (event) => {
+    const el = event.target;
+    if (el.classList.contains('emoji_dropdown_list_item')) {
+      const setId = el.parentNode.dataset.setId;
+      const index = el.dataset.stickerIndex;
+      const fullSet = this.stickerSets.get(setId);
+      const document = fullSet.documents[index];
+      MessagesFormController.onStickerSend(document);
+      this.hide();
+    }
   };
 
   isShown() {

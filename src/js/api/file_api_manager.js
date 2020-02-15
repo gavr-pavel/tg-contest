@@ -255,6 +255,16 @@ const FileApiManager = new class {
     return this.loadFile(location, document.dc_id, options);
   }
 
+  loadStickerSetThumb(set, options = {}) {
+    const location = {
+      _: 'inputStickerSetThumb',
+      stickerset: {_: 'inputStickerSetID', id: set.id, access_hash: set.access_hash},
+      volume_id: set.thumb.location.volume_id,
+      local_id: set.thumb.location.local_id,
+    };
+    return this.loadFile(location, set.thumb_dc_id, options);
+  }
+
   async uploadFile(blob, name = '') {
     const randomId = randomLong();
 
