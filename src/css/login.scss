@@ -118,3 +118,17 @@
   white-space: nowrap;
   color: #777A7E;
 }
+
+.login_password_visibility_button {
+  position: absolute;
+  z-index: 1;
+  right: 15px;
+  top: 16px;
+  width: 24px;
+  height: 24px;
+  background: url('../icons/eye1_svg.svg') no-repeat center;
+  cursor: pointer;
+}
+.login_password_visibility_button-visible {
+  background: url('../icons/eye2_svg.svg') no-repeat center;
+}

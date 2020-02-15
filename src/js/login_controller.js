@@ -82,10 +82,10 @@ const LoginController = new class {
         this.setDomContent('header', 'Enter a password');
         this.setDomContent('subheader','Your account is protected with<br>an additional password', false);
         this.dom.form.innerHTML = '';
-        const input = this.buildInput('Password', 'password');
+        const input = this.buildPasswordInput();
         this.submitButton = this.buildButton('Next');
         this.passwordTextField = new MDCTextField(input);
-        this.dom.form.append(input, this.submitButton, this.buildPasswordVisibilityButton());
+        this.dom.form.append(input, this.submitButton);
         this.mdcComponents.push(this.passwordTextField);
         import('./api/password_manager.js');
       } break;
@@ -346,6 +346,23 @@ const LoginController = new class {
     return input;
   }
 
+  buildPasswordInput() {
+    const wrap = this.buildInput('Password', 'password');
+
+    const input = $('input', wrap);
+
+    const button = buildHtmlElement(`<span class="login_password_visibility_button"></span>`);
+    button.addEventListener('click', () => {
+      const visible = input.type === 'password';
+      input.type = visible ? 'text' : 'password';
+      button.classList.toggle('login_password_visibility_button-visible', visible);
+    });
+
+    wrap.append(button);
+
+    return wrap;
+  }
+
   buildButton(text, hidden = true) {
     const button = buildHtmlElement(`
       <button class="login_button mdc-button mdc-button--unelevated" type="submit" ${hidden ? ' hidden' : ''}><span class="mdc-button__ripple"></span>${text}</button>
@@ -426,17 +443,6 @@ const LoginController = new class {
     `);
     el.addEventListener('click', () => {
       this.setStep(STEP_PHONE);
-    });
-    return el;
-  }
-
-  buildPasswordVisibilityButton() {
-    const el = buildHtmlElement(`
-      <span class="login_password_visibility_button"></span>
-    `);
-    el.addEventListener('click', () => {
-      const input = this.this.passwordTextField.input_;
-      input.type = input.type === 'password' ? 'text' : 'password';
     });
     return el;
   }
