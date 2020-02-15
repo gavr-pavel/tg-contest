@@ -130,13 +130,20 @@
   position: relative;
 }
 
-.chat_info_shared_docs_item {
+.chat_info_shared_docs_item,
+.chat_info_shared_link_item {
   cursor: pointer;
   display: flex;
-  flex-flow: column wrap;
-  height: 48px;
   margin: 12px;
   overflow: hidden;
+}
+
+.chat_info_shared_docs_item {
+  height: 48px;
+}
+
+.chat_info_shared_link_item:hover {
+  text-decoration: none;
 }
 
 .chat_info_shared_docs_item:hover .chat_info_shared_docs_item_icon {
@@ -165,15 +172,13 @@
   display: none;
 }
 
-.chat_info_shared_docs_item_icon {
-  align-items: flex-end;
-  background-color: #DF3F40;
-  background-size: contain;
+.chat_info_shared_docs_item_icon,
+.chat_info_shared_link_item_image {
+  background-size: cover;
   border-radius: 8px;
-  color: #fff;
+  box-sizing: border-box;
   display: flex;
-  font-size: 15px;
-  font-weight: 600;
+  flex-shrink: 0;
   height: 48px;
   justify-content: center;
   margin-right: 12px;
@@ -181,6 +186,31 @@
   position: relative;
   text-align: center;
   width: 48px;
+}
+
+.chat_info_shared_docs_item_icon {
+  align-items: flex-end;
+  color: #fff;
+  background-color: #DF3F40;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.chat_info_shared_link_item_image {
+  background-color: rgba(0, 0, 0, .1);
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.chat_info_shared_link_item_image:before {
+  content: '\1F517'; // ?
+  font-size: 22px;
+  left: 0;
+  line-height: 48px;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: -1;
 }
 
 .chat_info_shared_docs_item_icon:not(.chat_info_shared_docs_item_icon-thumb):before {
@@ -201,7 +231,8 @@
   color: transparent;
 }
 
-.chat_info_shared_docs_item_info {
+.chat_info_shared_docs_item_info,
+.chat_info_shared_link_item_info {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -216,11 +247,41 @@
   pointer-events: none;
   text-overflow: ellipsis;
   width: 80%;
+  white-space: nowrap;
 }
 
 .chat_info_shared_docs_item_desc {
   color: #707579;
   font-size: 13px;
+}
+
+.chat_info_shared_link_item_title,
+.chat_info_shared_link_item_desc {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat_info_shared_link_item_title {
+  color: #000;
+  font-size: 15px;
+}
+
+.chat_info_shared_link_item_desc {
+  color: #717579;
+  font-size: 13px;
+  margin: 2px 0;
+}
+
+.chat_info_shared_link_item_url {
+  color: #64A2E3;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 80%;
+  white-space: nowrap;
 }
 
 .messages_search_input {

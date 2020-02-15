@@ -232,6 +232,8 @@ const ChatInfoController = new class {
         return this.renderSharedMedia(messages);
       case 'docs':
         return this.renderSharedDocs(messages);
+      case 'links':
+        return this.renderSharedLinks(messages);
     }
   }
 
@@ -277,10 +279,51 @@ const ChatInfoController = new class {
     $('.chat_info_shared_docs').append(frag);
   }
 
+  renderSharedLinks(messages) {
+    console.log(messages);
+    const frag = document.createDocumentFragment();
+    for (const message of messages) {
+      const thumb = MessagesController.getMessageMediaThumb(message.media);
+      const media = message.media;
+
+      let title = '';
+      let desc = '';
+      let url = '';
+      if (media && media.webpage && media.webpage._ !== 'webPageEmpty') {
+        title = media.webpage.title || media.webpage.site_name || '';
+        desc = media.webpage.description || '';
+        url = media.webpage.url;
+      }
+
+      if (!url) {
+        url = this.getUrlFromText(message);
+        if (!url) {
+          continue;
+        }
+      }
+
+      const linkEl = buildHtmlElement(`
+        <a class="chat_info_shared_link_item" data-message-id="${ message.id }" target="_blank" href="${ url }">
+          <div class="chat_info_shared_link_item_image"></div>
+          <div class="chat_info_shared_link_item_info">
+            <div class="chat_info_shared_link_item_title">${ encodeHtmlEntities(title) }</div>
+            <div class="chat_info_shared_link_item_desc">${ encodeHtmlEntities(desc) }</div>
+            <div class="chat_info_shared_link_item_url">${ encodeHtmlEntities(url) }</div>
+          </div>
+        </a>
+      `);
+      frag.append(linkEl);
+
+      if (thumb) {
+        this.loadLinkThumb(thumb, $('.chat_info_shared_link_item_image', linkEl));
+      }
+    }
+    $('.chat_info_shared_links').append(frag);
+  }
+
   async loadMediaThumb(message, thumbEl) {
     const thumb = MessagesController.getMessageMediaThumb(message.media);
     const photoSize = MediaApiManager.choosePhotoSize(thumb.sizes, 'm');
-
     const url = await FileApiManager.loadMessagePhoto(thumb.object, photoSize.type, {cache: true});
 
     thumbEl.style.backgroundImage = `url(${url})`;
@@ -290,6 +333,13 @@ const ChatInfoController = new class {
     const url = await FileApiManager.loadMessageDocumentThumb(doc, doc.type, {cache: true});
 
     thumbEl.classList.add('chat_info_shared_docs_item_icon-thumb');
+    thumbEl.style.backgroundImage = `url(${url})`;
+  }
+
+  async loadLinkThumb(thumb, thumbEl) {
+    const photoSize = MediaApiManager.choosePhotoSize(thumb.sizes, 'm');
+    const url = await FileApiManager.loadMessagePhoto(thumb.object, photoSize.type, {cache: true});
+
     thumbEl.style.backgroundImage = `url(${url})`;
   }
 
@@ -380,6 +430,15 @@ const ChatInfoController = new class {
   getFileSizeFormatted(bytes) {
     const i = bytes === 0 ? 0 : Math.floor(Math.log(bytes) / Math.log(1024));
     return `${ (bytes / Math.pow(1024, i)).toFixed(1) } ${ ['B', 'KB', 'MB', 'GB', 'TB'][i] }`;
+  }
+
+  getUrlFromText(message) {
+    for (const entity of message.entities) {
+      if (entity._ === 'messageEntityUrl') {
+        return message.message.substring(entity.offset, entity.offset + entity.length);
+      }
+    }
+    return '';
   }
 };
 
