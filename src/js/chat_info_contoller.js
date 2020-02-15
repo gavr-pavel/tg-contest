@@ -349,14 +349,28 @@ const ChatInfoController = new class {
       case 'image/jpeg':
       case 'image/jpg':
       case 'image/png':
+      case 'image/gif':
       case 'image/webp':
       case 'video/mp4':
+      case 'video/webm':
       case 'video/mov':
       case 'video/avi':
       case 'video/mkv':
       case 'application/pdf':
-      case 'application/doc':
-        return mimeType.split('/').pop().split('.')[0];
+      case 'application/json':
+      case 'application/zip':
+      case 'text/csv':
+      case 'text/html':
+      case 'multipart/x-zip':
+        return mimeType.split(/[.\-\/]/).pop();
+      case 'application/x-compressed-tar':
+        return 'tar.gz';
+      case 'application/x-7z-compressed':
+        return '7z';
+      case 'text/plain':
+        return 'txt';
+      case 'image/svg+xml':
+        return 'svg';
     }
     return '';
   }

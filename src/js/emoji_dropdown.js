@@ -230,7 +230,6 @@ const EmojiDropdown = new class {
       }
       listsToLoad.push(list);
     }
-    console.log(listsToLoad);
     for (const list of listsToLoad) {
       const fullSet = this.stickerSets.get(list.dataset.setId);
       this.loadStickersList(list, fullSet);
