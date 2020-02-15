@@ -147,7 +147,7 @@ const MessagesController = new class {
       const chatId = peer.channel_id || peer.chat_id;
       MessagesApiManager.loadChatFull(chatId)
           .then((fullChat) => {
-            let statusText;
+            let statusText = '';
             if (fullChat.participants_count) {
               if (MessagesApiManager.isMegagroup(chatId)) {
                 statusText = `${this.formatCount(fullChat.participants_count)} members, ${this.formatCount(fullChat.online_count)} online`;

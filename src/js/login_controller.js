@@ -236,11 +236,11 @@ const LoginController = new class {
       return;
     }
 
+    this.submitButton.disabled = true;
+
     const accountPassword = await ApiClient.callMethod('account.getPassword');
     const {getInputPasswordSRP} = await import('./api/password_manager.js');
     const inputPasswordSRP = await getInputPasswordSRP(password, accountPassword);
-
-    this.submitButton.disabled = true;
 
     ApiClient.callMethod('auth.checkPassword', {
       password: Object.assign({_: 'inputCheckPasswordSRP'}, inputPasswordSRP)
