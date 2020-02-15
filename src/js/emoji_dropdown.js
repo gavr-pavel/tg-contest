@@ -303,7 +303,7 @@ const EmojiDropdown = new class {
   };
 
   onGlobalClick = (event) => {
-    if (!EmojiDropdown.container.contains(event.target) && event.target !== this.button) {
+    if (!this.container.contains(event.target) && event.target !== this.button) {
       this.hide();
     } else {
       event.preventDefault(); // prevent input blur

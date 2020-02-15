@@ -2,7 +2,7 @@ import {bufferRandom, bufferConcat, pqPrimeFactorization, intRand, intToUint, bi
 import {TLSerialization, TLDeserialization, Schema} from './tl.js';
 import {selectRsaPublicKey, rsaEncrypt, sha1Hash, sha256Hash, aesIgeDecrypt, aesIgeEncrypt} from './crypto.js';
 import {aesjs} from '../vendor/aes.js';
-import {HttpTransport, WebSocketTransport} from './transport.js';
+import {WebSocketTransport} from './transport.js';
 
 class MTProto {
   authKey = 0;
@@ -24,17 +24,13 @@ class MTProto {
 
     this.dcId = options.dcId || this.chooseDC();
 
-    if (1) {
-      this.transport = new WebSocketTransport({
-        dcId: this.dcId,
-        onMessage: (buffer) => this.transportReceive(buffer),
-        onReconnect: () => {
-          this.init();
-        }
-      });
-    } else {
-      this.transport = new HttpTransport();
-    }
+    this.transport = new WebSocketTransport({
+      dcId: this.dcId,
+      onMessage: (buffer) => this.transportReceive(buffer),
+      onReconnect: () => {
+        this.init();
+      }
+    });
 
     this.init();
   }
@@ -69,7 +65,7 @@ class MTProto {
   }
 
   isProtocolFramingEnabled() {
-    return !(this.transport instanceof HttpTransport);
+    return true;
   }
 
   async initProtocol() {
@@ -154,7 +150,7 @@ class MTProto {
   }
 
   async wrapEncryptedMessage(msgKey, encryptedData) {
-    const s = new TLSerialization();
+    const s = new TLSerialization({startMaxLength: encryptedData.byteLength + 256});
     s.storeIntBytes(this.authKeyId, 64, 'auth_key_id');
     s.storeIntBytes(msgKey, 128, 'message_key');
     s.storeRawBytes(encryptedData, 'encrypted_data');
@@ -514,14 +510,20 @@ class MTProto {
   }
 
   schedulePendingMessagesRequest() {
-    if (!this.pendingMessagesRequestTimeout) {
+    if (this.pendingMessages.length >= 10) {
+      this.flushPendingMessages();
+    } else if (!this.pendingMessagesRequestTimeout) {
       this.pendingMessagesRequestTimeout = setTimeout(() => {
-        const pendingMessages = this.getPendingMessages();
-        if (pendingMessages.length) {
-          this.sendRequest(pendingMessages);
-        }
+        this.flushPendingMessages();
         this.pendingMessagesRequestTimeout = null;
       });
+    }
+  }
+
+  flushPendingMessages() {
+    const pendingMessages = this.getPendingMessages();
+    if (pendingMessages.length) {
+      this.sendRequest(pendingMessages);
     }
   }
 
@@ -777,11 +779,7 @@ class MTProto {
   }
 
   onAuthReady() {
-    if (this.transport instanceof HttpTransport) {
-      this.initLongPoll();
-    } else {
-      this.initPingLoop();
-    }
+    this.initPingLoop();
     if (this.options.onConnectionReady) {
       this.options.onConnectionReady();
       delete this.options.onConnectionReady;
@@ -854,23 +852,6 @@ class MTProto {
     }, 60000);
   }
 
-  initLongPoll() {
-    const tick = () => {
-      const reqMsg = this.wrapMethodCallMessage('http_wait', {
-        max_delay: 3000,
-        wait_after: 150,
-        max_wait: 25000
-      });
-      this.sendRequest(reqMsg)
-        .then(tick)
-        .catch((e) => {
-          console.warn('[MTProto] Long poll error', e);
-        });
-    };
-
-    tick();
-  }
-
   ping() {
     const ping_id = longFromInts(...new Uint32Array(bufferRandom(8)));
     const msg = this.wrapMethodCallMessage('ping', {ping_id, });
@@ -889,8 +870,11 @@ class MTProto {
     return !notRelated.includes(constructor);
   }
 
-  getSerializer(api = true) {
-    return new TLSerialization({mtproto: !api});
+  getSerializer({api = true, upload = false}) {
+    return new TLSerialization({
+      mtproto: !api,
+      startMaxLength: upload ? 512 * 1024 : void(0)
+    });
   }
 
   getSchema() {

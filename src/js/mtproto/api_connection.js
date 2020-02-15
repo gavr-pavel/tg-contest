@@ -2,11 +2,8 @@ import {App} from '../app.js';
 import {getDeferred, Emitter} from '../utils.js';
 
 class ApiConnection {
-
   connectionReady = false;
   connectionInited = false;
-
-  config = false;
 
   emitter = new Emitter();
 
@@ -55,7 +52,6 @@ class ApiConnection {
     }
     this.connectionReady = true;
     this.connectionDefered.resolve();
-    // this.config = await this.callMethod('help.getConfig');
   }
 
   destroy() {
@@ -63,7 +59,7 @@ class ApiConnection {
   }
 
   wrapCall(method, params) {
-    const serializer = this.mtproto.getSerializer();
+    const serializer = this.mtproto.getSerializer({api: true, upload: this.options.upload});
 
     if (!this.connectionInited) {
       const Schema = this.mtproto.getSchema();
@@ -122,14 +118,13 @@ class ApiConnection {
     return +errorMessage.match(/\d+$/)[0];
   }
 
-  getServerTimeOffset() {
-    return this.mtproto.timeOffset;
-  }
+  // getServerTimeOffset() {
+  //   return this.mtproto.timeOffset;
+  // }
 
-  getServerTimeNow() {
-    return Math.floor(Date.now() / 1000) + this.getServerTimeOffset();
-  }
-
+  // getServerTimeNow() {
+  //   return Math.floor(Date.now() / 1000) + this.getServerTimeOffset();
+  // }
 }
 
 function getSystemLang() {

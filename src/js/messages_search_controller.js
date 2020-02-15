@@ -71,7 +71,7 @@ const MessagesSearchController = new class {
   }
 
   renderResultsHeader(count) {
-    const text = I18n.getPlural('messages_search_results_found', count)
+    const text = I18n.getPlural('messages_search_n_results_found', count);
     this.listWrap.insertAdjacentHTML('afterbegin', `
       <div class="messages_search_results_header">${text}</div>
     `);

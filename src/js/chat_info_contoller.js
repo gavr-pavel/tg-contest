@@ -26,6 +26,8 @@ const ChatInfoController = new class {
     }
     this.peerId = peerId;
 
+    this.sharedSection = null;
+
     this.sharedLoading = {
       loading: {
         media: true,

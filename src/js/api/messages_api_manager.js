@@ -20,32 +20,10 @@ const MessagesApiManager = new class {
     });
   }
 
-  async initUpdatesState() {
-    this.updatesState = await ApiClient.callMethod('updates.getState');
-  }
-
-  checkUpdatesSeq(seq, date) {
-    return true;
-    // const local = this.updatesState;
-    // if (local.seq + 1 === seq) {
-    //   local.seq = seq;
-    //   local.date = date;
-    //   console.log(`updates state seq updated to ${seq}`);
-    //   return true;
-    // }
-    // if (local.seq + 1 < seq) {
-    //   // there's an updates gap that must be filled
-    // }
-    // console.warn(`bad updates seq ${seq}, local seq is ${local.seq}`);
-    // debugger;
-    // return false;
-  }
-
   onUpdates(object) {
     switch (object._) {
       case 'updates':
       case 'updatesCombined':
-        console.log(object._, object.seq);
         this.updateChats(object.chats);
         this.updateUsers(object.users);
         for (const update of object.updates) {
@@ -63,7 +41,7 @@ const MessagesApiManager = new class {
   }
 
   handleUpdate(update) {
-    console.log(update._, update);
+    // console.log(update._, update);
     switch (update._) {
       case 'updateNewMessage':
       case 'updateNewChannelMessage': {

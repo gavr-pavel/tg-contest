@@ -59,6 +59,7 @@ const LoginController = new class {
         this.setDomContent('image', img, false);
         this.setDomText('header', '+' + this.authParams.phoneNumber);
         this.setDomContent('subheader', 'We have sent you an SMS<br>with the code.');
+        this.dom.header.append(this.buildEditPhoneButton());
         this.dom.form.innerHTML = '';
         const input = this.buildInput('Code');
         this.submitButton = this.buildButton('Next');
@@ -76,7 +77,7 @@ const LoginController = new class {
         const input = this.buildInput('Password', 'password');
         this.submitButton = this.buildButton('Next');
         this.passwordTextField = new MDCTextField(input);
-        this.dom.form.append(input, this.submitButton);
+        this.dom.form.append(input, this.submitButton, this.buildPasswordVisibilityButton());
         this.mdcComponents.push(this.passwordTextField);
         import('./api/password_manager.js');
       } break;
@@ -343,6 +344,27 @@ const LoginController = new class {
     `);
     this.mdcComponents.push(new MDCRipple(button));
     return button;
+  }
+
+  buildEditPhoneButton() {
+    const el = buildHtmlElement(`
+      <span class="login_edit_phone_button"></span>
+    `);
+    el.addEventListener('click', () => {
+      this.setStep(STEP_PHONE);
+    });
+    return el;
+  }
+
+  buildPasswordVisibilityButton() {
+    const el = buildHtmlElement(`
+      <span class="login_password_visibility_button"></span>
+    `);
+    el.addEventListener('click', () => {
+      const input = this.this.passwordTextField.input_;
+      input.type = input.type === 'password' ? 'text' : 'password';
+    });
+    return el;
   }
 
   destroy() {

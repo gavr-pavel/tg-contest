@@ -31,7 +31,6 @@ const MessagesController = new class {
 
     MessagesFormController.init();
 
-    MessagesApiManager.initUpdatesState();
     MessagesApiManager.emitter.on('chatMessagesUpdate', this.onChatMessagesUpdate);
     MessagesApiManager.emitter.on('chatNewMessage', this.onNewMessage);
     MessagesApiManager.emitter.on('chatEditMessage', this.onEditMessage);

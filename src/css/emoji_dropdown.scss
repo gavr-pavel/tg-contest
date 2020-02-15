@@ -9,7 +9,7 @@
   box-shadow: 0 10px 20px rgba(0, 0, 0, .5);
   overflow: hidden;
   transition: transform .2s, opacity .2s, visibility .2s;
-  transform-origin: 29px 455px;
+  transform-origin: 29px calc(100% + 35px);
   will-change: transform;
 }
 .emoji_dropdown[hidden] {

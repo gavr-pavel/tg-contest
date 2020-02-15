@@ -5,7 +5,7 @@ $mdc-theme-secondary: #50A2E9; //#50A2E9 for checkbox, #018786 for ???
 $mdc-theme-error: #D7483F;
 $mdc-theme-on-primary: #ffffff;
 $mdc-shape-small-component-radius: 10px;
-//$mdc-shape-medium-component-radius: 10px;
+$mdc-shape-medium-component-radius: 10px;
 //$mdc-shape-large-component-radius: 20px;
 
 @import "@material/textfield/mdc-text-field";
@@ -22,6 +22,7 @@ $mdc-shape-small-component-radius: 10px;
 @import "right_sidebar";
 @import "settings_menu";
 @import "messages";
+@import "messages_form";
 @import "media_view";
 @import "emoji_dropdown";
 
