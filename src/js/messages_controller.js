@@ -424,22 +424,65 @@ const MessagesController = new class {
   };
 
   onFileClick = (event) => {
-    const msgId = +event.currentTarget.dataset.messageId || +event.currentTarget.closest('.messages_item').dataset.id;
-    const message = MessagesApiManager.messages.get(msgId);
-    if (message) {
-      const document = message.media.document;
-      const attributes = MediaApiManager.getDocumentAttributes(document);
-      FileApiManager.loadMessageDocument(document)
-          .then((url) => {
-            console.log('downloaded', url);
-            const a = window.document.createElement('a');
-            a.href = url;
-            a.download = attributes.file_name;
-            a.click();
-          });
-      console.log(`started loading ${document.mime_type} file`);
+    const thumb = event.currentTarget;
+
+    if (thumb.dataset.loading) {
+      return;
     }
-    console.log(msgId, message);
+    thumb.dataset.loading = 1;
+
+    const msgId = +thumb.dataset.messageId || +thumb.closest('.messages_item').dataset.id;
+    const message = MessagesApiManager.messages.get(msgId);
+    if (!message) {
+      return;
+    }
+    const document = message.media.document;
+    const abortController = new AbortController();
+
+    const onAbort = () => {
+      abortController.abort();
+      onDone();
+    };
+
+    const onProgress = (loaded) => {
+      const percent = Math.round(loaded / document.size * 100);
+      if (progressPath) {
+        progressPath.style.strokeDasharray = `${percent}, 100`;
+      }
+    };
+
+    const onDone = (url = null) => {
+      delete thumb.dataset.loading;
+      thumb.removeEventListener('click', onAbort);
+      thumb.classList.remove('document_icon-loading');
+      thumb.innerHTML = '';
+      if (url) {
+        const attributes = MediaApiManager.getDocumentAttributes(document);
+        const a = window.document.createElement('a');
+        a.href = url;
+        a.download = attributes.file_name;
+        a.click();
+      }
+    };
+
+    let progressPath;
+    if (thumb.classList.contains('document_icon')) {
+      thumb.classList.add('document_icon-loading');
+      thumb.innerHTML = `
+        <svg class="document_icon_progress_svg" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+          <path class="document_icon_progress_path" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      `;
+      thumb.addEventListener('click', onAbort);
+      progressPath = $('.document_icon_progress_path', thumb);
+    }
+
+    FileApiManager.loadMessageDocument(document, {onProgress, signal: abortController.signal})
+        .then(onDone)
+        .catch((error) => {
+          console.error(error);
+          onDone();
+        });
   };
 
   getMessageMediaThumb(media) {

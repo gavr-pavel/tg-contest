@@ -306,6 +306,10 @@
   background-color: #65AB5A;
 }
 
+.document_icon_progress_svg {
+  animation: spin 1s infinite linear;
+}
+
 .document_icon_progress_path {
   fill: none;
   stroke: #fff;

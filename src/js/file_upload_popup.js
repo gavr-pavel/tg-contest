@@ -101,12 +101,10 @@ const FileUploadPopup = new class {
     }
     if (files.length > 1) {
       // todo show popup instead
-      console.log('upload multiple files', files);
       for (const file of files) {
         MessagesFormController.onFileSend(file, sendAsMedia);
       }
     } else {
-      console.log('upload single file', files[0]);
       MessagesFormController.onFileSend(files[0], sendAsMedia);
     }
   }
