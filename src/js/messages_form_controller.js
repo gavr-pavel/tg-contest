@@ -34,6 +34,10 @@ const MessagesFormController = new class {
     input.parentNode.appendChild(EmojiDropdown.container);
   }
 
+  focus() {
+    this.dom.input.focus();
+  }
+
   onInput = () => {
     const input = this.dom.input;
     input.style.height = '';

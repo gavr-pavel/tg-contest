@@ -54,6 +54,9 @@ const MessagesController = new class {
 
     this.showHeader(dialog);
     this.footer.hidden = !this.canSendMessage(dialog);
+    if (!this.footer.hidden) {
+      MessagesFormController.focus();
+    }
 
     this.container.append(this.loader);
 

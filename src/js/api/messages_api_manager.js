@@ -41,7 +41,6 @@ const MessagesApiManager = new class {
   }
 
   handleUpdate(update) {
-    // console.log(update._, update);
     switch (update._) {
       case 'updateNewMessage':
       case 'updateNewChannelMessage': {
