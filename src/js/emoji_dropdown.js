@@ -220,15 +220,21 @@ const EmojiDropdown = new class {
     const container = event.currentTarget;
     const containerHeight = container.offsetHeight;
     const scrollTop = container.scrollTop;
-    let currentList;
+    const listsToLoad = [];
     for (const list of container.children) {
-      if (list.offsetTop > scrollTop + containerHeight / 2) {
+      if (list.offsetTop + list.offsetHeight < scrollTop - 50) {
+        continue;
+      }
+      if (list.offsetTop > scrollTop + containerHeight + 50) {
         break;
       }
-      currentList = list;
+      listsToLoad.push(list);
     }
-    const fullSet = this.stickerSets.get(currentList.dataset.setId);
-    this.loadStickersList(currentList, fullSet);
+    console.log(listsToLoad);
+    for (const list of listsToLoad) {
+      const fullSet = this.stickerSets.get(list.dataset.setId);
+      this.loadStickersList(list, fullSet);
+    }
   };
 
   onStickerClick = (event) => {
