@@ -32,6 +32,7 @@
 
 .login_form {
   width: 360px;
+  position: relative;
 }
 
 .login_input {
@@ -72,4 +73,24 @@
   background-position: center;
   background-size: 48px;
   border-radius: 50%;
+}
+
+.mdc-menu.login_countries_list {
+  display: block;
+  opacity: 1;
+  max-height: 375px;
+  margin-top: -15px;
+}
+
+.login_countries_list[hidden] {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.mdc-menu.login_countries_item {
+  display: flex;
+}
+
+.mdc-menu.login_countries_item_emoji {
+
 }

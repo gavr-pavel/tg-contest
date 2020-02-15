@@ -4,6 +4,7 @@ import {I18n} from './i18n.js';
 import {App} from './app';
 import {MDCTextField} from '@material/textfield/index';
 import {MDCRipple} from '@material/ripple/component';
+import {CountryCodesConfig, getCountryCodeEmojiFlag} from './country_codes_config';
 
 const STEP_PHONE = 0;
 const STEP_CODE = 1;
@@ -47,10 +48,13 @@ const LoginController = new class {
         this.setDomContent('header', 'Sign in to Telegram');
         this.setDomContent('subheader', 'Please enter your phone number', false);
         this.dom.form.innerHTML = '';
-        const input = this.buildInput('Phone Number', 'tel');
+        const countryInput = '';//this.buildInput('Country');
+        const countryMenu = '';//this.buildCountryMenu(countryInput);
+        const phoneInput = this.buildInput('Phone Number', 'tel');
         this.submitButton = this.buildButton('Next');
-        this.phoneTextField = new MDCTextField(input);
-        this.dom.form.append(input, this.submitButton);
+        // this.countryTextField = new MDCTextField(countryInput);
+        this.phoneTextField = new MDCTextField(phoneInput);
+        this.dom.form.append(countryInput, countryMenu, phoneInput, this.submitButton);
         this.mdcComponents.push(this.phoneTextField);
       } break;
 
@@ -344,6 +348,40 @@ const LoginController = new class {
     `);
     this.mdcComponents.push(new MDCRipple(button));
     return button;
+  }
+
+  buildCountryMenu(inputWrap) {
+    let items = '';
+    for (const country of CountryCodesConfig) {
+      const [code, langKey, prefix] = country;
+      if (!code) {
+        continue;
+      }
+      const emoji = getCountryCodeEmojiFlag(code);
+      items += `
+        <li class="mdc-list-item login_countries_item" role="menuitem">
+          <div class="login_countries_item_emoji">${emoji}</div>
+          <div class="login_countries_item_country">${I18n.get(langKey)}</div>
+          <div class="login_countries_item_emoji">${prefix}</div>
+        </li>
+      `;
+    }
+
+    const el = buildHtmlElement(`
+      <div class="mdc-menu mdc-menu-surface login_countries_list" hidden>
+        <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">${items}</ul>
+      </div>
+    `);
+
+    const input = inputWrap.querySelector('input');
+    input.addEventListener('focus', () => {
+      el.hidden = false;
+    });
+    input.addEventListener('blur', () => {
+      el.hidden = true;
+    });
+
+    return el;
   }
 
   buildEditPhoneButton() {

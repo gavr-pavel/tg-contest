@@ -1,5 +1,5 @@
 import {buildHtmlElement, getLabeledElements, $, Storage} from './utils';
-import {emojiConfig} from './emoji_config';
+import {EmojiConfig} from './emoji_config';
 import {ApiClient} from './api/api_client';
 import {MessagesFormController} from './messages_form_controller';
 
@@ -50,9 +50,9 @@ const EmojiDropdown = new class {
   initEmojiSection() {
     let emojiSectionHtml = '';
     let bottomNavHtml = '';
-    for (const category in emojiConfig) {
+    for (const category in EmojiConfig) {
       let categoryItems = '';
-      for (const item of emojiConfig[category]) {
+      for (const item of EmojiConfig[category]) {
         categoryItems += `<div class="emoji_dropdown_list_item">${item}</div>`;
       }
       emojiSectionHtml += `<div class="emoji_dropdown_list emoji_dropdown_list-${category}" data-category="${category}">${categoryItems}</div>`;

@@ -3,7 +3,7 @@ import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple';
 import {MediaApiManager} from './api/media_api_manager';
 import {MediaViewController} from './media_view_controller';
-import {emojiRegex} from './emoji_config';
+import {getEmojiMatches} from './emoji_config';
 import {MessagesFormController} from './messages_form_controller';
 import {ChatsController} from "./chats_controller";
 import {ChatInfoController} from "./chat_info_contoller";
@@ -692,7 +692,7 @@ const MessagesController = new class {
     if (text) {
       text = this.replaceLineBreaks(text);
       if (text.length <= 12 && !message.media) {
-        const emojiMatches = text.match(emojiRegex);
+        const emojiMatches = getEmojiMatches(text);
         if (emojiMatches && emojiMatches.length <= 3 && emojiMatches.join('').length === text.length) {
           addClass += ' messages_item_text_emoji_big';
         }
