@@ -292,7 +292,7 @@ const FileApiManager = new class {
           throw new Error('File upload aborted');
         }
         if (onProgress) {
-          onProgress(offset + partSize);
+          onProgress(Math.min(blob.size, offset + partSize));
         }
       }
     } finally {

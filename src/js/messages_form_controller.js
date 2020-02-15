@@ -104,8 +104,9 @@ const MessagesFormController = new class {
         ]
       };
     }
+
+    await MessagesApiManager.sendMedia(peer, inputMedia);
     MessagesController.removePendingMessage(pendingMessageEl);
-    MessagesApiManager.sendMedia(peer, inputMedia);
   }
 
   buildFileUploadProgressElement(title, size) {
