@@ -56,6 +56,10 @@ const LoginController = new class {
         this.phoneTextField = new MDCTextField(phoneInput);
         this.dom.form.append(countryInput, countryMenu, phoneInput, this.submitButton);
         this.mdcComponents.push(this.phoneTextField);
+        if (this.authParams.phoneNumber) {
+          this.phoneTextField.value = this.authParams.phoneNumber;
+        }
+        this.phoneTextField.focus();
       } break;
 
       case STEP_CODE: {

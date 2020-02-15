@@ -66,6 +66,17 @@
   background-position: center;
 }
 
+.login_edit_phone_button {
+  display: inline-block;
+  background: url('../icons/edit2_svg_gray.svg') no-repeat center;
+  width: 24px;
+  height: 24px;
+  margin-left: 13px;
+  margin-bottom: -2px;
+  vertical-align: baseline;
+  cursor: pointer;
+}
+
 .login_upload_photo {
   background-color: #5DA3EF;
   background-image: url('../icons/cameraadd_white_svg.svg');
