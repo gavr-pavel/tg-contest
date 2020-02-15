@@ -645,9 +645,9 @@ const MessagesController = new class {
         <div class="webpage">${this.formatWebpageContent(webpage, mediaThumbData)}</div>
       `;
     } else if (webpage._ === 'webPagePending') {
-      return 'Content is loading...'
+      return '<div class="webpage_placeholder">Content is loading...</div>'
     }
-    return 'Content not available';
+    return '<div class="webpage_placeholder">Content not available</div>';
   }
 
   formatWebpageContent(webpage, mediaThumbData) {
