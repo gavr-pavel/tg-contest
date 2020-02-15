@@ -265,7 +265,7 @@ const FileApiManager = new class {
     return this.loadFile(location, set.thumb_dc_id, options);
   }
 
-  async uploadFile(blob, name = '') {
+  async uploadFile(blob, name = '', {onProgress}) {
     const randomId = randomLong();
 
     const isBigFile = blob.size > 10 * 1024 * 1024;
@@ -280,6 +280,9 @@ const FileApiManager = new class {
         file_total_parts: totalParts,
         bytes: await blob.slice(offset, offset + partSize).arrayBuffer()
       });
+      if (onProgress) {
+        onProgress(offset + partSize);
+      }
     }
 
     return {

@@ -1,9 +1,10 @@
-import {$, debounce, getLabeledElements} from './utils';
+import {$, buildHtmlElement, debounce, encodeHtmlEntities, getLabeledElements} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
 import {EmojiDropdown} from './emoji_dropdown';
 import {MDCRipple} from '@material/ripple';
 import {FileUploadPopup} from './file_upload_popup';
+import {ChatInfoController} from './chat_info_contoller';
 
 const MessagesFormController = new class {
   init() {
@@ -72,7 +73,17 @@ const MessagesFormController = new class {
 
   async onFileSend(file, sendAsMedia = false) {
     const peer = MessagesController.dialog.peer;
-    const inputFile = await FileApiManager.uploadFile(file, file.name);
+    const pendingMessageEl = MessagesController.appendPendingMessage(el);
+    const onProgress = (uploaded) => {
+      pendingMessageEl.innerHTML = `
+        <b>${encodeHtmlEntities(file.name)}</b> ${ChatInfoController.getFileSizeFormatted(file.size)}
+        <div>uploaded ${ Math.round(uploaded / file.size * 100) }%</div>
+      `;
+    };
+
+    onProgress(0);
+
+    const inputFile = await FileApiManager.uploadFile(file, file.name, {onProgress});
     let inputMedia;
     if (sendAsMedia && file.type.startsWith('image/')) {
       inputMedia = {_: 'inputMediaUploadedPhoto', file: inputFile};
@@ -86,7 +97,23 @@ const MessagesFormController = new class {
         ]
       };
     }
+    MessagesController.removePendingMessage(pendingMessageEl);
     MessagesApiManager.sendMedia(peer, inputMedia);
+  }
+
+  buildFileUploadPendingMessageContent(title, size) {
+    const el = buildHtmlElement(`
+      <div class="file_upload_progress_item">
+        <div class="file_upload_progress_item_icon">
+          <svg class="file_upload_progress_item_icon_svg" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+            <path class="messages_item_media_progress_path" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          </svg>
+        </div>
+        <div class="file_upload_progress_item_title">${encodeHtmlEntities(title)}</div>
+        <div class="file_upload_progress_item_size">${ChatInfoController.getFileSizeFormatted(size)}</div>
+      </div>
+    `);
+    return el;
   }
 };
 

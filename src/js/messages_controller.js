@@ -355,6 +355,18 @@ const MessagesController = new class {
     return el;
   }
 
+  appendPendingMessage(content) {
+    const el = buildHtmlElement(`<div class="messages_item messages_item-out messages_item-stick-to-next messages_item-stick-to-prev"></div>`);
+    el.append(content);
+    const list = $('.messages_pending_list');
+    list.appendChild(el);
+    return el;
+  }
+
+  removePendingMessage(el) {
+    el.remove();
+  }
+
   getClasses(dict) {
     let className = '';
     for (const [cls, cond] of Object.entries(dict)) {
