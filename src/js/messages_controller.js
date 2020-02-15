@@ -328,6 +328,10 @@ const MessagesController = new class {
         this.scrollToBottom();
       }
     }
+
+    if (this.dialog.unread_count) {
+      MessagesApiManager.readHistory(this.dialog, this.lastMsgId);
+    }
   }
 
   renderNewMessage(message) {

@@ -471,6 +471,22 @@ const MessagesApiManager = new class {
     }
   }
 
+  async readHistory(dialog, maxId) {
+    if (dialog.peer.channel_id) {
+      await ApiClient.callMethod('channels.readHistory', {
+        channel: this.getInputPeer(dialog.peer),
+        max_id: maxId
+      });
+    } else {
+      await ApiClient.callMethod('messages.readHistory', {
+        peer: this.getInputPeer(dialog.peer),
+        max_id: maxId
+      });
+    }
+    dialog.unread_count = 0; // todo fix count actual unread messages left
+    this.emitter.trigger('chatUnreadCountUpdate', {dialog});
+  }
+
   saveDraft(peer, message) {
     return ApiClient.callMethod('messages.saveDraft', {
       message,
