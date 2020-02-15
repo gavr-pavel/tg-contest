@@ -48,11 +48,11 @@ const LoginController = new class {
         this.setDomContent('header', 'Sign in to Telegram');
         this.setDomContent('subheader', 'Please enter your phone number', false);
         this.dom.form.innerHTML = '';
-        const countryInput = '';//this.buildInput('Country');
-        const countryMenu = '';//this.buildCountryMenu(countryInput);
+        const countryInput = this.buildInput('Country');
+        const countryMenu = this.buildCountryMenu(countryInput);
         const phoneInput = this.buildInput('Phone Number', 'tel');
         this.submitButton = this.buildButton('Next');
-        // this.countryTextField = new MDCTextField(countryInput);
+        this.countryTextField = new MDCTextField(countryInput);
         this.phoneTextField = new MDCTextField(phoneInput);
         this.dom.form.append(countryInput, countryMenu, phoneInput, this.submitButton);
         this.mdcComponents.push(this.phoneTextField);
@@ -351,35 +351,67 @@ const LoginController = new class {
   }
 
   buildCountryMenu(inputWrap) {
-    let items = '';
+    const items = [];
     for (const country of CountryCodesConfig) {
       const [code, langKey, prefix] = country;
       if (!code) {
         continue;
       }
       const emoji = getCountryCodeEmojiFlag(code);
-      items += `
-        <li class="mdc-list-item login_countries_item" role="menuitem">
+      const name = I18n.get(langKey);
+      const el = buildHtmlElement(`
+        <li class="mdc-list-item login_countries_item" role="menuitem" data-code="${code}" data-name="${name.toLowerCase()}">
           <div class="login_countries_item_emoji">${emoji}</div>
-          <div class="login_countries_item_country">${I18n.get(langKey)}</div>
-          <div class="login_countries_item_emoji">${prefix}</div>
+          <div class="login_countries_item_country">${name}</div>
+          <div class="login_countries_item_prefix">${prefix}</div>
         </li>
-      `;
+      `);
+      el.addEventListener('mousedown', onItemClick);
+      items.push(el);
     }
 
     const el = buildHtmlElement(`
-      <div class="mdc-menu mdc-menu-surface login_countries_list" hidden>
-        <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">${items}</ul>
+      <div class="mdc-menu mdc-menu-surface login_countries_menu" hidden>
+        <ul class="mdc-list login_countries_list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1"></ul>
       </div>
     `);
 
+    $('.login_countries_list', el).append(...items);
+
+    let itemsFound = items.length;
+
     const input = inputWrap.querySelector('input');
     input.addEventListener('focus', () => {
-      el.hidden = false;
+      if (itemsFound) {
+        el.hidden = false;
+      }
     });
     input.addEventListener('blur', () => {
       el.hidden = true;
     });
+    input.addEventListener('input', () => {
+      const value = input.value.trim().toLowerCase();
+      itemsFound = 0;
+      for (const item of items) {
+        if (item.dataset.name.indexOf(value) > -1) {
+          item.style.display = '';
+          itemsFound++;
+        } else {
+          item.style.display = 'none';
+        }
+      }
+      el.hidden = !itemsFound;
+    });
+
+    function onItemClick(event) {
+      event.preventDefault();
+      const item = event.currentTarget;
+      const name = $('.login_countries_item_country', item).innerText;
+      const prefix = $('.login_countries_item_prefix', item).innerText.replace(/\s+/g, '');
+      LoginController.countryTextField.value = name;
+      LoginController.phoneTextField.value = prefix;
+      LoginController.phoneTextField.focus();
+    }
 
     return el;
   }

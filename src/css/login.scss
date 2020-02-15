@@ -75,22 +75,35 @@
   border-radius: 50%;
 }
 
-.mdc-menu.login_countries_list {
+.mdc-menu.login_countries_menu {
   display: block;
   opacity: 1;
+  width: 100%;
   max-height: 375px;
   margin-top: -15px;
 }
 
-.login_countries_list[hidden] {
+.login_countries_menu[hidden] {
   visibility: hidden;
   opacity: 0;
 }
 
-.mdc-menu.login_countries_item {
+.login_countries_item {
   display: flex;
 }
 
-.mdc-menu.login_countries_item_emoji {
+.login_countries_item_emoji {
+  width: 55px;
+  text-align: left;
+  font-size: 22px;
+}
 
+.login_countries_item_country {
+  width: 100%;
+  text-align: left;
+}
+
+.login_countries_item_prefix {
+  white-space: nowrap;
+  color: #777A7E;
 }
