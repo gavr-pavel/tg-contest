@@ -257,13 +257,13 @@ const ChatInfoController = new class {
       const attrs = MediaApiManager.getDocumentAttributes(document);
       const fileName = attrs.file_name;
       const type = this.getFileExtension(document.mime_type);
+      const iconClass = this.getFileIconClass(type);
       const size = this.getFileSizeFormatted(document.size);
-
       const dateTime = MessagesController.formatMessageDateTime(message.date);
 
       const docEl = buildHtmlElement(`
         <div class="chat_info_shared_docs_item" data-message-id="${ message.id }">
-          <div class="chat_info_shared_docs_item_icon">${ type }</div>
+          <div class="chat_info_shared_docs_item_icon${iconClass}">${ type }</div>
           <div class="chat_info_shared_docs_item_info">
             <div class="chat_info_shared_docs_item_name">${ encodeHtmlEntities(fileName) }</div>
             <div class="chat_info_shared_docs_item_desc">${ size } &middot; ${ dateTime }</div>
@@ -280,7 +280,6 @@ const ChatInfoController = new class {
   }
 
   renderSharedLinks(messages) {
-    console.log(messages);
     const frag = document.createDocumentFragment();
     for (const message of messages) {
       const thumb = MessagesController.getMessageMediaThumb(message.media);
@@ -396,6 +395,33 @@ const ChatInfoController = new class {
     this.setSharedSection(section);
   };
 
+  getFileIconClass(ext) {
+    const start = ' chat_info_shared_docs_item_icon-';
+    switch (ext) {
+      case 'pdf':
+        return `${start}pdf`;
+      case 'doc':
+      case 'docx':
+      case 'xls':
+      case 'xlsx':
+      case 'ppt':
+      case 'pptx':
+      case 'odp':
+      case 'ods':
+      case 'odt':
+      case 'rtf':
+      case 'txt':
+      case 'epub':
+        return `${start}doc`;
+      case 'zip':
+      case '7z':
+      case 'tar.gz':
+        return `${start}zip`;
+    }
+
+    return '';
+  }
+
   getFileExtension(mimeType) {
     switch (mimeType) {
       case 'image/jpeg':
@@ -415,14 +441,62 @@ const ChatInfoController = new class {
       case 'text/html':
       case 'multipart/x-zip':
         return mimeType.split(/[.\-\/]/).pop();
+
+      case 'image/vnd.microsoft.icon':
+        return 'ico';
+      case 'image/svg+xml':
+        return 'svg';
+      case 'image/tiff':
+        return 'tiff';
+
+      case 'audio/ogg':
+        return 'ogg';
+      case 'audio/wav':
+        return 'wav';
+
+      case 'video/x-ms-wmv':
+        return 'wmv';
+      case 'video/quicktime':
+        return 'mov';
+
+      case 'application/doc':
+      case 'application/ms-doc':
+      case 'application/msword':
+        return 'doc';
+      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        return 'docx';
+      case 'application/excel':
+      case 'application/vnd.ms-excel':
+      case 'application/x-excel':
+      case 'application/x-msexcel':
+        return 'xls';
+      case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+        return 'xlsx';
+      case 'application/mspowerpoint':
+      case 'application/powerpoint':
+      case 'application/vnd.ms-powerpoint':
+      case 'application/x-mspowerpoint':
+        return 'ppt';
+      case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+        return 'pptx';
+      case 'application/vnd.oasis.opendocument.presentation':
+        return 'odp';
+      case 'application/vnd.oasis.opendocument.spreadsheet':
+        return 'ods';
+      case 'application/vnd.oasis.opendocument.text':
+        return 'odt';
+      case 'text/rtf':
+      case 'application/wps-office.doc':
+        return 'rtf';
+      case 'text/plain':
+        return 'txt';
+      case 'application/epub+zip':
+        return 'epub';
+
       case 'application/x-compressed-tar':
         return 'tar.gz';
       case 'application/x-7z-compressed':
         return '7z';
-      case 'text/plain':
-        return 'txt';
-      case 'image/svg+xml':
-        return 'svg';
     }
     return '';
   }
