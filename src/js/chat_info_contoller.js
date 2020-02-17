@@ -46,12 +46,6 @@ const ChatInfoController = new class {
         docs: 0,
         links: 0,
         audio: 0,
-      },
-      scrollTop: {
-        media: 0,
-        docs: 0,
-        links: 0,
-        audio: 0,
       }
     };
 
@@ -353,14 +347,12 @@ const ChatInfoController = new class {
     }
 
     if (sectionPrev) {
-      this.sharedLoading.scrollTop[sectionPrev] = this.scrollContainer.scrollTop;
       $(`.chat_info_shared_${sectionPrev}`).hidden = true;
       $(`.chat_info_shared_${sectionNew}`).hidden = false;
     }
 
     this.sharedSection = sectionNew;
     this.sharedTabsDom[`nav_${sectionNew}`].classList.add('nav_tabs_item-active');
-    this.scrollContainer.scrollTop = this.sharedLoading.scrollTop[sectionNew];
 
     this.loadMoreShared();
   }

@@ -39,19 +39,19 @@
 }
 
 .media_view_controls_item-delete {
-  background-image: url('../icons/delete_svg_white.svg');
+  background-image: svg('../icons/delete_svg.svg', (path: (fill: white)));
 }
 
 .media_view_controls_item-forward {
-  background-image: url('../icons/forward_svg_white.svg');
+  background-image: svg('../icons/forward_svg.svg', (path: (fill: white)));
 }
 
 .media_view_controls_item-download {
-  background-image: url('../icons/download_svg_white.svg');
+  background-image: svg('../icons/download_svg.svg', (path: (fill: white)));
 }
 
 .media_view_controls_item-close {
-  background-image: url('../icons/close_svg_white.svg');
+  background-image: svg('../icons/close_svg.svg', (path: (fill: white)));
 }
 
 .media_view_content {

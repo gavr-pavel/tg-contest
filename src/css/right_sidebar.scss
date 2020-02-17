@@ -67,15 +67,15 @@
 }
 
 .chat_info_desc_icon-bio {
-  background-image: url('../icons/info_svg_gray.svg');
+  background-image: svg('../icons/info_svg.svg', (path: (fill: $icon_gray_color)));
 }
 
 .chat_info_desc_icon-phone {
-  background-image: url('../icons/phone_svg_gray.svg');
+  background-image: svg('../icons/phone_svg.svg', (path: (fill: $icon_gray_color)));
 }
 
 .chat_info_desc_icon-username {
-  background-image: url('../icons/username_svg_gray.svg');
+  background-image: svg('../icons/username_svg.svg', (path: (fill: $icon_gray_color)));
 }
 
 .chat_info_shared[hidden] {
@@ -151,7 +151,7 @@
 }
 
 .chat_info_shared_docs_item:hover .chat_info_shared_docs_item_icon:after {
-  background-image: url('../icons/download2_svg_white.svg');
+  background-image: svg('../icons/download_svg.svg', (path: (fill: white)));
   background-position: center;
   background-repeat: no-repeat;
   border-radius: 8px;

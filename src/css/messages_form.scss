@@ -44,11 +44,11 @@
   left: 15px;
   bottom: 15px;
   cursor: pointer;
-  background: url('../icons/smile_svg_gray.svg');
+  background: svg('../icons/smile_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
 
 .messages_form_emoji_button-active {
-  background: url('../icons/smile_svg_blue.svg');
+  background: svg('../icons/smile_svg.svg', (path: (fill: $icon_blue_color)));
 }
 
 .messages_form_media_button {
@@ -61,7 +61,7 @@
   right: 15px;
   bottom: 15px;
   cursor: pointer;
-  background: url('../icons/attach_svg_gray.svg');
+  background: svg('../icons/attach_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
 
 .messages_form_media_button_wrap {
@@ -72,7 +72,7 @@
 }
 
 .messages_form_media_button-active {
-  background: url('../icons/attach_svg_blue.svg');
+  background: svg('../icons/attach_svg.svg', (path: (fill: $icon_blue_color)));
 }
 
 .messages_form_button {
@@ -85,11 +85,11 @@
   border-radius: 50%;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-  background: #fff url('../icons/microphone2_svg_gray.svg') no-repeat center;
+  background: #fff svg('../icons/microphone2_svg.svg', (path: (fill: $icon_mediumgray_color))) no-repeat center;
 }
 
 .messages_form_button-send {
-  background-image: url('../icons/send_svg_blue.svg');
+  background-image: svg('../icons/send_svg.svg', (path: (fill: $icon_blue_color)));
 }
 
 .messages_form_media_menu {
@@ -116,13 +116,13 @@
 }
 
 .messages_form_media_menu_item-media {
-  background-image: url('../icons/photo_svg_gray.svg');
+  background-image: svg('../icons/photo_svg.svg', (path: (fill: $icon_gray_color)));
 }
 
 .messages_form_media_menu_item-file {
-  background-image: url('../icons/document_svg_gray.svg');
+  background-image: svg('../icons/document_svg.svg', (path: (fill: $icon_gray_color)));
 }
 
 .messages_form_media_menu_item-poll {
-  background-image: url('../icons/poll_svg_gray.svg');
+  background-image: svg('../icons/poll_svg.svg', (path: (fill: $icon_gray_color)));
 }

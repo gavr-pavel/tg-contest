@@ -123,51 +123,51 @@
 }
 
 .emoji_dropdown_bottom_nav_item-recent {
-  background-image: url('../icons/recent_svg_gray.svg');
+  background-image: svg('../icons/recent_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
 .emoji_dropdown_bottom_nav_item-smileys {
-  background-image: url('../icons/smile2_svg_gray.svg');
+  background-image: svg('../icons/smile_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
 .emoji_dropdown_bottom_nav_item-animals {
-  background-image: url('../icons/animals_svg_gray.svg');
+  background-image: svg('../icons/animals_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
 .emoji_dropdown_bottom_nav_item-food {
-  background-image: url('../icons/eats_svg_gray.svg');
+  background-image: svg('../icons/eats_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
 .emoji_dropdown_bottom_nav_item-travel {
-  background-image: url('../icons/car_svg_gray.svg');
+  background-image: svg('../icons/car_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
 .emoji_dropdown_bottom_nav_item-sports {
-  background-image: url('../icons/sport_svg_gray.svg');
+  background-image: svg('../icons/sport_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
 .emoji_dropdown_bottom_nav_item-objects {
-  background-image: url('../icons/lamp_svg_gray.svg');
+  background-image: svg('../icons/lamp_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
 .emoji_dropdown_bottom_nav_item-flags {
-  background-image: url('../icons/flag_svg_gray.svg');
+  background-image: svg('../icons/flag_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
 
 .emoji_dropdown_bottom_nav_item-recent.emoji_dropdown_bottom_nav_item-active {
-  background-image: url('../icons/recent_svg_blue.svg');
+  background-image: svg('../icons/recent_svg_blue.svg', (path: (fill: $icon_blue_color)));
 }
 .emoji_dropdown_bottom_nav_item-smileys.emoji_dropdown_bottom_nav_item-active {
-  background-image: url('../icons/smile2_svg_blue.svg');
+  background-image: svg('../icons/smile_svg_blue.svg', (path: (fill: $icon_blue_color)));
 }
 .emoji_dropdown_bottom_nav_item-animals.emoji_dropdown_bottom_nav_item-active {
-  background-image: url('../icons/animals_svg_blue.svg');
+  background-image: svg('../icons/animals_svg_blue.svg', (path: (fill: $icon_blue_color)));
 }
 .emoji_dropdown_bottom_nav_item-food.emoji_dropdown_bottom_nav_item-active {
-  background-image: url('../icons/eats_svg_blue.svg');
+  background-image: svg('../icons/eats_svg_blue.svg', (path: (fill: $icon_blue_color)));
 }
 .emoji_dropdown_bottom_nav_item-travel.emoji_dropdown_bottom_nav_item-active {
-  background-image: url('../icons/car_svg_blue.svg');
+  background-image: svg('../icons/car_svg_blue.svg', (path: (fill: $icon_blue_color)));
 }
 .emoji_dropdown_bottom_nav_item-sports.emoji_dropdown_bottom_nav_item-active {
-  background-image: url('../icons/sport_svg_blue.svg');
+  background-image: svg('../icons/sport_svg_blue.svg', (path: (fill: $icon_blue_color)));
 }
 .emoji_dropdown_bottom_nav_item-objects.emoji_dropdown_bottom_nav_item-active {
-  background-image: url('../icons/lamp_svg_blue.svg');
+  background-image: svg('../icons/lamp_svg_blue.svg', (path: (fill: $icon_blue_color)));
 }
 .emoji_dropdown_bottom_nav_item-flags.emoji_dropdown_bottom_nav_item-active {
-  background-image: url('../icons/flag_svg_blue.svg');
+  background-image: svg('../icons/flag_svg_blue.svg', (path: (fill: $icon_blue_color)));
 }

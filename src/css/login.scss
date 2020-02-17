@@ -61,14 +61,14 @@
 }
 
 .login_telegram_logo {
-  background-image: url('../icons/loginlogo_svg.svg');
+  background-image: svg('../icons/loginlogo_svg.svg');
   background-repeat: no-repeat;
   background-position: center;
 }
 
 .login_edit_phone_button {
   display: inline-block;
-  background: url('../icons/edit2_svg_gray.svg') no-repeat center;
+  background: svg('../icons/edit_svg.svg', (path: (fill: $icon_gray_color))) no-repeat center;
   width: 24px;
   height: 24px;
   margin-left: 13px;
@@ -79,7 +79,7 @@
 
 .login_upload_photo {
   background-color: #5DA3EF;
-  background-image: url('../icons/cameraadd_white_svg.svg');
+  background-image: svg('../icons/cameraadd_svg.svg', (path: (fill: white)));
   background-repeat: no-repeat;
   background-position: center;
   background-size: 48px;
@@ -126,9 +126,9 @@
   top: 16px;
   width: 24px;
   height: 24px;
-  background: url('../icons/eye1_svg.svg') no-repeat center;
+  background: svg('../icons/eye1_svg.svg', (path: (fill: $icon_mediumgray_color))) no-repeat center;
   cursor: pointer;
 }
 .login_password_visibility_button-visible {
-  background: url('../icons/eye2_svg.svg') no-repeat center;
+  background: svg('../icons/eye2_svg.svg', (path: (fill: $icon_mediumgray_color))) no-repeat center;
 }

@@ -1,3 +1,81 @@
+.chats_header {
+  display: flex;
+  padding: 8px 20px 8px 14px;
+}
+
+.chats_header_menu_button {
+  background-image: svg('../icons/menu_svg.svg', (path: (fill: $icon_gray_color)));
+  background-position: center;
+  background-repeat: no-repeat;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: 14px;
+  outline: none;
+  width: 44px;
+  height: 44px;
+}
+
+.chats_header_menu_button[hidden] {
+  visibility: hidden;
+}
+
+.chats_header_menu {
+  width: 218px;
+}
+
+.chats_header_menu_badge {
+  background-color: #C4C9CC;
+  border-radius: 50%;
+  color: #fff;
+  display: inline-block;
+  float: right;
+  font-size: 12px;
+  height: 24px;
+  line-height: 24px;
+  margin-right: 16px;
+  text-align: center;
+  width: 24px;
+}
+
+.chats_header_menu_item,
+.settings_main_menu_list .mdc-list-item {
+  background-position: 18px center;
+  background-repeat: no-repeat;
+  background-size: 22px;
+  padding-left: 72px;
+}
+
+.chats_header_menu_item-new_group {
+  background-image: svg('../icons/newgroup_svg.svg', (path: (fill: $icon_gray_color)));
+}
+
+.chats_header_menu_item-contacts {
+  background-image: svg('../icons/newprivate_svg.svg', (path: (fill: $icon_gray_color)));
+}
+
+.chats_header_menu_item-archived {
+  background-image: svg('../icons/archive_svg.svg', (path: (fill: $icon_gray_color)));
+}
+
+.chats_header_menu_item-saved {
+  background-image: svg('../icons/savedmessages_svg.svg', (path: (fill: $icon_gray_color)));
+}
+
+.chats_header_menu_item-settings {
+  background-image: svg('../icons/settings_svg.svg', (path: (fill: $icon_gray_color)));
+}
+
+.chats_header_menu_item-help {
+  background-image: svg('../icons/help_svg.svg', (path: (fill: $icon_gray_color)));
+}
+
+.chats_header_menu_item:hover {
+  background-color: #F1F3F4;
+  cursor: pointer;
+}
+
 .chats_sidebar,
 .contacts_sidebar {
   box-sizing: border-box;
@@ -57,7 +135,7 @@
 
 .chats_item_photo_saved_messages {
   background-color: #5DA3EF;
-  background-image: url('../icons/savedmessages_svg.svg');
+  background-image: svg('../icons/savedmessages_svg.svg', (path: (fill: white)));
   background-repeat: no-repeat;
   background-position: center;
 }
@@ -119,7 +197,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #C5C9CC url('../icons/pinnedchat_svg.svg') no-repeat center;
+  background: #C5C9CC svg('../icons/pinnedchat_svg.svg', (path: (fill: white))) no-repeat center;
   margin-left: 5px;
 }
 

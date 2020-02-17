@@ -15,7 +15,7 @@
 }
 
 .settings_extra_menu_item-log_out {
-  background-image: url('../icons/logout_svg_gray.svg');
+  background-image: svg('../icons/logout_svg.svg', (path: (fill: $icon_gray_color)));
   background-position: 18px center;
   background-repeat: no-repeat;
   background-size: 22px;
@@ -27,21 +27,21 @@
 }
 
 .settings_main_menu_item-edit {
-  background-image: url('../icons/edit_svg_gray.svg');
+  background-image: svg('../icons/edit_svg.svg', (path: (fill: $icon_gray_color)));
 }
 
 .settings_main_menu_item-general {
-  background-image: url('../icons/settings2_svg_gray.svg');
+  background-image: svg('../icons/settings_svg.svg', (path: (fill: $icon_gray_color)));
 }
 
 .settings_main_menu_item-notifications {
-  background-image: url('../icons/unmute_svg_gray.svg');
+  background-image: svg('../icons/unmute_svg.svg', (path: (fill: $icon_gray_color)));
 }
 
 .settings_main_menu_item-privacy {
-  background-image: url('../icons/lock_svg_gray.svg');
+  background-image: svg('../icons/lock_svg.svg', (path: (fill: $icon_gray_color)));
 }
 
 .settings_main_menu_item-language {
-  background-image: url('../icons/language_svg_gray.svg');
+  background-image: svg('../icons/language_svg.svg', (path: (fill: $icon_gray_color)));
 }

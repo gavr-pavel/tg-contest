@@ -1,8 +1,8 @@
 const path = require('path');
+const inliner = require('sass-inline-svg');
 
 module.exports = {
-  // mode: 'development',
-  mode: 'production',
+  mode: 'development',
   watch: true,
   entry: ['./src/css/main.scss', './src/js/main.js'],
   output: {
@@ -34,31 +34,23 @@ module.exports = {
           {
             loader: 'file-loader',
             options: {
-              name: 'main.css',
+              name: '[name].css',
             },
           },
-          {loader: 'extract-loader'},
-          {loader: 'css-loader'},
+          {
+            loader: 'postcss-loader'
+          },
           {
             loader: 'sass-loader',
             options: {
+              implementation: require('node-sass'),
               sassOptions: {
                 includePaths: ['./node_modules'],
+                functions: {svg: inliner('./src/css', {})}
               }
             },
           }
         ],
-      },
-      {
-        test: /\.(png|jpg|svg)$/,
-        use: [
-          {
-            loader: 'url-loader',
-            options: {
-              limit: 8192,
-            }
-          }
-        ]
       }
     ]
   }

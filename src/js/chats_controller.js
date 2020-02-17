@@ -29,22 +29,22 @@ const ChatsController = new class {
   }
 
   initMenu() {
-    const menuContainer = $('.main_menu_list');
+    const menuContainer = $('.chats_header_menu');
     this.mainMenu = new MDCMenu(menuContainer);
 
-    this.menuButton = $('.left_sidebar_menu_button');
+    this.menuButton = $('.chats_header_menu_button');
     this.menuButton.addEventListener('click', this.onMainMenuClick);
 
-    for (const item of $('.mdc-list', menuContainer).children) {
+    for (const item of menuContainer.querySelectorAll('.chats_header_menu_item')) {
       new MDCRipple(item).unbounded = true;
     }
 
     new MDCRipple(this.menuButton).unbounded = true;
 
-    const contactsButtonEl = $('.main_menu_item-contacts', menuContainer);
+    const contactsButtonEl = $('.chats_header_menu_item-contacts', menuContainer);
     contactsButtonEl.addEventListener('click', this.onMenuContactsClick);
 
-    const settingsButtonEl = $('.main_menu_item-settings', menuContainer);
+    const settingsButtonEl = $('.chats_header_menu_item-settings', menuContainer);
     settingsButtonEl.addEventListener('click', this.onMenuSettingsClick);
   }
 

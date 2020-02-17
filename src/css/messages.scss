@@ -57,7 +57,7 @@
   margin-left: 10px;
   width: 44px;
   height: 44px;
-  background: url('../icons/search_svg.svg') no-repeat center;
+  background: svg('../icons/search_svg.svg', (path: (fill: $icon_gray_color))) no-repeat center;
   border-radius: 50%;
   overflow: hidden;
 }
@@ -70,7 +70,7 @@
   margin-left: 10px;
   width: 44px;
   height: 44px;
-  background: url('../icons/more_svg.svg') no-repeat center;
+  background: svg('../icons/more_svg.svg', (path: (fill: $icon_gray_color))) no-repeat center;
   border-radius: 50%;
   overflow: hidden;
 }
@@ -199,7 +199,7 @@
   height: 54px;
   margin-left: -27px;
   margin-top: -27px;
-  background: rgba(0, 0, 0, .6) url('../icons/largeplay_svg_white.svg') no-repeat center;
+  background: rgba(0, 0, 0, .6) svg('../icons/largeplay_svg.svg', (path: (fill: white))) no-repeat center;
   border-radius: 50%;
 }
 .messages_item_media_thumb-loading::after {
@@ -294,13 +294,13 @@
 .document_icon {
   width: 54px;
   height: 54px;
-  background: #5DA3EF url('../icons/download_svg.svg') no-repeat center;
+  background: #5DA3EF svg('../icons/download_svg.svg', (path: (fill: white))) no-repeat center;
   border-radius: 50%;
   margin-right: 10px;
   cursor: pointer;
 }
 .document_icon-loading {
-  background-image: url('../icons/close3_svg_white.svg');
+  background-image: svg('../icons/close_svg.svg', (path: (fill: white)));
 }
 .messages_item-out .document_icon {
   background-color: #65AB5A;
@@ -340,7 +340,7 @@
   top: 50%;
   transform: translate(-50%, -50%);
   padding-top: 165px;
-  background: url('../icons/chatsplaceholder_svg.svg') no-repeat top center;
+  background: svg('../icons/chatsplaceholder_svg.svg', (path: (fill: white))) no-repeat top center;
   filter: drop-shadow(0 2px 3px rgba(0,0,0,.15))
 }
 
@@ -379,22 +379,22 @@
   font-size: 14px;
 }
 .messages_placeholder_action-private {
-  background-image: url('../icons/newprivate_svg.svg');
+  background-image: svg('../icons/newprivate_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
 .messages_placeholder_action-private:hover {
-  background-image: url('../icons/newprivate_white_svg.svg');
+  background-image: svg('../icons/newprivate_svg.svg', (path: (fill: white)));
 }
 .messages_placeholder_action-group {
-  background-image: url('../icons/newgroup_svg.svg');
+  background-image: svg('../icons/newgroup_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
 .messages_placeholder_action-group:hover {
-  background-image: url('../icons/newgroup_white_svg.svg');
+  background-image: svg('../icons/newgroup_svg.svg', (path: (fill: white)));
 }
 .messages_placeholder_action-channel {
-  background-image: url('../icons/newchannel_svg.svg');
+  background-image: svg('../icons/newchannel_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
 .messages_placeholder_action-channel:hover {
-  background-image: url('../icons/newchannel_white_svg.svg');
+  background-image: svg('../icons/newchannel_svg.svg', (path: (fill: white)));
 }
 
 .messages_footer {
@@ -410,7 +410,7 @@
   margin-left: -27px;
   margin-top: -27px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5) url('../icons/close2_svg_white.svg') no-repeat center;
+  background: rgba(0, 0, 0, 0.5) svg('../icons/close_svg.svg', (path: (fill: white))) no-repeat center;
 }
 
 .messages_item_media_progress_svg {

@@ -23,17 +23,17 @@
 }
 
 .sidebar_back_button {
-  background: url('../icons/back_svg_gray.svg') no-repeat center;
+  background: svg('../icons/back_svg.svg', (path: (fill: $icon_gray_color))) no-repeat center;
   z-index: 10;
 }
 
 .sidebar_close_button {
-  background: url('../icons/close_svg_gray.svg') no-repeat center;
+  background: svg('../icons/close_svg.svg', (path: (fill: $icon_gray_color))) no-repeat center;
   z-index: 5;
 }
 
 .sidebar_extra_menu_button {
-  background: url('../icons/more_svg_gray.svg') no-repeat center;
+  background: svg('../icons/more_svg.svg', (path: (fill: $icon_gray_color))) no-repeat center;
   flex-shrink: 0;
 }
 
@@ -44,7 +44,7 @@
 
 .sidebar_search {
   background-color: #F4F4F5;
-  background-image: url('../icons/search_svg_light_gray.svg');
+  background-image: svg('../icons/search_svg.svg', (path: (fill: $icon_lightgray_color)));
   background-position: 12px center;
   background-repeat: no-repeat;
   border: 2px solid transparent;
@@ -62,7 +62,7 @@
 }
 .sidebar_search:focus {
   border: 2px solid #5FA1E3;
-  background-image: url('../icons/search_svg_blue.svg');
+  background-image: svg('../icons/search_svg.svg', (path: (fill: $icon_blue_color)));
 }
 
 .sidebar_user_info {
