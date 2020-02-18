@@ -5,6 +5,9 @@ $mdc-theme-on-primary: #ffffff;
 $mdc-shape-small-component-radius: 10px;
 $mdc-shape-medium-component-radius: 10px;
 //$mdc-shape-large-component-radius: 20px;
+$mdc-text-field-outlined-idle-border: #DADCE0;
+$mdc-button-height: 44px;
+$mdc-icon-button-size: 44px;
 
 @import "@material/textfield/mdc-text-field";
 @import "@material/button/mdc-button";
@@ -26,7 +29,6 @@ $icon_blue_color: #5FA1E3;
 @import "sidebar";
 @import "left_sidebar";
 @import "right_sidebar";
-@import "settings_menu";
 @import "messages";
 @import "messages_form";
 @import "media_view";

@@ -30,22 +30,31 @@ const ChatsController = new class {
 
   initMenu() {
     const menuContainer = $('.chats_header_menu');
-    this.mainMenu = new MDCMenu(menuContainer);
+    const mdcMenu = new MDCMenu(menuContainer);
 
-    this.menuButton = $('.chats_header_menu_button');
-    this.menuButton.addEventListener('click', this.onMainMenuClick);
+    const menuButton = $('.chats_header_menu_button');
+    menuButton.addEventListener('click', () => {
+      if (!mdcMenu.open) {
+        mdcMenu.open = true;
+        mdcMenu.setAbsolutePosition(14, 60);
+      }
+    });
 
     for (const item of menuContainer.querySelectorAll('.chats_header_menu_item')) {
       new MDCRipple(item).unbounded = true;
     }
 
-    new MDCRipple(this.menuButton).unbounded = true;
+    new MDCRipple(menuButton).unbounded = true;
 
     const contactsButtonEl = $('.chats_header_menu_item-contacts', menuContainer);
-    contactsButtonEl.addEventListener('click', this.onMenuContactsClick);
+    contactsButtonEl.addEventListener('click', () => {
+      ContactsController.show();
+    });
 
     const settingsButtonEl = $('.chats_header_menu_item-settings', menuContainer);
-    settingsButtonEl.addEventListener('click', this.onMenuSettingsClick);
+    settingsButtonEl.addEventListener('click', () => {
+      SettingsController.show();
+    });
   }
 
   onDialogsUpdate = (event) => {
@@ -242,14 +251,6 @@ const ChatsController = new class {
       return '';
     }
     switch (media._) {
-      // case 'messageSticker':
-      //   return 'Sticker';
-      // case 'messageAnimation':
-      //   return 'Gif';
-      // case 'messageAudio':
-      //   return 'Audio';
-      // case 'messageVideo':
-      //   return 'Video';
       case 'messageMediaPhoto':
         return 'Photo';
       case 'messageMediaDocument':
@@ -332,21 +333,6 @@ const ChatsController = new class {
     const peerId = +el.dataset.peerId;
     const dialog = MessagesApiManager.getDialog(peerId);
     MessagesController.setChat(dialog);
-  };
-
-  onMainMenuClick = () => {
-    if (!this.mainMenu.open) {
-      this.mainMenu.open = true;
-      this.mainMenu.setAbsolutePosition(14, 60);
-    }
-  };
-
-  onMenuContactsClick = () => {
-    ContactsController.show();
-  };
-
-  onMenuSettingsClick = () => {
-    SettingsController.show();
   };
 
   isPeerMe(peer) {

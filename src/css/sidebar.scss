@@ -1,6 +1,6 @@
 .sidebar_header {
   display: flex;
-  padding: 8px 8px 4px;
+  padding: 8px;
   background: #fff;
   position: sticky;
   top: 0;
@@ -12,13 +12,12 @@
   flex-basis: 100%;
   font-size: 18px;
   font-weight: 500;
-  line-height: 48px;
+  line-height: 44px;
   padding-left: 72px;
 }
 
 .sidebar_back_button,
 .sidebar_close_button {
-  flex-shrink: 0;
   position: absolute;
 }
 
@@ -42,7 +41,7 @@
   display: none;
 }
 
-.sidebar_search {
+.sidebar_search_input {
   background-color: #F4F4F5;
   background-image: svg('../icons/search_svg.svg', (path: (fill: $icon_lightgray_color)));
   background-position: 12px center;
@@ -52,15 +51,17 @@
   display: inline-block;
   flex-basis: 100%;
   font: inherit;
+  font-size: 15px;
   height: 44px;
   outline: none;
   padding-left: 42px;
+  margin: 0 12px 0 14px;
   box-sizing: border-box;
 }
-.sidebar_search::placeholder {
+.sidebar_search_input::placeholder {
   color: #8E969B;
 }
-.sidebar_search:focus {
+.sidebar_search_input:focus {
   border: 2px solid #5FA1E3;
   background-image: svg('../icons/search_svg.svg', (path: (fill: $icon_blue_color)));
 }

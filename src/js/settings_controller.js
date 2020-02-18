@@ -12,11 +12,11 @@ const SettingsController = new class {
     const userName = MessagesApiManager.getUserName(user);
 
     this.container = buildHtmlElement(`
-      <div class="settings_menu">
-        <div class="settings_menu_header">
+      <div class="settings_sidebar">
+        <div class="sidebar_header">
           <div class="sidebar_header_title">Settings</div>
           <button type="button" class="sidebar_extra_menu_button mdc-icon-button"></button>
-          <div class="sidebar_extra_menu_list mdc-menu mdc-menu-surface">
+          <div class="sidebar_extra_menu mdc-menu mdc-menu-surface">
             <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">
               <li class="mdc-list-item settings_extra_menu_item-log_out" role="menuitem">
                 <span class="mdc-list-item__text">Log out</span>
@@ -79,7 +79,7 @@ const SettingsController = new class {
   };
 
   onExtraMenuClick = () => {
-    const menuEl = $('.sidebar_extra_menu_list', this.container);
+    const menuEl = $('.sidebar_extra_menu', this.container);
     const menu = new MDCMenu(menuEl);
 
     if (!menu.open) {

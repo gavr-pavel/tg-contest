@@ -4,7 +4,8 @@ import {I18n} from './i18n.js';
 import {App} from './app';
 import {MDCTextField} from '@material/textfield/index';
 import {MDCRipple} from '@material/ripple/component';
-import {CountryCodesConfig, getCountryCodeEmojiFlag} from './country_codes_config';
+import {CountryCodesConfig} from './country_codes_config';
+import {getCountryCodeEmojiFlag} from './emoji_config';
 
 const STEP_PHONE = 0;
 const STEP_CODE = 1;
@@ -374,12 +375,11 @@ const LoginController = new class {
   buildCountryMenu(inputWrap) {
     const items = [];
     for (const country of CountryCodesConfig) {
-      const [code, langKey, prefix] = country;
+      const [code, name, prefix] = country;
       if (!code) {
         continue;
       }
       const emoji = getCountryCodeEmojiFlag(code);
-      const name = I18n.get(langKey);
       const el = buildHtmlElement(`
         <li class="mdc-list-item login_countries_item" role="menuitem" data-code="${code}" data-name="${name.toLowerCase()}">
           <div class="login_countries_item_emoji">${emoji}</div>

@@ -16,7 +16,7 @@ const MessagesSearchController = new class {
     this.container.innerHTML = `
       <div class="sidebar_header">
         <button type="button" class="sidebar_close_button mdc-icon-button"></button>
-        <input class="sidebar_search messages_search_input" type="text" placeholder="Start typing...">
+        <input class="sidebar_search_input messages_search_input" type="text" placeholder="Start typing...">
       </div>
       <div class="messages_search_results_list"></div>
     `;

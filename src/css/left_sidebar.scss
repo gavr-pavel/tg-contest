@@ -8,3 +8,51 @@
   position: relative;
   width: 420px;
 }
+
+.settings_sidebar {
+  background: #fff;
+  box-sizing: border-box;
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 5;
+}
+
+.settings_menu_header {
+  display: flex;
+  padding: 8px 8px 0;
+}
+
+.settings_extra_menu_item-log_out {
+  background-image: svg('../icons/logout_svg.svg', (path: (fill: $icon_gray_color)));
+  background-position: 18px center;
+  background-repeat: no-repeat;
+  background-size: 22px;
+  padding-left: 72px;
+}
+
+.sidebar_extra_menu_list {
+  width: 172px;
+}
+
+.settings_main_menu_item-edit {
+  background-image: svg('../icons/edit_svg.svg', (path: (fill: $icon_gray_color)));
+}
+
+.settings_main_menu_item-general {
+  background-image: svg('../icons/settings_svg.svg', (path: (fill: $icon_gray_color)));
+}
+
+.settings_main_menu_item-notifications {
+  background-image: svg('../icons/unmute_svg.svg', (path: (fill: $icon_gray_color)));
+}
+
+.settings_main_menu_item-privacy {
+  background-image: svg('../icons/lock_svg.svg', (path: (fill: $icon_gray_color)));
+}
+
+.settings_main_menu_item-language {
+  background-image: svg('../icons/language_svg.svg', (path: (fill: $icon_gray_color)));
+}

@@ -18,8 +18,23 @@ function getEmojiMatches(text) {
   return text.match(emojiRegex);
 }
 
+function getCountryCodeEmojiFlag(code) {
+  if (code === 'UK') {
+    code = 'GB';
+  }
+
+  const flagOffset = 0x1F1E6;
+  const asciiOffset = 0x41;
+
+  const firstChar = code.codePointAt(0) - asciiOffset + flagOffset;
+  const secondChar = code.codePointAt(1) - asciiOffset + flagOffset;
+
+  return String.fromCodePoint(firstChar, secondChar);
+}
+
 export {
   EmojiConfig,
   getEmojiMatches,
-  isEmojiChar
+  isEmojiChar,
+  getCountryCodeEmojiFlag
 };

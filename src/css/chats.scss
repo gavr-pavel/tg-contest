@@ -1,6 +1,6 @@
 .chats_header {
   display: flex;
-  padding: 8px 20px 8px 14px;
+  padding: 8px;
 }
 
 .chats_header_menu_button {
@@ -11,7 +11,6 @@
   border-radius: 50%;
   cursor: pointer;
   flex-shrink: 0;
-  margin-right: 14px;
   outline: none;
   width: 44px;
   height: 44px;
