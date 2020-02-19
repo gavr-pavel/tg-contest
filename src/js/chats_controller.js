@@ -1,4 +1,4 @@
-import {$, buildHtmlElement, encodeHtmlEntities} from './utils';
+import {$, buildHtmlElement, buildLoaderElement, encodeHtmlEntities} from './utils';
 import {App} from './app';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
@@ -6,6 +6,7 @@ import {SettingsController} from './settings_controller';
 import {MDCRipple} from '@material/ripple/component';
 import {MDCMenu} from '@material/menu';
 import {ContactsController} from "./contacts_controller";
+import {GlobalSearchController} from './global_search_controller';
 
 const ChatsController = new class {
   chatElements = new Map();
@@ -14,7 +15,10 @@ const ChatsController = new class {
     this.container = $('.chats_sidebar');
     this.container.addEventListener('scroll', this.onScroll);
 
-    this.initMenu();
+    this.initHeader();
+
+    this.loader = buildLoaderElement();
+    this.container.append(this.loader);
 
     MessagesApiManager.emitter.on('dialogsUpdate', this.onDialogsUpdate);
     MessagesApiManager.emitter.on('dialogOrderUpdate', this.onDialogOrderUpdate);
@@ -22,17 +26,48 @@ const ChatsController = new class {
     MessagesApiManager.emitter.on('chatNewMessage', this.onDialogNewMessage);
     MessagesApiManager.emitter.on('chatUnreadCountUpdate', this.onDialogUnreadCountUpdate);
 
-    this.loader = buildHtmlElement('<div class="lds-ring"><div></div><div></div><div></div><div></div></div>');
-    this.container.append(this.loader);
-
     this.loadMore();
   }
 
-  initMenu() {
-    const menuContainer = $('.chats_header_menu');
+  initHeader() {
+    this.header = $('.chats_header');
+    this.header.innerHTML = `
+      <button type="button" class="chats_header_menu_button mdc-icon-button"></button>
+      <button type="button" class="mdc-icon-button sidebar_back_button chats_header_back_button" hidden></button>
+      <div class="chats_header_menu mdc-menu mdc-menu-surface">
+        <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">
+          <li class="mdc-list-item chats_header_menu_item chats_header_menu_item-new_group" role="menuitem">
+            <span class="mdc-list-item__text">New Group</span>
+          </li>
+          <li class="mdc-list-item chats_header_menu_item chats_header_menu_item-contacts" role="menuitem">
+            <span class="mdc-list-item__text">Contacts</span>
+          </li>
+          <li class="mdc-list-item chats_header_menu_item chats_header_menu_item-archived" role="menuitem">
+            <span class="mdc-list-item__text">Archived</span>
+          </li>
+          <li class="mdc-list-item chats_header_menu_item chats_header_menu_item-saved" role="menuitem">
+            <span class="mdc-list-item__text">Saved</span>
+          </li>
+          <li class="mdc-list-item chats_header_menu_item chats_header_menu_item-settings" role="menuitem">
+            <span class="mdc-list-item__text">Settings</span>
+          </li>
+          <li class="mdc-list-item chats_header_menu_item chats_header_menu_item-help" role="menuitem">
+            <span class="mdc-list-item__text">Help</span>
+          </li>
+        </ul>
+      </div>
+      <input type="text" placeholder="Search" class="sidebar_search_input chats_header_search_input">
+    `;
+
+    this.initHeaderMenu();
+    this.initHeaderSearch();
+  }
+
+  initHeaderMenu() {
+    const menuContainer = $('.chats_header_menu', this.header);
     const mdcMenu = new MDCMenu(menuContainer);
 
-    const menuButton = $('.chats_header_menu_button');
+    const menuButton = $('.chats_header_menu_button', this.header);
     menuButton.addEventListener('click', () => {
       if (!mdcMenu.open) {
         mdcMenu.open = true;
@@ -54,6 +89,13 @@ const ChatsController = new class {
     const settingsButtonEl = $('.chats_header_menu_item-settings', menuContainer);
     settingsButtonEl.addEventListener('click', () => {
       SettingsController.show();
+    });
+  }
+
+  initHeaderSearch() {
+    const input = $('.chats_header_search_input');
+    input.addEventListener('input', () => {
+      GlobalSearchController.show(input);
     });
   }
 
@@ -239,9 +281,9 @@ const ChatsController = new class {
     }
     if (message.to_id._ === 'peerChannel' && message.from_id) {
       const user = MessagesApiManager.users.get(message.from_id);
-      text = encodeHtmlEntities(user.first_name) + ': ' + text;
+      text = `<span class="chats_item_message_author_label">${encodeHtmlEntities(user.first_name)}:</span> ${text}`;
     } else if (message.pFlags.out) {
-      text = 'You: ' + text;
+      text = `<span class="chats_item_message_author_label">You:</span> ${text}`;
     }
     return text;
   }

@@ -1,4 +1,4 @@
-import {$, buildHtmlElement, encodeHtmlEntities} from './utils';
+import {$, buildHtmlElement, buildLoaderElement, encodeHtmlEntities} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple';
 import {MediaApiManager} from './api/media_api_manager';
@@ -21,7 +21,7 @@ const MessagesController = new class {
     this.scrollContainer = $('.messages_scroll');
     this.container = $('.messages_list');
 
-    this.loader = buildHtmlElement('<div class="lds-ring"><div></div><div></div><div></div><div></div></div>');
+    this.loader = buildLoaderElement();
 
     this.scrollContainer.addEventListener('scroll', this.onScroll);
 
@@ -66,6 +66,15 @@ const MessagesController = new class {
     if (chatEl) {
       chatEl.classList.add('chats_item-selected');
     }
+  }
+
+  async setChatByPeerId(peerId) {
+    let dialog = MessagesApiManager.getDialog(peerId);
+    if (!dialog) {
+      const peer = MessagesApiManager.getPeerById(peerId);
+      dialog = await MessagesApiManager.loadPeerDialog(peer);
+    }
+    MessagesController.setChat(dialog);
   }
 
   exitChat() {
@@ -390,8 +399,10 @@ const MessagesController = new class {
   }
 
   renderMessageContent(el, message, options = {}) {
-    const authorName = !options.stickToPrev ? this.formatAuthorName(message) : '';
     const mediaThumbData = this.getMessageMediaThumb(message.media);
+    const isStickerMessage = mediaThumbData && mediaThumbData.type === 'sticker';
+    const isEmojiMessage = this.isEmojiMessage(message);
+    const authorName = !options.stickToPrev && !isStickerMessage && !isEmojiMessage ? this.formatAuthorName(message) : '';
 
     el.innerHTML = `
       <div class="messages_item_content">
@@ -401,10 +412,10 @@ const MessagesController = new class {
       </div>
     `;
 
-    if (mediaThumbData && mediaThumbData.type === 'sticker') {
+    if (isStickerMessage) {
       el.classList.add('messages_item-type-sticker');
     }
-    if (this.isEmojiMessage(message)) {
+    if (isEmojiMessage) {
       el.classList.add('messages_item-type-emoji');
     }
 

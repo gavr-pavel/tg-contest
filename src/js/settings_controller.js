@@ -5,57 +5,54 @@ import {ChatsController} from './chats_controller';
 
 const SettingsController = new class {
   show() {
-    this.leftSidebar = $('.left_sidebar');
-
     const userId = App.getAuthUserId();
     const user = MessagesApiManager.users.get(userId);
     const userName = MessagesApiManager.getUserName(user);
 
-    this.container = buildHtmlElement(`
-      <div class="settings_sidebar">
-        <div class="sidebar_header">
-          <div class="sidebar_header_title">Settings</div>
-          <button type="button" class="sidebar_extra_menu_button mdc-icon-button"></button>
-          <div class="sidebar_extra_menu mdc-menu mdc-menu-surface">
-            <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">
-              <li class="mdc-list-item settings_extra_menu_item-log_out" role="menuitem">
-                <span class="mdc-list-item__text">Log out</span>
-              </li>
-            </ul>
-          </div>
+    this.container = $('.settings_sidebar');
+    this.container.hidden = false;
+    this.container.innerHTML = `
+      <div class="sidebar_header">
+        <div class="sidebar_header_title">Settings</div>
+        <button type="button" class="sidebar_extra_menu_button mdc-icon-button"></button>
+        <div class="sidebar_extra_menu mdc-menu mdc-menu-surface">
+          <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">
+            <li class="mdc-list-item settings_extra_menu_item-log_out" role="menuitem">
+              <span class="mdc-list-item__text">Log out</span>
+            </li>
+          </ul>
         </div>
-        <div class="sidebar_user_info">
-          <div class="sidebar_user_photo"></div>
-          <div class="sidebar_user_name">${encodeHtmlEntities(userName)}</div>
-          <div class="sidebar_user_desc">+${user.phone}</div>
-        </div>
-        <ul class="settings_main_menu_list mdc-list">
-          <li class="mdc-list-item settings_main_menu_item-edit" tabindex="0">
-            <span class="mdc-list-item__text">Edit Profile</span>
-          </li>
-          <li class="mdc-list-item settings_main_menu_item-general">
-            <span class="mdc-list-item__text">General Settings</span>
-          </li>
-          <li class="mdc-list-item settings_main_menu_item-notifications">
-            <span class="mdc-list-item__text">Notifications</span>
-          </li>
-          <li class="mdc-list-item settings_main_menu_item-privacy">
-            <span class="mdc-list-item__text">Privacy and Security</span>
-          </li>
-          <li class="mdc-list-item settings_main_menu_item-language">
-            <span class="mdc-list-item__text">Language</span>
-          </li>
-        </ul>
       </div>
-    `);
-    this.leftSidebar.appendChild(this.container);
+      <div class="sidebar_user_info">
+        <div class="sidebar_user_photo"></div>
+        <div class="sidebar_user_name">${encodeHtmlEntities(userName)}</div>
+        <div class="sidebar_user_desc">+${user.phone}</div>
+      </div>
+      <ul class="settings_main_menu_list mdc-list">
+        <li class="mdc-list-item settings_main_menu_item-edit" tabindex="0">
+          <span class="mdc-list-item__text">Edit Profile</span>
+        </li>
+        <li class="mdc-list-item settings_main_menu_item-general">
+          <span class="mdc-list-item__text">General Settings</span>
+        </li>
+        <li class="mdc-list-item settings_main_menu_item-notifications">
+          <span class="mdc-list-item__text">Notifications</span>
+        </li>
+        <li class="mdc-list-item settings_main_menu_item-privacy">
+          <span class="mdc-list-item__text">Privacy and Security</span>
+        </li>
+        <li class="mdc-list-item settings_main_menu_item-language">
+          <span class="mdc-list-item__text">Language</span>
+        </li>
+      </ul>
+    `;
 
     this.loadUserPhoto(user);
     this.bindListeners();
   }
 
   bindListeners() {
-    const backButtonEl = $('.sidebar_back_button', this.leftSidebar);
+    const backButtonEl = $('.chats_header_back_button');
     backButtonEl.addEventListener('click', this.onBack, {once: true});
     backButtonEl.hidden = false;
 
@@ -73,7 +70,8 @@ const SettingsController = new class {
   }
 
   onBack = (event) => {
-    this.container.remove();
+    this.container.hidden = true;
+    this.container.innerHTML = '';
     const backButtonEl = event.currentTarget;
     backButtonEl.hidden = true;
   };

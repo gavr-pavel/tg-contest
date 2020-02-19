@@ -76,7 +76,8 @@
 }
 
 .chats_sidebar,
-.contacts_sidebar {
+.contacts_sidebar,
+.global_search_sidebar {
   box-sizing: border-box;
   width: 420px;
   padding: 8px;
@@ -102,6 +103,10 @@
   height: 54px;
   padding: 9px;
   border-radius: 5px;
+}
+
+.chats_item_message_author_label {
+  color: #000;
 }
 
 .chats_item-selected {

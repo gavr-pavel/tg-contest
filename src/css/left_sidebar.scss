@@ -55,3 +55,22 @@
 .settings_main_menu_item-language {
   background-image: svg('../icons/language_svg.svg', (path: (fill: $icon_gray_color)));
 }
+
+.global_search_sidebar {
+  padding: 0;
+}
+
+.global_search_sublist {
+  padding: 12px 8px;
+  border-bottom: 1px solid #DADCE0;
+}
+
+.global_search_sublist_header {
+  color: #717579;
+  background-color: #fff;
+  font-weight: 500;
+  padding: 8px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}

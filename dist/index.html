@@ -21,35 +21,11 @@
     <template id="template_main">
       <div class="main_container">
         <div class="left_sidebar">
-          <div class="chats_header">
-            <button type="button" class="chats_header_menu_button mdc-icon-button"></button>
-            <button type="button" class="sidebar_back_button mdc-icon-button" hidden></button>
-            <div class="chats_header_menu mdc-menu mdc-menu-surface">
-              <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">
-                <li class="mdc-list-item chats_header_menu_item chats_header_menu_item-new_group" role="menuitem">
-                  <span class="mdc-list-item__text">New Group</span>
-                </li>
-                <li class="mdc-list-item chats_header_menu_item chats_header_menu_item-contacts" role="menuitem">
-                  <span class="mdc-list-item__text">Contacts</span>
-                </li>
-                <li class="mdc-list-item chats_header_menu_item chats_header_menu_item-archived" role="menuitem">
-                  <span class="mdc-list-item__text">Archived</span>
-                </li>
-                <li class="mdc-list-item chats_header_menu_item chats_header_menu_item-saved" role="menuitem">
-                  <span class="mdc-list-item__text">Saved</span>
-                </li>
-                <li class="mdc-list-item chats_header_menu_item chats_header_menu_item-settings" role="menuitem">
-                  <span class="mdc-list-item__text">Settings</span>
-                </li>
-                <li class="mdc-list-item chats_header_menu_item chats_header_menu_item-help" role="menuitem">
-                  <span class="mdc-list-item__text">Help</span>
-                </li>
-              </ul>
-            </div>
-            <input type="text" placeholder="Search" class="sidebar_search_input">
-          </div>
+          <div class="chats_header"></div>
           <div class="chats_sidebar"></div>
           <div class="contacts_sidebar" hidden></div>
+          <div class="settings_sidebar" hidden></div>
+          <div class="global_search_sidebar" hidden></div>
         </div>
         <div class="messages_container">
           <div class="messages_header" hidden></div>
@@ -58,17 +34,13 @@
             <div class="messages_pending_list"></div>
           </div>
           <div class="messages_footer" hidden>
-            <div class="messages_form">
-              <div class="messages_form_input_wrap">
-                <textarea class="messages_form_input" placeholder="Message" data-js-label="input"></textarea>
-                <button class="messages_form_emoji_button" data-js-label="emoji_button"></button>
-                <button class="messages_form_media_button" data-js-label="media_button"></button>
-              </div>
-              <button class="messages_form_button mdc-icon-button" data-js-label="submit_button"></button>
-            </div>
+            <div class="messages_form"></div>
           </div>
         </div>
-        <div class="right_sidebar" hidden></div>
+        <div class="right_sidebar" hidden>
+          <div class="chat_info_sidebar" hidden></div>
+          <div class="messages_search_sidebar" hidden></div>
+        </div>
       </div>
     </template>
     <script src="main.js"></script>

@@ -9,6 +9,14 @@ import {ChatInfoController} from './chat_info_contoller';
 const MessagesFormController = new class {
   init() {
     this.container = $('.messages_form');
+    this.container.innerHTML = `
+      <div class="messages_form_input_wrap">
+        <textarea class="messages_form_input" placeholder="Message" data-js-label="input"></textarea>
+        <button class="messages_form_emoji_button" data-js-label="emoji_button"></button>
+        <button class="messages_form_media_button" data-js-label="media_button"></button>
+      </div>
+      <button class="messages_form_button mdc-icon-button" data-js-label="submit_button"></button>
+    `;
 
     this.dom = getLabeledElements(this.container);
 

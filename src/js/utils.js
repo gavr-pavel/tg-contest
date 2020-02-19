@@ -100,6 +100,10 @@ function buildHtmlElement(htmlStr) {
   return tmp.firstElementChild;
 }
 
+function buildLoaderElement() {
+  return buildHtmlElement('<div class="lds-ring"><div></div><div></div><div></div><div></div></div>');
+}
+
 function cmpStrNum(a, b) {
   const diff = a.length - b.length;
   if (diff !== 0) {
@@ -127,6 +131,7 @@ export {
   $,
   importTemplate,
   buildHtmlElement,
+  buildLoaderElement,
   encodeHtmlEntities,
   getLabeledElements,
   cmpStrNum,
