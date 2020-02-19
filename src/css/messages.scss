@@ -159,6 +159,17 @@
   font-weight: 500;
 }
 
+.messages_item-type-sticker,
+.messages_item-type-emoji {
+  background: none;
+  box-shadow: none;
+}
+
+.messages_item-type-emoji {
+  overflow: visible;
+  padding-bottom: 10px;
+}
+
 .messages_item_author {
   font-weight: 500;
 }
@@ -213,7 +224,8 @@
 .messages_item_media_thumb_image-blurred {
   filter: blur(10px);
 }
-.messages_item_media_thumb + .messages_item_date {
+.messages_item_media_thumb + .messages_item_date,
+.messages_item-type-emoji .messages_item_date {
   position: absolute;
   z-index: 1;
   right: 4px;
@@ -223,6 +235,15 @@
   padding: 1px 5px;
   border-radius: 10px;
   text-decoration: none !important;
+}
+.messages_item-type-emoji .messages_item_date {
+  bottom: -7px;
+}
+.messages_item-type-emoji:not(.messages_item-out) .messages_item_date {
+  bottom: 0;
+  left: 100%;
+  right: auto;
+  margin-left: -15px;
 }
 .webpage .messages_item_media_thumb {
   margin: 0 0 5px;
@@ -254,6 +275,11 @@
   color: #65AB5A;
 }
 
+.messages_item-type-emoji .messages_item_text {
+  font-size: 50px;
+  line-height: 50px;
+}
+
 
 .webpage {
   border-left: 2px solid #41A0EA;
@@ -276,10 +302,6 @@
 
 .webpage_description {
   margin-top: 3px;
-}
-
-.messages_item_text_emoji_big {
-  font-size: 3em;
 }
 
 .messages_item_text + .document {

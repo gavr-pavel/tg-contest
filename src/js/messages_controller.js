@@ -176,6 +176,9 @@ const MessagesController = new class {
   }
 
   loadMore() {
+    if (this.loading || this.noMore) {
+      return;
+    }
     this.loading = true;
     MessagesApiManager.loadChatMessages(this.dialog, this.offsetMsgId, 30)
         .then((messages) => {
@@ -252,8 +255,9 @@ const MessagesController = new class {
 
   onScroll = () => {
     const scrollContainer = this.scrollContainer;
-    this.scrolling = scrollContainer.scrollTop < scrollContainer.scrollHeight - scrollContainer.offsetHeight;
-    if (!this.loading && !this.noMore && scrollContainer.scrollTop < 150) {
+    const scrollTop = scrollContainer.scrollTop;
+    this.scrolling = scrollTop < scrollContainer.scrollHeight - scrollContainer.offsetHeight;
+    if (!this.loading && !this.noMore && scrollTop < 150) {
       this.loadMore();
     }
   };
@@ -397,6 +401,13 @@ const MessagesController = new class {
       </div>
     `;
 
+    if (mediaThumbData && mediaThumbData.type === 'sticker') {
+      el.classList.add('messages_item-type-sticker');
+    }
+    if (this.isEmojiMessage(message)) {
+      el.classList.add('messages_item-type-emoji');
+    }
+
     if (mediaThumbData) {
       this.loadMessageMediaThumb(el, mediaThumbData);
     } else if (message.media && message.media.document) {
@@ -405,6 +416,16 @@ const MessagesController = new class {
         docBtn.addEventListener('click', this.onFileClick);
       }
     }
+  }
+
+  isEmojiMessage(message) {
+    if (message.message.length <= 12 && !message.media) {
+      const emojiMatches = getEmojiMatches(message.message);
+      if (emojiMatches && emojiMatches.length <= 3 && emojiMatches.join('').length === message.message.length) {
+        return true;
+      }
+    }
+    return false;
   }
 
   formatAuthorName(message) {
@@ -694,12 +715,6 @@ const MessagesController = new class {
     }
     if (text) {
       text = this.replaceLineBreaks(text);
-      if (text.length <= 12 && !message.media) {
-        const emojiMatches = getEmojiMatches(text);
-        if (emojiMatches && emojiMatches.length <= 3 && emojiMatches.join('').length === text.length) {
-          addClass += ' messages_item_text_emoji_big';
-        }
-      }
       text = `<span class="messages_item_text ${addClass}">${text}</span>`;
     }
     return text;
@@ -798,6 +813,9 @@ const MessagesController = new class {
       const date = new Date(messageDate * 1000);
       const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
       dateText = months[date.getMonth()] + ' ' + date.getDate();
+      if (date.getFullYear() !== new Date().getFullYear()) {
+        dateText += ', ' + date.getFullYear();
+      }
     }
 
     return dateText;
