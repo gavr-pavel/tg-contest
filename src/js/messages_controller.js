@@ -184,7 +184,7 @@ const MessagesController = new class {
     });
   }
 
-  loadMore() {
+  loadMore = () => {
     if (this.loading || this.noMore) {
       return;
     }
@@ -202,7 +202,7 @@ const MessagesController = new class {
         .finally(() => {
           this.loading = false;
         });
-  }
+  };
 
   canSendMessage(dialog) {
     const chat = MessagesApiManager.getPeerData(dialog.peer);
@@ -339,7 +339,7 @@ const MessagesController = new class {
       this.scrollContainer.scrollTop = this.scrollContainer.scrollHeight - prevScrollHeight;
     } else {
       if (this.scrollContainer.scrollHeight <= this.scrollContainer.offsetHeight) {
-        this.loadMore();
+        setTimeout(this.loadMore, 0);
       } else {
         this.scrollToBottom();
       }
