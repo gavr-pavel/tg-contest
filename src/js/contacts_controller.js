@@ -11,8 +11,7 @@ const ContactsController = new class {
     this.container = $('.contacts_sidebar');
     this.container.hidden = false;
 
-    this.loader = buildLoaderElement();
-    this.container.append(this.loader);
+    this.loader = buildLoaderElement(this.container);
 
     const backButtonEl = $('.chats_header_back_button');
     backButtonEl.addEventListener('click', this.onBack);

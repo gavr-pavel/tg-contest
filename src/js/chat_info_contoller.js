@@ -1,6 +1,5 @@
 import {$, buildHtmlElement, encodeHtmlEntities, getLabeledElements} from "./utils";
 import {MDCCheckbox} from '@material/checkbox';
-import {MDCMenu} from "@material/menu";
 import {MessagesApiManager} from "./api/messages_api_manager";
 import {ApiClient} from "./api/api_client";
 import {MediaApiManager} from "./api/media_api_manager";
@@ -484,7 +483,6 @@ const ChatInfoController = new class {
         return 'txt';
       case 'application/epub+zip':
         return 'epub';
-
       case 'application/x-compressed-tar':
         return 'tar.gz';
       case 'application/x-7z-compressed':

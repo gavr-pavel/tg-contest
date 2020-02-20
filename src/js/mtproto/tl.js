@@ -346,9 +346,13 @@ class TLSerialization {
       if (type.indexOf('?') !== -1) {
         const condType = type.split('?');
         const [field, bit] = condType[0].split('.');
-        if (object[param.name] !== void(0)) {
-          object[field] = (object[field] || 0) | (1 << bit);
+        if (object[param.name] === void(0)) {
+          continue;
         }
+        if (condType[1] === 'true' && !object[param.name]) {
+          continue;
+        }
+        object[field] = (object[field] || 0) | (1 << bit);
       }
     }
   }

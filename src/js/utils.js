@@ -100,8 +100,12 @@ function buildHtmlElement(htmlStr) {
   return tmp.firstElementChild;
 }
 
-function buildLoaderElement() {
-  return buildHtmlElement('<div class="lds-ring"><div></div><div></div><div></div><div></div></div>');
+function buildLoaderElement(container = null) {
+  const el = buildHtmlElement('<div class="lds-ring"><div></div><div></div><div></div><div></div></div>');
+  if (container) {
+    container.appendChild(el);
+  }
+  return el;
 }
 
 function cmpStrNum(a, b) {

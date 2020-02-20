@@ -8,7 +8,8 @@
   width: 420px;
 }
 
-.settings_sidebar {
+.settings_sidebar,
+.archived_chats_sidebar {
   background: #fff;
   box-sizing: border-box;
   height: 100%;
@@ -17,6 +18,10 @@
   top: 0;
   width: 100%;
   z-index: 5;
+}
+
+.archived_chats_list {
+  padding: 8px;
 }
 
 .settings_menu_header {
@@ -63,6 +68,9 @@
 .global_search_sublist {
   padding: 12px 8px;
   border-bottom: 1px solid #DADCE0;
+}
+.global_search_sublist:last-child {
+  border-bottom: 0;
 }
 
 .global_search_sublist_header {

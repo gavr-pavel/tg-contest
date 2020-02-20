@@ -7,6 +7,7 @@ import {MDCRipple} from '@material/ripple/component';
 import {MDCMenu} from '@material/menu';
 import {ContactsController} from "./contacts_controller";
 import {GlobalSearchController} from './global_search_controller';
+import {ArchivedChatsController} from './archived_chats_conntroller';
 
 const ChatsController = new class {
   chatElements = new Map();
@@ -17,8 +18,7 @@ const ChatsController = new class {
 
     this.initHeader();
 
-    this.loader = buildLoaderElement();
-    this.container.append(this.loader);
+    this.loader = buildLoaderElement(this.container);
 
     MessagesApiManager.emitter.on('dialogsUpdate', this.onDialogsUpdate);
     MessagesApiManager.emitter.on('dialogOrderUpdate', this.onDialogOrderUpdate);
@@ -86,6 +86,11 @@ const ChatsController = new class {
       ContactsController.show();
     });
 
+    const archivedButtonEl = $('.chats_header_menu_item-archived', menuContainer);
+    archivedButtonEl.addEventListener('click', () => {
+      ArchivedChatsController.show();
+    });
+
     const settingsButtonEl = $('.chats_header_menu_item-settings', menuContainer);
     settingsButtonEl.addEventListener('click', () => {
       SettingsController.show();
@@ -100,8 +105,10 @@ const ChatsController = new class {
   }
 
   onDialogsUpdate = (event) => {
-    const {dialogs} = event.detail;
-    this.renderChats(dialogs);
+    const {dialogs, folderId} = event.detail;
+    if (!folderId) {
+      this.renderChats(dialogs);
+    }
   };
 
   onDialogNewMessage = (event) => {

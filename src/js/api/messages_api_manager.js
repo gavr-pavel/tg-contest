@@ -4,6 +4,7 @@ import {App} from '../app';
 
 const MessagesApiManager = new class {
   dialogs = [];
+  archivedDialogs = [];
   messages = new Map();
   chats = new Map();
   users = new Map();
@@ -262,9 +263,10 @@ const MessagesApiManager = new class {
     this.emitter.trigger('dialogOrderUpdate', {dialog, index: newIndex});
   }
 
-  async loadDialogs(offset = {}, limit = 20) {
-    await ApiClient.connectionDefered.promise;
+  async loadDialogs(offset = {}, limit = 20, folderId = 0) {
     const response = await ApiClient.callMethod('messages.getDialogs', {
+      folder_id: folderId,
+      exclude_pinned: !!folderId,
       offset_date: offset.date || 0,
       offset_id: offset.id || 0,
       offset_peer: this.getInputPeer(offset.peer),
@@ -278,12 +280,19 @@ const MessagesApiManager = new class {
     this.updateMessages(messages);
     this.updateDialogs(dialogs);
 
-    this.dialogs = this.dialogs.concat(dialogs);
-    this.emitter.trigger('dialogsUpdate', {dialogs: this.dialogs});
+    const allDialogs = folderId ? this.archivedDialogs : this.dialogs;
+
+    allDialogs.splice(allDialogs.length, 0, ...dialogs);
+
+    this.emitter.trigger('dialogsUpdate', {dialogs: allDialogs, folderId});
 
     this.preloadDialogsMessages(dialogs);
 
     return dialogs;
+  }
+
+  loadArchivedDialogs(offset = {}, limit = 20) {
+    return this.loadDialogs(offset, limit, 1);
   }
 
   async loadChatMessages(dialog, offsetId, limit) {

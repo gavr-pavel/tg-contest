@@ -48,12 +48,9 @@ const SettingsController = new class {
     `;
 
     this.loadUserPhoto(user);
-    this.bindListeners();
-  }
 
-  bindListeners() {
     const backButtonEl = $('.chats_header_back_button');
-    backButtonEl.addEventListener('click', this.onBack, {once: true});
+    backButtonEl.addEventListener('click', this.onBack);
     backButtonEl.hidden = false;
 
     const extraMenuButtonEl = $('.sidebar_extra_menu_button', this.container);
@@ -73,6 +70,7 @@ const SettingsController = new class {
     this.container.hidden = true;
     this.container.innerHTML = '';
     const backButtonEl = event.currentTarget;
+    backButtonEl.removeEventListener('click', this.onBack);
     backButtonEl.hidden = true;
   };
 
