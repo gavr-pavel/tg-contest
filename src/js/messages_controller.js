@@ -117,7 +117,6 @@ const MessagesController = new class {
 
   showHeader(dialog) {
     const peer = dialog.peer;
-    const peerId = MessagesApiManager.getPeerId(dialog.peer);
     const peerName = MessagesApiManager.getPeerName(peer);
 
     let peerStatus = '';
@@ -135,7 +134,7 @@ const MessagesController = new class {
       <div class="messages_header_peer">
         <div class="messages_header_peer_photo"></div>
         <div class="messages_header_peer_description">
-          <div class="messages_header_peer_name">${peerName}</div>
+          <div class="messages_header_peer_name">${encodeHtmlEntities(peerName)}</div>
           <div class="messages_header_peer_status ${peerStatusClass}">${peerStatus}</div>
         </div>
       </div>
