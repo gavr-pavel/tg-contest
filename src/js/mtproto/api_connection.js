@@ -118,13 +118,13 @@ class ApiConnection {
     return +errorMessage.match(/\d+$/)[0];
   }
 
-  // getServerTimeOffset() {
-  //   return this.mtproto.timeOffset;
-  // }
+  getServerTimeOffset() {
+    return this.mtproto.timeOffset;
+  }
 
-  // getServerTimeNow() {
-  //   return Math.floor(Date.now() / 1000) + this.getServerTimeOffset();
-  // }
+  getServerTimeNow() {
+    return Math.floor(Date.now() / 1000) + this.getServerTimeOffset();
+  }
 }
 
 function getSystemLang() {

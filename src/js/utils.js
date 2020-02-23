@@ -127,6 +127,37 @@ function randomLong() {
   return crypto.getRandomValues(new Uint32Array(2));
 }
 
+function formatDateFull(ts) {
+  const date = new Date(ts * 1000);
+  return `${ date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+}
+
+function formatDateRelative(ts, now) {
+  if (now - ts < 3600) {
+    const minutes = Math.floor((now - ts) / 60);
+    if (minutes) {
+      return minutes + ' minutes ago';
+    } else {
+      return 'just now';
+    }
+  }
+  const dateToday = new Date(now * 1000);
+  dateToday.setHours(0, 0, 0, 0);
+  if (ts > dateToday.getTime() / 1000) {
+    return 'today at ' + formatTime(ts);
+  }
+  dateToday.setDate(dateToday.getDate() - 1);
+  if (ts > dateToday.getTime() / 1000) {
+    return 'yesterday at ' + formatTime(ts);
+  }
+  return formatDateFull(ts);
+}
+
+function formatTime(ts) {
+  const date = new Date(ts * 1000);
+  return date.getHours() + ':' + date.getMinutes().toString().padStart(2, '0');
+}
+
 export {
   Storage,
   Emitter,
@@ -140,5 +171,8 @@ export {
   getLabeledElements,
   cmpStrNum,
   wait,
-  randomLong
+  randomLong,
+  formatDateFull,
+  formatDateRelative,
+  formatTime
 };

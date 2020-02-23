@@ -1,4 +1,12 @@
-import {$, buildHtmlElement, buildLoaderElement, encodeHtmlEntities} from './utils';
+import {
+  $,
+  buildHtmlElement,
+  buildLoaderElement,
+  encodeHtmlEntities,
+  formatDateFull,
+  formatDateRelative,
+  formatTime
+} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple';
 import {MediaApiManager} from './api/media_api_manager';
@@ -8,6 +16,7 @@ import {MessagesFormController} from './messages_form_controller';
 import {ChatsController} from "./chats_controller";
 import {ChatInfoController} from "./chat_info_contoller";
 import {MessagesSearchController} from './messages_search_controller';
+import {ApiClient} from './api/api_client';
 
 const MessagesController = new class {
   dialog = null;
@@ -407,7 +416,7 @@ const MessagesController = new class {
       <div class="messages_item_content">
         ${authorName}
         ${this.formatMessageContent(message, mediaThumbData)}
-        <div class="messages_item_date" title="${this.formatMessageDate(message.date)}">${this.formatMessageTime(message.date)}</div>
+        <div class="messages_item_date" title="${formatDateFull(message.date)}">${formatTime(message.date)}</div>
       </div>
     `;
 
@@ -797,11 +806,6 @@ const MessagesController = new class {
     return date.getHours() + ':' + date.getMinutes().toString().padStart(2, '0');
   }
 
-  formatMessageDate(ts) {
-    const date = new Date(ts * 1000);
-    return date.toLocaleString().replace(/\//g, '.');
-  }
-
   compareMessagesDate(message1, message2) {
     const date1 = new Date(message1.date * 1000);
     const date2 = new Date(message2.date * 1000);
@@ -902,6 +906,9 @@ const MessagesController = new class {
         case 'userStatusOnline':
           return 'online';
         case 'userStatusOffline':
+          if (user.status.was_online) {
+            return 'last seen ' + formatDateRelative(user.status.was_online, ApiClient.getServerTimeNow());
+          }
           return 'offline';
         case 'userStatusRecently':
           return 'last seen recently';

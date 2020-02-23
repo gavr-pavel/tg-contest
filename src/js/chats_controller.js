@@ -1,4 +1,4 @@
-import {$, buildHtmlElement, buildLoaderElement, encodeHtmlEntities} from './utils';
+import {$, buildHtmlElement, buildLoaderElement, encodeHtmlEntities, formatDateFull, formatTime} from './utils';
 import {App} from './app';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
@@ -246,13 +246,13 @@ const ChatsController = new class {
     const messageDate = new Date(message.date * 1000);
     const now = Date.now();
     if (messageDate.getTime() > now - 86400000) {
-      return MessagesController.formatMessageTime(message.date);
+      return formatTime(message.date);
     } else if (messageDate.getTime() > now - 86400000 * 6) {
       return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][messageDate.getDay()];
     } if (messageDate.getFullYear() === new Date().getFullYear()) {
       return [messageDate.getDate(), messageDate.getMonth() + 1].join('/');
     } else {
-      return [messageDate.getDate(), messageDate.getMonth() + 1, messageDate.getFullYear()].join('/');
+      return formatDateFull(message.date);
     }
   }
 
