@@ -158,6 +158,11 @@ function formatTime(ts) {
   return date.getHours() + ':' + date.getMinutes().toString().padStart(2, '0');
 }
 
+function formatTimeFull(ts) {
+  const date = new Date(ts * 1000);
+  return date.getHours() + ':' + date.getMinutes().toString().padStart(2, '0') + ':' + date.getSeconds().toString().padStart(2, '0');
+}
+
 export {
   Storage,
   Emitter,
@@ -174,5 +179,6 @@ export {
   randomLong,
   formatDateFull,
   formatDateRelative,
-  formatTime
+  formatTime,
+  formatTimeFull
 };

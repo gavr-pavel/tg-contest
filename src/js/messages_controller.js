@@ -5,7 +5,7 @@ import {
   encodeHtmlEntities,
   formatDateFull,
   formatDateRelative,
-  formatTime
+  formatTime, formatTimeFull
 } from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple';
@@ -307,38 +307,48 @@ const MessagesController = new class {
     }
 
     let newElementsAdded = false;
-    const frag = document.createDocumentFragment();
+
+    const dateGroups = [];
+    let lastDateGroup;
     messages.forEach((message, i) => {
       if (this.offsetMsgId && message.id >= this.offsetMsgId) {
         return;
       }
 
-      const nextMessage = messages[i - 1];
-      const prevMessage = messages[i + 1];
+      const nextMessage = messages[i - 1]; // earlier message
+      const prevMessage = messages[i + 1]; // later message
 
       let stickToNext = message.from_id && nextMessage && nextMessage.from_id === message.from_id;
       let stickToPrev = message.from_id && prevMessage && prevMessage.from_id === message.from_id;
       const messageMidnight = new Date(message.date * 1000).setHours(0, 0, 0, 0) / 1000;
-      let dateMessageEl = '';
-      if (!prevMessage || prevMessage.date < messageMidnight) {
-        dateMessageEl = this.buildDateMessageEl(message.date);
+      if (!lastDateGroup && this.container.firstElementChild) {
+        const group = this.container.firstElementChild;
+        if (+group.dataset.date === messageMidnight) {
+          lastDateGroup = group;
+        }
       }
-      if (!nextMessage || nextMessage.date > messageMidnight + 86400) {
+      if (!lastDateGroup || !nextMessage || nextMessage.date > messageMidnight + 86400) {
         stickToNext = false;
+        lastDateGroup = buildHtmlElement(`
+          <div class="messages_group-date" data-date="${messageMidnight}">
+            <div class="messages_item-type-service messages_item-type-date">${this.formatMessageDateFull(message.date)}</div>
+          </div>
+        `);
+        dateGroups.unshift(lastDateGroup);
       }
       if (!newElementsAdded) {
         if (nextMessage && !this.compareMessagesDate(message, nextMessage)) {
           const lastEl = this.container.lastElementChild;
-          if (lastEl.classList.contains('messages_item-type-service')) {
+          if (lastEl.classList.contains('messages_item-type-date')) {
             lastEl.remove();
           }
         }
         newElementsAdded = true;
       }
       const el = this.buildMessageEl(message, {stickToNext, stickToPrev});
-      frag.append(el, dateMessageEl);
+      lastDateGroup.firstElementChild.after(el);
     });
-    this.container.append(frag);
+    this.container.prepend(...dateGroups);
 
     this.lastMsgId = messages[0].id;
     this.offsetMsgId = messages[messages.length - 1].id;
@@ -416,7 +426,7 @@ const MessagesController = new class {
       <div class="messages_item_content">
         ${authorName}
         ${this.formatMessageContent(message, mediaThumbData)}
-        <div class="messages_item_date" title="${formatDateFull(message.date)}">${formatTime(message.date)}</div>
+        <div class="messages_item_date" title="${formatDateFull(message.date)} ${formatTimeFull(message.date)}">${formatTime(message.date)}</div>
       </div>
     `;
 
@@ -801,11 +811,6 @@ const MessagesController = new class {
     return html;
   }
 
-  formatMessageTime(ts) {
-    const date = new Date(ts * 1000);
-    return date.getHours() + ':' + date.getMinutes().toString().padStart(2, '0');
-  }
-
   compareMessagesDate(message1, message2) {
     const date1 = new Date(message1.date * 1000);
     const date2 = new Date(message2.date * 1000);
@@ -836,13 +841,7 @@ const MessagesController = new class {
   }
 
   formatMessageDateTime(date) {
-    return `${this.formatMessageDateFull(date)} at ${this.formatMessageTime(date)}`;
-  }
-
-  buildDateMessageEl(messageDate) {
-    return buildHtmlElement(`
-      <div class="messages_item-type-service messages_item-type-date">${ this.formatMessageDateFull(messageDate) }</div>
-    `);
+    return `${this.formatMessageDateFull(date)} at ${formatTime(date)}`;
   }
 
   formatCount(count) {
