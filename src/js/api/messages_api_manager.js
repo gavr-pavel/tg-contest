@@ -228,7 +228,7 @@ const MessagesApiManager = new class {
     this.dialogs.splice(0, prevPinnedCount, ...pinnedDialogs);
 
     pinnedDialogs.forEach((dialog, index) => {
-      this.emitter.trigger('dialogOrderUpdate', {dialog, index});
+      this.emitter.trigger('dialogOrderUpdate', {dialog, index, folderId: 0});
     });
 
     unpinnedDialogs.forEach((dialog) => {
@@ -246,21 +246,24 @@ const MessagesApiManager = new class {
       return;
     }
 
-    const curIndex = this.dialogs.indexOf(dialog);
+    const folderId = dialog.folder_id;
+    const dialogs = !folderId ? this.dialogs : this.archivedDialogs;
+
+    const curIndex = dialogs.indexOf(dialog);
     if (curIndex > -1) {
-      this.dialogs.splice(curIndex, 1);
+      dialogs.splice(curIndex, 1);
     }
 
-    const newIndex = this.dialogs.findIndex((item) => {
+    const newIndex = dialogs.findIndex((item) => {
       if (!item.pFlags.pinned && item.top_message) {
         const itemMessage = this.messages.get(item.top_message);
         return itemMessage && itemMessage.date < lastMessage.date;
       }
       return false;
     });
-    this.dialogs.splice(newIndex, 0, dialog);
+    dialogs.splice(newIndex, 0, dialog);
 
-    this.emitter.trigger('dialogOrderUpdate', {dialog, index: newIndex});
+    this.emitter.trigger('dialogOrderUpdate', {dialog, index: newIndex, folderId});
   }
 
   async loadDialogs(offset = {}, limit = 20, folderId = 0) {

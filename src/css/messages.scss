@@ -84,7 +84,7 @@
 .messages_list {
   min-height: 100%;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   align-items: end;
   align-content: end;
   max-width: 740px;

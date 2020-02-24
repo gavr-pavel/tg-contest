@@ -46,6 +46,11 @@ const MessagesFormController = new class {
     this.dom.input.focus();
   }
 
+  clear() {
+    this.dom.input.value = '';
+    this.onInput();
+  }
+
   onInput = () => {
     const input = this.dom.input;
     input.style.height = '';
@@ -64,8 +69,7 @@ const MessagesFormController = new class {
       return;
     }
     MessagesApiManager.sendMessage(MessagesController.dialog.peer, message);
-    input.value = '';
-    this.onInput();
+    this.clear();
   };
 
   onKeyDown = (event) => {

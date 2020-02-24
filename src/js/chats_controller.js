@@ -126,7 +126,10 @@ const ChatsController = new class {
   };
 
   onDialogOrderUpdate = (event) => {
-    const {dialog, index} = event.detail;
+    const {dialog, index, folderId} = event.detail;
+    if (folderId) {
+      return;
+    }
     const chatId = MessagesApiManager.getPeerId(dialog.peer);
     let el = this.chatElements.get(chatId);
     if (!el) {

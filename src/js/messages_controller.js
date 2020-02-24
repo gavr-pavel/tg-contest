@@ -92,6 +92,8 @@ const MessagesController = new class {
       chatEl.classList.remove('chats_item-selected');
     }
 
+    MessagesFormController.clear();
+    MediaViewController.abort();
     ChatInfoController.close();
     MessagesSearchController.close();
 
@@ -106,8 +108,6 @@ const MessagesController = new class {
     this.loading = false;
     this.noMore = false;
     this.scrolling = false;
-
-    MediaViewController.abort();
   }
 
   initPlaceholder() {
@@ -321,8 +321,8 @@ const MessagesController = new class {
       let stickToNext = message.from_id && nextMessage && nextMessage.from_id === message.from_id;
       let stickToPrev = message.from_id && prevMessage && prevMessage.from_id === message.from_id;
       const messageMidnight = new Date(message.date * 1000).setHours(0, 0, 0, 0) / 1000;
-      if (!lastDateGroup && this.container.firstElementChild) {
-        const group = this.container.firstElementChild;
+      if (!lastDateGroup && this.container.lastElementChild) {
+        const group = this.container.lastElementChild;
         if (+group.dataset.date === messageMidnight) {
           lastDateGroup = group;
         }
@@ -334,7 +334,7 @@ const MessagesController = new class {
             <div class="messages_item-type-service messages_item-type-date">${this.formatMessageDateFull(message.date)}</div>
           </div>
         `);
-        dateGroups.unshift(lastDateGroup);
+        dateGroups.push(lastDateGroup);
       }
       if (!newElementsAdded) {
         if (nextMessage && !this.compareMessagesDate(message, nextMessage)) {
@@ -348,7 +348,7 @@ const MessagesController = new class {
       const el = this.buildMessageEl(message, {stickToNext, stickToPrev});
       lastDateGroup.firstElementChild.after(el);
     });
-    this.container.prepend(...dateGroups);
+    this.container.append(...dateGroups);
 
     this.lastMsgId = messages[0].id;
     this.offsetMsgId = messages[messages.length - 1].id;
@@ -870,9 +870,9 @@ const MessagesController = new class {
       case 'messageActionChatAddUser':
         return 'New member in the group';
       case 'messageActionChatDeleteUser':
-        return 'User left the group.';
+        return 'User' + ' left the group';
       case 'messageActionChatJoinedByLink':
-        return 'A user joined the chat via an invite link';
+        return 'User' + ' joined the group via invite link';
       case 'messageActionChannelCreate':
         return 'The channel was created';
       case 'messageActionChatMigrateTo':
