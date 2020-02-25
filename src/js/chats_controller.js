@@ -25,6 +25,7 @@ const ChatsController = new class {
     MessagesApiManager.emitter.on('dialogTopMessageUpdate', this.onDialogTopMessageUpdate);
     MessagesApiManager.emitter.on('chatNewMessage', this.onDialogNewMessage);
     MessagesApiManager.emitter.on('chatUnreadCountUpdate', this.onDialogUnreadCountUpdate);
+    MessagesApiManager.emitter.on('userStatusUpdate', this.onUserStatusUpdate);
 
     this.loadMore();
   }
@@ -154,6 +155,14 @@ const ChatsController = new class {
     this.renderChatPreviewContent(el, dialog);
   };
 
+  onUserStatusUpdate = (event) => {
+    const {user} = event.detail;
+    const el = this.chatElements.get(user.id);
+    if (el) {
+      this.updateChatStatus(el, user.status);
+    }
+  };
+
   onScroll = () => {
     const container = this.container;
     if (!this.loading && !this.noMore && container.scrollTop + container.offsetHeight > container.scrollHeight - 150) {
@@ -213,6 +222,10 @@ const ChatsController = new class {
     `);
     this.renderChatPreviewContent(el, dialog);
     this.loadChatPhoto(el, dialog);
+    if (dialog.peer._ === 'peerUser') {
+      const user = MessagesApiManager.getPeerData(dialog.peer);
+      this.updateChatStatus(el, user.status);
+    }
     el.addEventListener('click', this.onChatClick);
     new MDCRipple(el.firstElementChild);
     this.chatElements.set(peerId, el);
@@ -292,7 +305,8 @@ const ChatsController = new class {
     }
     if (message.to_id._ === 'peerChannel' && message.from_id) {
       const user = MessagesApiManager.users.get(message.from_id);
-      text = `<span class="chats_item_message_author_label">${encodeHtmlEntities(user.first_name)}:</span> ${text}`;
+      const userName = MessagesApiManager.getUserName(user, false);
+      text = `<span class="chats_item_message_author_label">${encodeHtmlEntities(userName)}:</span> ${text}`;
     } else if (message.pFlags.out) {
       text = `<span class="chats_item_message_author_label">You:</span> ${text}`;
     }
@@ -341,6 +355,12 @@ const ChatsController = new class {
     return 'File';
   }
 
+  updateChatStatus(el, userStatus) {
+    const isOnline = !!userStatus && userStatus._ === 'userStatusOnline';
+    const photoEl = $('.chats_item_photo', el);
+    photoEl.classList.toggle('chats_item_photo-online', isOnline);
+  }
+
   loadChatPhoto(el, dialog) {
     const photoEl = $('.chats_item_photo', el);
     if (this.isPeerMe(dialog.peer)) {
@@ -352,7 +372,12 @@ const ChatsController = new class {
 
   loadPeerPhoto(el, peer, big = false) {
     const peerId = MessagesApiManager.getPeerId(peer);
-    const photo = MessagesApiManager.getPeerPhoto(peer);
+    const peerData = MessagesApiManager.getPeerData(peer);
+    const photo = peerData.photo;
+    if (peerData.pFlags.deleted) {
+      this.setChatPhotoDeletedPlaceholder(el, peerId);
+      return;
+    }
     if (!photo || photo._ === 'chatPhotoEmpty') {
       this.setChatPhotoPlaceholder(el, peerId);
       return;
@@ -368,10 +393,14 @@ const ChatsController = new class {
         });
   }
 
+  setChatPhotoDeletedPlaceholder(photoEl) {
+    photoEl.style.backgroundColor = '#ACB2B6';
+    photoEl.innerHTML = '<div class="peer_photo_deleted_placeholder"></div>';
+  }
+
   setChatPhotoPlaceholder(photoEl, peerId) {
     const peer = MessagesApiManager.getPeerById(peerId);
     const peerTitle = MessagesApiManager.getPeerName(peer);
-
     photoEl.style.backgroundColor = this.getPlaceholderColor(peerId);
     photoEl.innerHTML = '<div class="peer_photo_placeholder">' + peerTitle.charAt(0) + '</div>';
   }

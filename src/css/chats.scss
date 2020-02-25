@@ -81,7 +81,7 @@
   box-sizing: border-box;
   width: 420px;
   padding: 8px;
-  border-right: 1px solid #E0E3E6;
+  border-right: 1px solid #DADCE0;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -123,7 +123,7 @@
   left: -10px;
   right: -10px;
   top: -7px;
-  border-top: 1px solid #E5E7E9;
+  border-top: 1px solid #DADCE0;
 }
 
 .chats_item_photo,
@@ -135,6 +135,19 @@
   margin-right: 10px;
   border-radius: 50%;
   background-color: #eee;
+  position: relative;
+}
+
+.chats_item_photo-online:before {
+  content: '';
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 10px;
+  height: 10px;
+  background-color: #53C24A;
+  border: 2px solid #fff;
+  border-radius: 50%;
 }
 
 .chats_item_photo_saved_messages {
