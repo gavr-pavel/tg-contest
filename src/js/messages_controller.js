@@ -1,11 +1,11 @@
 import {
   $,
   buildHtmlElement,
-  buildLoaderElement,
+  buildLoaderElement, cutText,
   encodeHtmlEntities,
   formatDateFull,
   formatDateRelative,
-  formatTime, formatTimeFull
+  formatTime
 } from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple';
@@ -426,7 +426,7 @@ const MessagesController = new class {
       <div class="messages_item_content">
         ${authorName}
         ${this.formatMessageContent(message, mediaThumbData)}
-        <div class="messages_item_date" title="${formatDateFull(message.date)} ${formatTimeFull(message.date)}">${formatTime(message.date)}</div>
+        <div class="messages_item_date" title="${formatDateFull(message.date)} ${formatTime(message.date, true)}">${formatTime(message.date)}</div>
       </div>
     `;
 
@@ -859,39 +859,71 @@ const MessagesController = new class {
 
   getServiceMessageText(message) {
     switch (message.action._) {
-      case 'messageActionChatCreate':
-        return 'Chat created';
+      case 'messageActionChatCreate': {
+        const user = MessagesApiManager.users.get(message.from_id);
+        const userName = MessagesApiManager.getUserName(user);
+        return `${userName} created the group ${message.action.title}`
+      }
       case 'messageActionChatEditTitle':
         return 'Chat name changed';
       case 'messageActionChatEditPhoto':
         return 'Chat photo changed';
       case 'messageActionChatDeletePhoto':
         return 'Chat photo deleted';
-      case 'messageActionChatAddUser':
-        return 'New member in the group';
+      case 'messageActionChatAddUser': {
+        const inviter = MessagesApiManager.users.get(message.from_id);
+        const inviterName = MessagesApiManager.getUserName(inviter);
+        const usersNames = message.action.users.map(user_id => MessagesApiManager.getUserName(MessagesApiManager.users.get(user_id)));
+        if (usersNames.length > 1) {
+          const invitedNames = usersNames.slice(0, -1).join(', ') + ' and ' + usersNames.slice(-1);
+          return `${inviterName} invited ${invitedNames}`
+        } else if (message.from_id === message.action.users[0]) {
+          return inviterName + 'joined the group';
+        } else {
+          return inviterName + ' invited ' + usersNames[0];
+        }
+      }
       case 'messageActionChatDeleteUser':
-        return 'User' + ' left the group';
-      case 'messageActionChatJoinedByLink':
-        return 'User' + ' joined the group via invite link';
+        const user = MessagesApiManager.users.get(message.from_id);
+        const userName = MessagesApiManager.getUserName(user);
+        return `${userName} left the group`;
+      case 'messageActionChatJoinedByLink': {
+        const user = MessagesApiManager.users.get(message.from_id);
+        const userName = MessagesApiManager.getUserName(user);
+        return `${userName} joined the group via invite link`;
+      }
       case 'messageActionChannelCreate':
-        return 'The channel was created';
+        return 'Channel created';
       case 'messageActionChatMigrateTo':
       case 'messageActionChannelMigrateFrom':
         return 'Chat was upgraded to supergroup';
-      case 'messageActionPinMessage':
-        return 'A message was pinned';
+      case 'messageActionPinMessage': {
+        let authorName = '';
+        if (message.from_id) {
+          const user = MessagesApiManager.users.get(message.from_id);
+          authorName = MessagesApiManager.getUserName(user);
+        } else {
+          authorName = MessagesApiManager.getPeerName(message.to_id);
+        }
+        const pinnedMessage = MessagesApiManager.messages.get(message.reply_to_msg_id);
+        const pinnedMessageText = pinnedMessage && pinnedMessage.message ? `"${cutText(pinnedMessage.message, 30, 20)}"` : 'message';
+        return `${authorName} pinned ${pinnedMessageText}`;
+      }
       case 'messageActionHistoryClear':
         return 'Chat history was cleared';
       case 'messageActionGameScore':
         return 'Someone scored in a game';
       case 'messageActionPaymentSent':
-        return 'A payment was sent';
+        return 'Payment was sent';
       case 'messageActionPhoneCall':
-        return 'A phone call';
+        return 'Phone call';
       case 'messageActionScreenshotTaken':
-        return 'A screenshot was taken';
-      case 'messageActionContactSignUp':
-        return 'A contact just signed up to telegram';
+        return 'Screenshot was taken';
+      case 'messageActionContactSignUp': {
+        const user = MessagesApiManager.users.get(message.from_id);
+        const userName = MessagesApiManager.getUserName(user);
+        return `${userName} joined Telegram`;
+      }
     }
     return '';
   }

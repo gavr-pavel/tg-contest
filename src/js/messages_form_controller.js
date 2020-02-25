@@ -47,8 +47,10 @@ const MessagesFormController = new class {
   }
 
   clear() {
-    this.dom.input.value = '';
-    this.onInput();
+    if (this.dom.input.value) {
+      this.dom.input.value = '';
+      this.onInput();
+    }
   }
 
   onInput = () => {

@@ -282,7 +282,8 @@ const ChatsController = new class {
 
   getMessagePreview(message) {
     if (message._ === 'messageService') {
-      return MessagesController.getServiceMessageText(message);
+      const text = MessagesController.getServiceMessageText(message);
+      return encodeHtmlEntities(text);
     }
     let text = encodeHtmlEntities(message.message);
     if (!text) {

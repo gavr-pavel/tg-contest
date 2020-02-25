@@ -153,14 +153,20 @@ function formatDateRelative(ts, now) {
   return formatDateFull(ts);
 }
 
-function formatTime(ts) {
+function formatTime(ts, withSeconds = false) {
   const date = new Date(ts * 1000);
-  return date.getHours() + ':' + date.getMinutes().toString().padStart(2, '0');
+  let result = date.getHours() + ':' + date.getMinutes().toString().padStart(2, '0');
+  if (withSeconds) {
+    result += ':' + date.getSeconds().toString().padStart(2, '0');
+  }
+  return result;
 }
 
-function formatTimeFull(ts) {
-  const date = new Date(ts * 1000);
-  return date.getHours() + ':' + date.getMinutes().toString().padStart(2, '0') + ':' + date.getSeconds().toString().padStart(2, '0');
+function cutText(text, checkLength, cutLength) {
+  if (text && text.length > checkLength) {
+    return text.substr(0, cutLength) + '...';
+  }
+  return text;
 }
 
 export {
@@ -180,5 +186,5 @@ export {
   formatDateFull,
   formatDateRelative,
   formatTime,
-  formatTimeFull
+  cutText
 };
