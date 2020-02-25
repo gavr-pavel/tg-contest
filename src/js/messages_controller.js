@@ -754,7 +754,7 @@ const MessagesController = new class {
     switch (entity._) {
       case 'messageEntityUrl':
         const url = /^https?:\/\//.test(text) ? text : 'http://' + text;
-        return `<a href="${url}" target="_blank" rel="noopener" data-entity="url">${text}</a>`;
+        return `<a href="${url}" target="_blank" rel="noopener" data-entity="url">${cutText(text, 60, 50)}</a>`;
       case 'messageEntityTextUrl':
         return `<a href="${entity.url}" target="_blank" rel="noopener" data-entity="text_url">${text}</a>`;
       case 'messageEntityBold':
@@ -878,7 +878,7 @@ const MessagesController = new class {
           const invitedNames = usersNames.slice(0, -1).join(', ') + ' and ' + usersNames.slice(-1);
           return `${inviterName} invited ${invitedNames}`
         } else if (message.from_id === message.action.users[0]) {
-          return inviterName + 'joined the group';
+          return inviterName + ' joined the group';
         } else {
           return inviterName + ' invited ' + usersNames[0];
         }
