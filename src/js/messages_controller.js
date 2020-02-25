@@ -723,10 +723,8 @@ const MessagesController = new class {
         <!--a href="${encodeURI(webpage.url)}" target="_blank">${webpage.display_url}</a-->
         <div class="webpage">${this.formatWebpageContent(webpage, mediaThumbData)}</div>
       `;
-    } else if (webpage._ === 'webPagePending') {
-      return '<div class="webpage_placeholder">Content is loading...</div>'
     }
-    return '<div class="webpage_placeholder">Content not available</div>';
+    return '';
   }
 
   formatWebpageContent(webpage, mediaThumbData) {
