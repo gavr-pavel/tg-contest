@@ -308,8 +308,11 @@ const MessagesController = new class {
 
     let newElementsAdded = false;
 
+    const isChat = this.dialog.peer._ === 'peerChat' || this.dialog.peer._ === 'peerChannel' && MessagesApiManager.isMegagroup(this.dialog.peer.channel_id);
+
     const dateGroups = [];
     let lastDateGroup;
+    let lastAuthorGroup;
     messages.forEach((message, i) => {
       if (this.offsetMsgId && message.id >= this.offsetMsgId) {
         return;
@@ -317,6 +320,8 @@ const MessagesController = new class {
 
       const nextMessage = messages[i - 1]; // earlier message
       const prevMessage = messages[i + 1]; // later message
+
+      const authorId = MessagesApiManager.getMessageAuthorPeerId(message);
 
       let stickToNext = message.from_id && nextMessage && nextMessage.from_id === message.from_id;
       let stickToPrev = message.from_id && prevMessage && prevMessage.from_id === message.from_id;
@@ -334,7 +339,27 @@ const MessagesController = new class {
             <div class="messages_item-type-service messages_item-type-date">${this.formatMessageDateFull(message.date)}</div>
           </div>
         `);
+        lastAuthorGroup = null;
         dateGroups.push(lastDateGroup);
+      }
+      if (!lastAuthorGroup && lastDateGroup.firstElementChild.nextElementSibling) {
+        const group = lastDateGroup.firstElementChild.nextElementSibling;
+        if (+group.dataset.authorId === authorId) {
+          lastAuthorGroup = group;
+        }
+      }
+      if (!lastAuthorGroup || nextMessage.from_id !== message.from_id) {
+        const needPhoto = isChat && message.from_id !== App.getAuthUserId();
+        lastAuthorGroup = buildHtmlElement(`
+          <div class="messages_group-author ${needPhoto ? 'messages_group-author-with-photo' : ''}" data-author-id="${authorId}">
+            ${needPhoto ? `<a class="messages_group_author_photo" href="#${this.getUserHref(message.from_id)}"></a>` : ''}
+          </div>
+        `);
+        if (needPhoto) {
+          const photoEl = lastAuthorGroup.firstElementChild;
+          ChatsController.loadPeerPhoto(photoEl, MessagesApiManager.getMessageAuthorPeer(message));
+        }
+        lastDateGroup.firstElementChild.after(lastAuthorGroup);
       }
       if (!newElementsAdded) {
         if (nextMessage && !this.compareMessagesDate(message, nextMessage)) {
@@ -346,7 +371,7 @@ const MessagesController = new class {
         newElementsAdded = true;
       }
       const el = this.buildMessageEl(message, {stickToNext, stickToPrev});
-      lastDateGroup.firstElementChild.after(el);
+      lastAuthorGroup.prepend(el);
     });
     this.container.append(...dateGroups);
 
@@ -375,9 +400,8 @@ const MessagesController = new class {
   buildMessageEl(message, options) {
     const el = document.createElement('div');
 
-    const isOut = (message.pFlags.out || MessagesApiManager.getMessagePeerId(message) === App.getAuthUserId()) && message.from_id === App.getAuthUserId();
-
     if (message._ === 'message') {
+      const isOut = (message.pFlags.out || MessagesApiManager.getMessageDialogPeerId(message) === App.getAuthUserId()) && message.from_id === App.getAuthUserId();
       el.className = this.getClasses({
         'messages_item': true,
         'messages_item-out': isOut,
@@ -463,7 +487,7 @@ const MessagesController = new class {
     if (message.from_id && this.dialog.peer._ !== 'peerUser') {
       const userId = message.from_id;
       const title = MessagesApiManager.getPeerName({_: 'peerUser', user_id: userId});
-      return `<a class="messages_item_author" href="#user/${userId}">${encodeHtmlEntities(title)}</a>`;
+      return `<a class="messages_item_author" href="#${this.getUserHref(userId)}">${encodeHtmlEntities(title)}</a>`;
     }
     return '';
   }
@@ -774,11 +798,11 @@ const MessagesController = new class {
       case 'textEntityTypePreCode':
         return `<pre><code>${text}</code></pre>`;
       case 'messageEntityMention':
-        return `<a href="${text}" data-entity="mention">${text}</a>`;
+        return `<a href="#${text}" data-entity="mention">${text}</a>`;
       case 'messageEntityMentionName':
-        return`<a href="#user/${entity.user_id}" data-entity="mention">${text}</a>`;
+        return`<a href="#${this.getUserHref(entity.user_id)}" data-entity="mention">${text}</a>`;
       case 'messageEntityHashtag':
-        return `<a href="${text}" data-entity="hashtag">${text}</a>`;
+        return `<a data-entity="hashtag">${text}</a>`;
       case 'messageEntityBotCommand':
         return `<a data-entity="bot_command">${text}</a>`;
       case 'messageEntityEmail':
@@ -864,7 +888,7 @@ const MessagesController = new class {
       case 'messageActionChatCreate': {
         const user = MessagesApiManager.users.get(message.from_id);
         const userName = MessagesApiManager.getUserName(user);
-        return `${userName} created the group ${message.action.title}`
+        return `${userName} created the group "${message.action.title}"`
       }
       case 'messageActionChatEditTitle':
         return 'Chat name changed';
@@ -952,6 +976,14 @@ const MessagesController = new class {
       }
     }
     return 'last seen a long time ago';
+  }
+
+  getUserHref(userId) {
+    const user = MessagesApiManager.users.get(userId);
+    if (user && user.username) {
+      return '@' + user.username;
+    }
+    return '@' + userId;
   }
 
   initBackground() {

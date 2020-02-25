@@ -93,11 +93,28 @@
   box-sizing: border-box;
 }
 
-.messages_group-date {
+.messages_group-date,
+.messages_group-author {
   display: flex;
   flex-direction: column;
   align-items: end;
   width: 100%;
+}
+
+.messages_group-author-with-photo {
+  position: relative;
+  padding-left: 45px;
+}
+
+.messages_group_author_photo {
+  position: absolute;
+  bottom: 5px;
+  left: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #eee;
+  text-decoration: none !important;
 }
 
 .messages_pending_list {

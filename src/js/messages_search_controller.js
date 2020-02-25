@@ -81,7 +81,7 @@ const MessagesSearchController = new class {
     const frag = document.createDocumentFragment();
 
     for (const message of messages) {
-      const peer = message.from_id ? MessagesApiManager.getPeerById(message.from_id) : MessagesApiManager.getMessagePeer(message);
+      const peer = MessagesApiManager.getMessageAuthorPeer(message);
       const title = MessagesApiManager.getPeerName(peer);
       const date = ChatsController.formatMessageDate(message);
       const messagePreview = ChatsController.getMessagePreview(message);

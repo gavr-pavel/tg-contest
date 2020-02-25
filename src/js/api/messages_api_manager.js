@@ -47,7 +47,7 @@ const MessagesApiManager = new class {
       case 'updateNewChannelMessage': {
         const message = update.message;
         this.updateMessages([message]);
-        const chatId = this.getMessagePeerId(message);
+        const chatId = this.getMessageDialogPeerId(message);
         const dialog = this.peerDialogs.get(chatId);
         if (dialog) {
           dialog.top_message = message.id;
@@ -193,7 +193,7 @@ const MessagesApiManager = new class {
       // workaround for broken channel access_hash in updates
       await this.reloadChannel(message.to_id.channel_id);
     }
-    const dialog = await this.loadPeerDialog(this.getMessagePeer(message));
+    const dialog = await this.loadPeerDialog(this.getMessageDialogPeer(message));
     if (dialog) {
       this.handleDialogOrder(dialog);
       this.emitter.trigger('chatNewMessage', {dialog, message});
@@ -509,15 +509,23 @@ const MessagesApiManager = new class {
     return this.peerDialogs.get(peerId);
   }
 
-  getMessagePeer(message) {
+  getMessageAuthorPeer(message) {
+    return message.from_id ? this.getPeerById(message.from_id) : message.to_id;
+  }
+
+  getMessageAuthorPeerId(message) {
+    return this.getPeerId(this.getMessageAuthorPeer(message));
+  }
+
+  getMessageDialogPeer(message) {
     if (message.to_id._ === 'peerUser') {
       return message.pFlags.out ? message.to_id : {_: 'peerUser', user_id: message.from_id};
     }
     return message.to_id;
   }
 
-  getMessagePeerId(message) {
-    return this.getPeerId(this.getMessagePeer(message));
+  getMessageDialogPeerId(message) {
+    return this.getPeerId(this.getMessageDialogPeer(message));
   }
 
   getPeerId(peer) {

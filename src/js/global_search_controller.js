@@ -130,7 +130,7 @@ const GlobalSearchController = new class {
       </div>
     `);
     for (const message of messages) {
-      const peer = MessagesApiManager.getMessagePeer(message);
+      const peer = MessagesApiManager.getMessageDialogPeer(message);
       const peerId = MessagesApiManager.getPeerId(peer);
       const title = MessagesApiManager.getPeerName(peer);
       const date = ChatsController.formatMessageDate(message);
