@@ -181,6 +181,9 @@
   overflow: visible;
   padding-bottom: 10px;
 }
+.messages_item-type-emoji.messages_item-out {
+  padding-bottom: 17px;
+}
 
 .messages_item_author {
   font-weight: 500;
@@ -249,7 +252,7 @@
   text-decoration: none !important;
 }
 .messages_item-type-emoji .messages_item_date {
-  bottom: -7px;
+  bottom: 0;
 }
 .messages_item-type-emoji:not(.messages_item-out) .messages_item_date {
   bottom: 0;

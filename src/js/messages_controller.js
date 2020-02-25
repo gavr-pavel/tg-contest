@@ -375,10 +375,12 @@ const MessagesController = new class {
   buildMessageEl(message, options) {
     const el = document.createElement('div');
 
+    const isOut = (message.pFlags.out || MessagesApiManager.getMessagePeerId(message) === App.getAuthUserId()) && message.from_id === App.getAuthUserId();
+
     if (message._ === 'message') {
       el.className = this.getClasses({
         'messages_item': true,
-        'messages_item-out': message.pFlags.out,
+        'messages_item-out': isOut,
         'messages_item-stick-to-next': options.stickToNext,
         'messages_item-stick-to-prev': options.stickToPrev,
       });
