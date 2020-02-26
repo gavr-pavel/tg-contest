@@ -5,10 +5,12 @@ import {MessagesApiManager} from './messages_api_manager';
 const PART_SIZE = 512 * 1024;
 const MAX_CONNECTIONS = 2;
 
-const DEBUG = 1;
+const DEBUG = 0;
 
 const FileApiManager = new class {
   blobUrls = new Map();
+
+  requests = new Map();
 
   queue = [];
 
@@ -60,11 +62,28 @@ const FileApiManager = new class {
     }
   }
 
-  async loadFile(location, dcId, {priority = 1, cache = false, mimeType = '', size = 0, onProgress, signal} = {}) {
+  async loadFile(location, dcId, options) {
+    const dbFileName = this.getDbFileName(location);
+    if (this.requests.has(dbFileName)) {
+      return this.requests.get(dbFileName);
+    }
+
+    const request = this.loadFileRequest(location, dcId, options);
+    this.requests.set(dbFileName, request);
+
+    request.finally(() => {
+      this.requests.delete(dbFileName);
+    });
+
+    return request;
+  }
+
+  async loadFileRequest(location, dcId, {priority = 1, cache = false, mimeType = '', size = 0, onProgress, signal} = {}) {
+    const dbFileName = this.getDbFileName(location);
     if (cache) {
       try {
         const start = Date.now();
-        const url = await this.getFromCache(location);
+        const url = await this.getFromCache(dbFileName);
         if (url) {
           DEBUG && console.log('[File download]', location, `got from cache in ${(Date.now() - start)} ms`);
           return url;
@@ -120,7 +139,7 @@ const FileApiManager = new class {
 
     if (cache) {
       try {
-        this.saveToCache(location, blob, url);
+        this.saveToCache(dbFileName, blob, url);
       } catch (e) {
         console.warn(e);
       }
@@ -152,9 +171,7 @@ const FileApiManager = new class {
     }
   }
 
-  async getFromCache(location) {
-    const dbFileName = this.getDbFileName(location);
-
+  async getFromCache(dbFileName) {
     if (this.blobUrls.has(dbFileName)) {
       return this.blobUrls.get(dbFileName);
     }
@@ -172,13 +189,11 @@ const FileApiManager = new class {
     }
   }
 
-  async saveToCache(location, blob, url) {
-    const dbFileName = this.getDbFileName(location);
-
+  async saveToCache(dbFileName, blob, url) {
     const db = await this.openDb();
     const request = db.transaction(['files'], 'readwrite')
         .objectStore('files')
-        .put(blob, this.getDbFileName(location));
+        .put(blob, dbFileName);
 
     this.blobUrls.set(dbFileName, url);
 

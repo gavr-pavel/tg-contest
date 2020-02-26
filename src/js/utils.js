@@ -39,8 +39,14 @@ class Emitter {
 function getDeferred() {
   const deferred = {};
   deferred.promise = new Promise((resolve, reject) => {
-    deferred.resolve = resolve;
-    deferred.reject = reject;
+    deferred.resolve = (...args) => {
+      resolve(...args);
+      return deferred.promise;
+    };
+    deferred.reject = (...args) => {
+      reject(...args);
+      return deferred.promise;
+    }
   });
   return deferred;
 }
