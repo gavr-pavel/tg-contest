@@ -597,7 +597,7 @@ const MessagesController = new class {
       const document = this.getAnimatedEmojiSticker(message.message);
       if (document) {
         const attributes = MediaApiManager.getDocumentAttributes(document);
-        return {type: 'sticker', object: document, sizes: document.thumbs, attributes};
+        return {type: 'sticker', object: document, sizes: document.thumbs, attributes, emoji: message.message};
       }
     }
     const media = message.media;
@@ -849,8 +849,8 @@ const MessagesController = new class {
       let maxW = 400;
       let maxH = 200;
       if (mediaThumbData.type === 'sticker') {
-        maxW = 150;
-        maxH = 150;
+        maxW = mediaThumbData.emoji ? 100 : 150;
+        maxH = mediaThumbData.emoji ? 100 : 150;
       }
       const photoSize = MediaApiManager.choosePhotoSize(mediaThumbData.sizes);
       [thumbWidth, thumbHeight] = this.getThumbWidthHeight(photoSize, maxW, maxH);
