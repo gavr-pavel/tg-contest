@@ -78,8 +78,9 @@ const MediaApiManager = new class {
 
           if (hasThumb) {
             result.type = 'image';
-            if (document.mime_type === 'application/x-tgsticker') { // todo animated sticker support
+            if (document.mime_type === 'application/x-tgsticker') {
               result.type = 'sticker';
+              result.animated = true;
             }
           }
           break;
@@ -102,7 +103,7 @@ const MediaApiManager = new class {
           result.mime_type = 'video/mp4';
           break;
         case 'sticker':
-          result.mime_type = 'image/webp';
+          result.mime_type = result.animated ? 'application/x-tgsticker' : 'image/webp';
           break;
         case 'audio':
           result.mime_type = 'audio/mpeg';

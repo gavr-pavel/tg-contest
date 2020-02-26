@@ -275,7 +275,7 @@ const ChatInfoController = new class {
   renderSharedLinks(messages) {
     const frag = document.createDocumentFragment();
     for (const message of messages) {
-      const thumb = MessagesController.getMessageMediaThumb(message.media);
+      const thumb = MessagesController.getMessageMediaThumb(message);
       const media = message.media;
 
       let title = '';
@@ -314,7 +314,7 @@ const ChatInfoController = new class {
   }
 
   async loadMediaThumb(message, thumbEl) {
-    const thumb = MessagesController.getMessageMediaThumb(message.media);
+    const thumb = MessagesController.getMessageMediaThumb(message);
     const photoSize = MediaApiManager.choosePhotoSize(thumb.sizes, 'm');
     const url = await FileApiManager.loadMessagePhoto(thumb.object, photoSize.type, {cache: true});
 

@@ -449,10 +449,9 @@ const MessagesController = new class {
   }
 
   renderMessageContent(el, message, options = {}) {
-    const mediaThumbData = this.getMessageMediaThumb(message.media);
-    const isStickerMessage = mediaThumbData && mediaThumbData.type === 'sticker';
     const isEmojiMessage = this.isEmojiMessage(message);
-    const isAnimatedEmojiMessage = 0;
+    const mediaThumbData = this.getMessageMediaThumb(message, isEmojiMessage);
+    const isStickerMessage = mediaThumbData && mediaThumbData.type === 'sticker';
     const authorName = !options.stickToPrev && !isStickerMessage && !isEmojiMessage ? this.formatAuthorName(message) : '';
 
     el.innerHTML = `
@@ -465,8 +464,7 @@ const MessagesController = new class {
 
     if (isStickerMessage) {
       el.classList.add('messages_item-type-sticker');
-    }
-    if (isEmojiMessage) {
+    } else if (isEmojiMessage) {
       el.classList.add('messages_item-type-emoji');
     }
 
@@ -490,6 +488,21 @@ const MessagesController = new class {
     return false;
   }
 
+  getAnimatedEmojiSticker(text) {
+    if (this.animatedEmojies) {
+      for (const pack of this.animatedEmojies.packs) {
+        if (pack.emoticon === text) {
+          const documentId = pack.documents[0];
+          for (const document of this.animatedEmojies.documents) {
+            if (document.id === documentId) {
+              return document;
+            }
+          }
+        }
+      }
+    }
+  }
+
   formatAuthorName(message) {
     if (message.from_id && this.dialog.peer._ !== 'peerUser') {
       const userId = message.from_id;
@@ -503,7 +516,11 @@ const MessagesController = new class {
     const thumb = event.currentTarget;
     const msgId = +thumb.dataset.messageId || +thumb.closest('.messages_item').dataset.id;
     const message = MessagesApiManager.messages.get(msgId);
-    const thumbData = this.getMessageMediaThumb(message.media);
+    const thumbData = this.getMessageMediaThumb(message);
+    if (!thumbData) {
+      // animated emoji
+      return;
+    }
     if (thumbData.type === 'photo') {
       MediaViewController.showPhoto(thumbData.object, thumb);
     } else if (thumbData.type === 'video') {
@@ -575,7 +592,15 @@ const MessagesController = new class {
         });
   };
 
-  getMessageMediaThumb(media) {
+  getMessageMediaThumb(message, isEmojiMessage = false) {
+    if (isEmojiMessage) {
+      const document = this.getAnimatedEmojiSticker(message.message);
+      if (document) {
+        const attributes = MediaApiManager.getDocumentAttributes(document);
+        return {type: 'sticker', object: document, sizes: document.thumbs, attributes};
+      }
+    }
+    const media = message.media;
     if (!media) {
       return;
     }
@@ -585,9 +610,9 @@ const MessagesController = new class {
         return {type: 'photo', object: photo, sizes: photo.sizes};
       case 'messageMediaDocument': {
         const document = media.document;
-        const docAttributes = MediaApiManager.getDocumentAttributes(document);
-        if (['video', 'gif', 'sticker'].includes(docAttributes.type)) {
-          return {type: docAttributes.type, object: document, sizes: document.thumbs};
+        const attributes = MediaApiManager.getDocumentAttributes(document);
+        if (['video', 'gif', 'sticker'].includes(attributes.type)) {
+          return {type: attributes.type, object: document, sizes: document.thumbs, attributes};
         }
       } break;
       case 'messageMediaWebPage': {
@@ -596,9 +621,9 @@ const MessagesController = new class {
           if (media.webpage.type === 'video' || media.webpage.type === 'gif') {
             return {type: media.webpage.type, object: document, sizes: document.thumbs};
           } else {
-            const docAttributes = MediaApiManager.getDocumentAttributes(document);
-            if (docAttributes.type === 'video' || docAttributes.type === 'gif') {
-              return {type: docAttributes.type, object: document, sizes: document.thumbs};
+            const attributes = MediaApiManager.getDocumentAttributes(document);
+            if (attributes.type === 'video' || attributes.type === 'gif') {
+              return {type: attributes.type, object: document, sizes: document.thumbs, attributes};
             }
           }
         }
@@ -610,11 +635,11 @@ const MessagesController = new class {
     }
   }
 
-  getThumbWidthHeight(thumb) {
-    let h = 200;
+  getThumbWidthHeight(thumb, maxW = 400, maxH = 200) {
+    let h = maxH;
     let w = Math.round(h * (thumb.w / thumb.h));
-    if (w > 400) {
-      w = 400;
+    if (w > maxW) {
+      w = maxW;
       h = Math.round(w / (thumb.w / thumb.h));
     }
     return [w, h];
@@ -636,19 +661,24 @@ const MessagesController = new class {
       thumbEl.innerHTML = `<img class="messages_item_media_thumb_image messages_item_media_thumb_image-blurred" src="${url}">`;
     }
 
-    try {
-      const photoSize = MediaApiManager.choosePhotoSize(sizes, 'm');
-      let url;
-      if (MediaApiManager.isCachedPhotoSize(photoSize)) {
-        url = MediaApiManager.getCachedPhotoSize(photoSize);
-      } else if (mediaThumbData.object._ === 'document') {
-        url = await FileApiManager.loadMessageDocumentThumb(mediaThumbData.object, photoSize.type, {cache: true});
-      } else {
-        url = await FileApiManager.loadMessagePhoto(mediaThumbData.object, photoSize.type, {cache: true});
+    if (mediaThumbData.type === 'sticker' && mediaThumbData.attributes.animated) {
+      const url = await FileApiManager.loadMessageDocument(mediaThumbData.object, {cache: true});
+      thumbEl.innerHTML = `<tgs-player autoplay src="${url}" class="messages_item_media_thumb_image"></tgs-player>`;
+    } else {
+      try {
+        const photoSize = MediaApiManager.choosePhotoSize(sizes, 'm');
+        let url;
+        if (MediaApiManager.isCachedPhotoSize(photoSize)) {
+          url = MediaApiManager.getCachedPhotoSize(photoSize);
+        } else if (mediaThumbData.object._ === 'document') {
+          url = await FileApiManager.loadMessageDocumentThumb(mediaThumbData.object, photoSize.type, {cache: true});
+        } else {
+          url = await FileApiManager.loadMessagePhoto(mediaThumbData.object, photoSize.type, {cache: true});
+        }
+        thumbEl.innerHTML = `<img class="messages_item_media_thumb_image" src="${url}">`;
+      } catch (error) {
+        console.log('thumb load error', error);
       }
-      thumbEl.innerHTML = `<img class="messages_item_media_thumb_image" src="${url}">`;
-    } catch (error) {
-      console.log('thumb load error', error);
     }
   }
 
@@ -656,6 +686,9 @@ const MessagesController = new class {
     const media = message.media;
     const caption = this.formatText(message);
     if (!media) {
+      if (mediaThumbData) {
+        return this.formatThumb(mediaThumbData, caption);
+      }
       return caption;
     }
     switch (media._) {
@@ -726,27 +759,20 @@ const MessagesController = new class {
   formatWebPage(media, mediaThumbData) {
     const webpage = media.webpage;
     if (webpage._ === 'webPage') {
-      return `
-        <!--a href="${encodeURI(webpage.url)}" target="_blank">${webpage.display_url}</a-->
-        <div class="webpage">${this.formatWebpageContent(webpage, mediaThumbData)}</div>
-      `;
+      let content = this.formatThumb(mediaThumbData);
+      if (webpage.site_name) {
+        content += `<a class="wepbage_site_name" href="${encodeURI(webpage.url)}" target="_blank">${encodeHtmlEntities(webpage.site_name)}</a>`;
+      }
+      if (webpage.title) {
+        content += `<div class="wepbage_title">${encodeHtmlEntities(webpage.title)}</div>`;
+      }
+      if (webpage.description) {
+        const description = cutText(webpage.description, 300, 255);
+        content += `<div class="webpage_description">${this.replaceLineBreaks(encodeHtmlEntities(description))}</div>`;
+      }
+      return `<div class="webpage">${content}</div>`;
     }
     return '';
-  }
-
-  formatWebpageContent(webpage, mediaThumbData) {
-    let result = this.formatThumb(mediaThumbData);
-    if (webpage.site_name) {
-      result += `<a class="wepbage_site_name" href="${encodeURI(webpage.url)}" target="_blank">${encodeHtmlEntities(webpage.site_name)}</a>`;
-    }
-    if (webpage.title) {
-      result += `<div class="wepbage_title">${encodeHtmlEntities(webpage.title)}</div>`;
-    }
-    if (webpage.description) {
-      const description = cutText(webpage.description, 300, 255);
-      result += `<div class="webpage_description">${this.replaceLineBreaks(encodeHtmlEntities(description))}</div>`;
-    }
-    return result;
   }
 
   replaceLineBreaks(text = '') {
@@ -817,24 +843,26 @@ const MessagesController = new class {
 
   formatThumb(mediaThumbData, caption) {
     let html = '';
-
     let thumbWidth;
     let thumbHeight;
-
     if (mediaThumbData) {
+      let maxW = 400;
+      let maxH = 200;
+      if (mediaThumbData.type === 'sticker') {
+        maxW = 150;
+        maxH = 150;
+      }
       const photoSize = MediaApiManager.choosePhotoSize(mediaThumbData.sizes);
-      [thumbWidth, thumbHeight] = this.getThumbWidthHeight(photoSize);
+      [thumbWidth, thumbHeight] = this.getThumbWidthHeight(photoSize, maxW, maxH);
       if (caption && caption.length > 100 && thumbWidth < 300) {
         thumbWidth = 300;
       }
       html += `<div class="messages_item_media_thumb messages_item_media_thumb-${mediaThumbData.type}" style="width:${thumbWidth}px;height:${thumbHeight}px;"></div>`;
     }
-
-    if (caption) {
+    if (caption && mediaThumbData.type !== 'sticker') {
       const cssWidth = thumbWidth ? `width:${thumbWidth}px;` : '';
       html += `<div class="messages_item_media_caption" style="${cssWidth}">${caption}</div>`;
     }
-
     return html;
   }
 
@@ -849,7 +877,6 @@ const MessagesController = new class {
 
   formatMessageDateFull(messageDate) {
     const todayMidnight = new Date().setHours(0, 0, 0, 0) / 1000;
-
     let dateText;
     if (messageDate > todayMidnight) {
       dateText = 'Today';
@@ -863,7 +890,6 @@ const MessagesController = new class {
         dateText += ', ' + date.getFullYear();
       }
     }
-
     return dateText;
   }
 
