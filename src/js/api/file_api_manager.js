@@ -5,6 +5,8 @@ import {MessagesApiManager} from './messages_api_manager';
 const PART_SIZE = 512 * 1024;
 const MAX_CONNECTIONS = 2;
 
+const DEBUG = 1;
+
 const FileApiManager = new class {
   blobUrls = new Map();
 
@@ -61,8 +63,10 @@ const FileApiManager = new class {
   async loadFile(location, dcId, {priority = 1, cache = false, mimeType = '', size = 0, onProgress, signal} = {}) {
     if (cache) {
       try {
+        const start = Date.now();
         const url = await this.getFromCache(location);
         if (url) {
+          DEBUG && console.log('[File download]', location, `got from cache in ${(Date.now() - start)} ms`);
           return url;
         }
       } catch (e) {
@@ -80,7 +84,10 @@ const FileApiManager = new class {
     }
 
     try {
+      const queueStart = Date.now();
       await this.checkQueue(priority);
+      DEBUG && console.log('[File download]', location, `waited queue for ${(Date.now() - queueStart)}ms`);
+      const loadStart = Date.now();
       for (let offset = 0, loaded = 0; ; offset += PART_SIZE) {
         const res = await apiConnection.callMethod('upload.getFile', {
           location,
@@ -102,6 +109,7 @@ const FileApiManager = new class {
           break;
         }
       }
+      DEBUG && console.log('[File download]', location, `loaded for ${(Date.now() - loadStart)}ms`);
     } finally {
       this.queueDone();
       this.connectionDone(apiConnection);

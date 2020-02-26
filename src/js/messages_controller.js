@@ -662,7 +662,7 @@ const MessagesController = new class {
     }
 
     if (mediaThumbData.type === 'sticker' && mediaThumbData.attributes.animated) {
-      const url = await FileApiManager.loadMessageDocument(mediaThumbData.object, {cache: true});
+      const url = await FileApiManager.loadMessageDocument(mediaThumbData.object);
       thumbEl.innerHTML = `<tgs-player autoplay src="${url}" class="messages_item_media_thumb_image"></tgs-player>`;
     } else {
       try {
