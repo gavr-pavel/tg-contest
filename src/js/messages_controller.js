@@ -5,7 +5,7 @@ import {
   encodeHtmlEntities,
   formatDateFull,
   formatDateRelative,
-  formatTime
+  formatTime, Storage
 } from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple';
@@ -37,6 +37,8 @@ const MessagesController = new class {
     this.initPlaceholder();
 
     this.initBackground();
+
+    this.loadAnimatedEmojiStickerSet();
 
     MessagesFormController.init();
 
@@ -273,7 +275,11 @@ const MessagesController = new class {
   onScroll = () => {
     const scrollContainer = this.scrollContainer;
     const scrollTop = scrollContainer.scrollTop;
+    const prevScrolling = !!this.scrolling;
     this.scrolling = scrollTop < scrollContainer.scrollHeight - scrollContainer.offsetHeight;
+    if (this.scrolling !== prevScrolling) {
+      this.scrollContainer.classList.toggle('messages_scroll-scrolling', this.scrolling);
+    }
     if (!this.loading && !this.noMore && scrollTop < 150) {
       this.loadMore();
     }
@@ -446,6 +452,7 @@ const MessagesController = new class {
     const mediaThumbData = this.getMessageMediaThumb(message.media);
     const isStickerMessage = mediaThumbData && mediaThumbData.type === 'sticker';
     const isEmojiMessage = this.isEmojiMessage(message);
+    const isAnimatedEmojiMessage = 0;
     const authorName = !options.stickToPrev && !isStickerMessage && !isEmojiMessage ? this.formatAuthorName(message) : '';
 
     el.innerHTML = `
@@ -728,22 +735,18 @@ const MessagesController = new class {
   }
 
   formatWebpageContent(webpage, mediaThumbData) {
-    const formattedThumb = this.formatThumb(mediaThumbData);
-
-    switch (webpage.type) {
-      case 'telegram_message':
-      case 'article':
-        return `
-          ${formattedThumb}
-          <a class="wepbage_site_name" href="${encodeURI(webpage.url)}" target="_blank">${encodeHtmlEntities(webpage.site_name)}</a>
-          <div class="wepbage_title">${encodeHtmlEntities(webpage.title || '')}</div>
-          <div class="webpage_description">${this.replaceLineBreaks(encodeHtmlEntities(webpage.description))}</div>
-        `;
+    let result = this.formatThumb(mediaThumbData);
+    if (webpage.site_name) {
+      result += `<a class="wepbage_site_name" href="${encodeURI(webpage.url)}" target="_blank">${encodeHtmlEntities(webpage.site_name)}</a>`;
     }
-    if (formattedThumb) {
-      return formattedThumb;
+    if (webpage.title) {
+      result += `<div class="wepbage_title">${encodeHtmlEntities(webpage.title)}</div>`;
     }
-    return '[' + webpage.type + ']';
+    if (webpage.description) {
+      const description = cutText(webpage.description, 300, 255);
+      result += `<div class="webpage_description">${this.replaceLineBreaks(encodeHtmlEntities(description))}</div>`;
+    }
+    return result;
   }
 
   replaceLineBreaks(text = '') {
@@ -1005,6 +1008,14 @@ const MessagesController = new class {
         $('.messages_container').style.backgroundImage = `url(${url})`;
       });
     };
+  }
+
+  async loadAnimatedEmojiStickerSet() {
+    if (!this.animatedEmojies) {
+      this.animatedEmojies = await ApiClient.callMethod('messages.getStickerSet', {
+        stickerset: {_: 'inputStickerSetAnimatedEmoji'}
+      });
+    }
   }
 };
 

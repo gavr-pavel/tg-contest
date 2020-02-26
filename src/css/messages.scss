@@ -79,6 +79,9 @@
   height: 100%;
   overflow: auto;
   transform: translateZ(0);
+}
+
+.messages_scroll-scrolling {
   mask-image: linear-gradient(to top, transparent 5px, #000 20px);
 }
 
