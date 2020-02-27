@@ -5,7 +5,7 @@ import {MessagesApiManager} from './messages_api_manager';
 const PART_SIZE = 512 * 1024;
 const MAX_CONNECTIONS = 2;
 
-const DEBUG = 1;
+const DEBUG = 0;
 
 const FileApiManager = new class {
   blobUrls = new Map();
