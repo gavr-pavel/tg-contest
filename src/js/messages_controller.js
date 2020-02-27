@@ -517,6 +517,10 @@ const MessagesController = new class {
     const msgId = +thumb.dataset.messageId || +thumb.closest('.messages_item').dataset.id;
     const message = MessagesApiManager.messages.get(msgId);
     const thumbData = this.getMessageMediaThumb(message);
+    if (thumb.firstElementChild.tagName === 'TGS-PLAYER') {
+      thumb.firstElementChild.stop();
+      thumb.firstElementChild.play();
+    }
     if (!thumbData) {
       // animated emoji
       return;
