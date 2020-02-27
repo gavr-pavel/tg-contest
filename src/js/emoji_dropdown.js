@@ -106,7 +106,7 @@ const EmojiDropdown = new class {
     bottomNavContainer.addEventListener('mousewheel', this.onStickersNavScroll);
   }
 
-  async initStickerSet(set, container, bottomButton, load = false) {
+  async initStickerSet(set, container, bottomButton, preload = false) {
     const fullSet = await ApiClient.callMethod('messages.getStickerSet', {
       stickerset: {_: 'inputStickerSetID', id: set.id, access_hash: set.access_hash}
     });
@@ -119,8 +119,8 @@ const EmojiDropdown = new class {
     });
     container.appendChild(frag);
 
-    if (load) {
-      this.loadStickersList(container, fullSet);
+    if (preload) {
+      this.loadStickersList(container, fullSet, true);
     }
 
     this.loadStickerSetThumb(bottomButton, fullSet);
@@ -139,19 +139,19 @@ const EmojiDropdown = new class {
     container.scrollLeft += delta;
   };
 
-  loadStickersList(container, fullSet) {
+  loadStickersList(container, fullSet, preload = false) {
     if (container.dataset.loaded) {
       return;
     }
     container.dataset.loaded = 1;
     for (const el of container.children) {
       const document = fullSet.documents[el.dataset.stickerIndex];
-      this.loadStickerThumb(el, document);
+      this.loadStickerThumb(el, document, preload);
     }
   }
 
-  async loadStickerThumb(el, document) {
-    const url = await FileApiManager.loadMessageDocumentThumb(document, 'm', {cache: true});
+  async loadStickerThumb(el, document, preload) {
+    const url = await FileApiManager.loadMessageDocumentThumb(document, 'm', {cache: true, priority: preload ? 0 : 1});
     el.innerHTML = `<img class="emoji_dropdown_sticker_img" src="${url}">`;
   }
 

@@ -89,7 +89,7 @@ const MediaViewController = new class {
     thumb.appendChild(progress);
     thumb.classList.add('messages_item_media_thumb-loading');
 
-    const done = () => {
+    this.state.onDone = () => {
       progress.remove();
       thumb.classList.remove('messages_item_media_thumb-loading');
     };
@@ -97,17 +97,18 @@ const MediaViewController = new class {
     this.state.onProgress = (loaded) => {
       const percent = Math.round(Math.max(0, Math.min(1, loaded / totalSize)) * 100);
       if (percent === 100) {
-        done();
+        this.state.onDone();
       } else {
         path.style.strokeDasharray = `${percent}, 100`;
       }
     };
 
-    this.state.abortController.signal.addEventListener('abort', done);
+    this.state.abortController.signal.addEventListener('abort', this.state.onDone);
   }
 
   onLoaded(url) {
     this.container.hidden = false;
+    this.state.onDone();
     this.state.url = url;
     document.addEventListener('keyup', this.onKeyUp);
   }

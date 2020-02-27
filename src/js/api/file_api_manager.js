@@ -5,7 +5,7 @@ import {MessagesApiManager} from './messages_api_manager';
 const PART_SIZE = 512 * 1024;
 const MAX_CONNECTIONS = 2;
 
-const DEBUG = 0;
+const DEBUG = 1;
 
 const FileApiManager = new class {
   blobUrls = new Map();
@@ -215,7 +215,7 @@ const FileApiManager = new class {
   }
 
   getDbFileName(location) {
-    return location._ + (location.id || location.volume_id + location.local_id);
+    return location._ + (location.id || location.volume_id + location.local_id) + (location.thumb_size  || '');
   }
 
   getDbRequestPromise(request) {
