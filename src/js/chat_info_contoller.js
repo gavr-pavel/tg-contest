@@ -316,14 +316,14 @@ const ChatInfoController = new class {
   async loadMediaThumb(message, thumbEl) {
     const thumb = MessagesController.getMessageMediaThumb(message);
     const photoSize = MediaApiManager.choosePhotoSize(thumb.sizes, 'm');
-    const url = await FileApiManager.loadMessagePhoto(thumb.object, photoSize.type);
+    const url = await FileApiManager.loadPhoto(thumb.object, photoSize.type);
 
     thumbEl.style.backgroundImage = `url(${url})`;
   }
 
   async loadDocThumb(document, thumbEl) {
     const photoSize = MediaApiManager.choosePhotoSize(document.thumbs, 'm');
-    const url = await FileApiManager.loadMessageDocumentThumb(document, photoSize.type);
+    const url = await FileApiManager.loadDocumentThumb(document, photoSize.type);
 
     thumbEl.classList.add('chat_info_shared_docs_item_icon-thumb');
     thumbEl.style.backgroundImage = `url(${url})`;
@@ -331,7 +331,7 @@ const ChatInfoController = new class {
 
   async loadLinkThumb(thumb, thumbEl) {
     const photoSize = MediaApiManager.choosePhotoSize(thumb.sizes, 'm');
-    const url = await FileApiManager.loadMessagePhoto(thumb.object, photoSize.type);
+    const url = await FileApiManager.loadPhoto(thumb.object, photoSize.type);
 
     thumbEl.style.backgroundImage = `url(${url})`;
   }

@@ -36,7 +36,7 @@ const MediaViewController = new class {
     const abortController = this.state.abortController;
     const onProgress = this.state.onProgress;
 
-    FileApiManager.loadMessagePhoto(photo, photoSize.type, {onProgress, signal: abortController.signal})
+    FileApiManager.loadPhoto(photo, photoSize.type, {onProgress, signal: abortController.signal})
         .then(url => {
           this.dom.content.innerHTML = `<img class="media_view_content_image" src="${url}">`;
           this.onLoaded(url);
@@ -48,7 +48,7 @@ const MediaViewController = new class {
     const abortController = this.state.abortController;
     const onProgress = this.state.onProgress;
 
-    FileApiManager.loadMessageDocument(document, {onProgress, signal: abortController.signal})
+    FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
         .then(url => {
           this.dom.content.innerHTML = `<video class="media_view_content_gif" src="${url}" autoplay loop></video>`;
           this.onLoaded(url);
@@ -60,7 +60,7 @@ const MediaViewController = new class {
     const abortController = this.state.abortController;
     const onProgress = this.state.onProgress;
 
-    FileApiManager.loadMessageDocument(document, {onProgress, signal: abortController.signal})
+    FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
         .then(url => {
           this.dom.content.innerHTML = `<video class="media_view_content_video" src="${url}" autoplay controls></video>`;
           this.onLoaded(url);

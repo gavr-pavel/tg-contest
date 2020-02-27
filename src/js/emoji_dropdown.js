@@ -151,7 +151,7 @@ const EmojiDropdown = new class {
   }
 
   async loadStickerThumb(el, document, preload) {
-    const url = await FileApiManager.loadMessageDocumentThumb(document, 'm', {cache: true, priority: preload ? 0 : 1});
+    const url = await FileApiManager.loadDocumentThumb(document, 'm', {cache: true, priority: preload ? 0 : 1});
     el.innerHTML = `<img class="emoji_dropdown_sticker_img" src="${url}">`;
   }
 

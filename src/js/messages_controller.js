@@ -584,7 +584,7 @@ const MessagesController = new class {
       progressPath = $('.document_icon_progress_path', thumb);
     }
 
-    FileApiManager.loadMessageDocument(document, {onProgress, signal: abortController.signal})
+    FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
         .then(onDone)
         .catch((error) => {
           console.error(error);
@@ -662,7 +662,7 @@ const MessagesController = new class {
     }
 
     if (mediaThumbData.type === 'sticker' && mediaThumbData.attributes.animated) {
-      const url = await FileApiManager.loadMessageDocument(mediaThumbData.object, {cache: true});
+      const url = await FileApiManager.loadDocument(mediaThumbData.object, {cache: true});
       thumbEl.innerHTML = `<tgs-player autoplay src="${url}" class="messages_item_media_thumb_image"></tgs-player>`;
     } else {
       try {
@@ -671,9 +671,9 @@ const MessagesController = new class {
         if (MediaApiManager.isCachedPhotoSize(photoSize)) {
           url = MediaApiManager.getCachedPhotoSize(photoSize);
         } else if (mediaThumbData.object._ === 'document') {
-          url = await FileApiManager.loadMessageDocumentThumb(mediaThumbData.object, photoSize.type);
+          url = await FileApiManager.loadDocumentThumb(mediaThumbData.object, photoSize.type);
         } else {
-          url = await FileApiManager.loadMessagePhoto(mediaThumbData.object, photoSize.type);
+          url = await FileApiManager.loadPhoto(mediaThumbData.object, photoSize.type);
         }
         thumbEl.innerHTML = `<img class="messages_item_media_thumb_image" src="${url}">`;
       } catch (error) {

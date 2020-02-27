@@ -22,7 +22,7 @@ const FileApiManager = new class {
     return URL.createObjectURL(blob);
   }
 
-  checkQueue(priority) {
+  queueWait(priority) {
     if (this.inProgress++ < MAX_CONNECTIONS) {
       return Promise.resolve();
     }
@@ -106,18 +106,18 @@ const FileApiManager = new class {
       }
       try {
         const queueStart = Date.now();
-        await this.checkQueue(priority);
+        await this.queueWait(priority);
         DEBUG && console.log('[File download]', location, `waited queue for ${(Date.now() - queueStart)}ms`);
         const loadStart = Date.now();
         for (let offset = 0, loaded = 0; ; offset += PART_SIZE) {
+          if (aborted) {
+            throw new Error('File download aborted');
+          }
           const res = await apiConnection.callMethod('upload.getFile', {
             location,
             offset,
             limit: PART_SIZE
           });
-          if (aborted) {
-            throw new Error('File download aborted');
-          }
           parts.push(new Blob([res.bytes]));
           loaded += res.bytes.byteLength;
           if (onProgress) {
@@ -241,7 +241,7 @@ const FileApiManager = new class {
     return this.loadFile(location, dcId, options);
   }
 
-  loadMessagePhoto(photo, sizeType, options = {}) {
+  loadPhoto(photo, sizeType, options = {}) {
     const location = {
       _: 'inputPhotoFileLocation',
       id: photo.id,
@@ -252,7 +252,7 @@ const FileApiManager = new class {
     return this.loadFile(location, photo.dc_id, options);
   }
 
-  loadMessageDocumentThumb(document, size, options = {}) {
+  loadDocumentThumb(document, size, options = {}) {
     const location = {
       _: 'inputDocumentFileLocation',
       id: document.id,
@@ -263,7 +263,7 @@ const FileApiManager = new class {
     return this.loadFile(location, document.dc_id, options);
   }
 
-  loadMessageDocument(document, options = {}) {
+  loadDocument(document, options = {}) {
     const location = {
       _: 'inputDocumentFileLocation',
       id: document.id,
@@ -299,17 +299,17 @@ const FileApiManager = new class {
     }
 
     try {
-      await this.checkQueue(100);
+      await this.queueWait(100);
       for (let partIndex = 0, offset = 0; offset < blob.size; partIndex++, offset += partSize) {
+        if (aborted) {
+          throw new Error('File upload aborted');
+        }
         await apiConnection.callMethod(isBigFile ? 'upload.saveBigFilePart' : 'upload.saveFilePart', {
           file_id: randomId,
           file_part: partIndex,
           file_total_parts: totalParts,
           bytes: await blob.slice(offset, offset + partSize).arrayBuffer()
         });
-        if (aborted) {
-          throw new Error('File upload aborted');
-        }
         if (onProgress) {
           onProgress(Math.min(blob.size, offset + partSize));
         }
