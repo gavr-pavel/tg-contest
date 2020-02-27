@@ -671,9 +671,9 @@ const MessagesController = new class {
         if (MediaApiManager.isCachedPhotoSize(photoSize)) {
           url = MediaApiManager.getCachedPhotoSize(photoSize);
         } else if (mediaThumbData.object._ === 'document') {
-          url = await FileApiManager.loadMessageDocumentThumb(mediaThumbData.object, photoSize.type, {cache: true});
+          url = await FileApiManager.loadMessageDocumentThumb(mediaThumbData.object, photoSize.type);
         } else {
-          url = await FileApiManager.loadMessagePhoto(mediaThumbData.object, photoSize.type, {cache: true});
+          url = await FileApiManager.loadMessagePhoto(mediaThumbData.object, photoSize.type);
         }
         thumbEl.innerHTML = `<img class="messages_item_media_thumb_image" src="${url}">`;
       } catch (error) {

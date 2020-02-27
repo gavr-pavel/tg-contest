@@ -80,70 +80,74 @@ const FileApiManager = new class {
 
   async loadFileRequest(location, dcId, {priority = 1, cache = false, mimeType = '', size = 0, onProgress, signal} = {}) {
     const dbFileName = this.getDbFileName(location);
+
+    if (this.blobUrls.has(dbFileName)) {
+      return this.blobUrls.get(dbFileName);
+    }
+
+    let blob;
+
     if (cache) {
       try {
         const start = Date.now();
-        const url = await this.getFromCache(dbFileName);
-        if (url) {
-          DEBUG && console.log('[File download]', location, `got from cache in ${(Date.now() - start)} ms`);
-          return url;
-        }
+        blob = await this.getFromCache(dbFileName);
+        DEBUG && console.log('[File download]', location, `got cache result in ${(Date.now() - start)} ms`);
       } catch (e) {
         console.warn(e);
       }
     }
 
-    const parts = [];
-
-    const apiConnection = this.getConnection(dcId);
-
-    let aborted = false;
-    if (signal) {
-      signal.addEventListener('abort', () => aborted = true);
-    }
-
-    try {
-      const queueStart = Date.now();
-      await this.checkQueue(priority);
-      DEBUG && console.log('[File download]', location, `waited queue for ${(Date.now() - queueStart)}ms`);
-      const loadStart = Date.now();
-      for (let offset = 0, loaded = 0; ; offset += PART_SIZE) {
-        const res = await apiConnection.callMethod('upload.getFile', {
-          location,
-          offset,
-          limit: PART_SIZE
-        });
-        if (aborted) {
-          throw new Error('File download aborted');
+    if (!blob) {
+      const parts = [];
+      const apiConnection = this.getConnection(dcId);
+      let aborted = false;
+      if (signal) {
+        signal.addEventListener('abort', () => aborted = true);
+      }
+      try {
+        const queueStart = Date.now();
+        await this.checkQueue(priority);
+        DEBUG && console.log('[File download]', location, `waited queue for ${(Date.now() - queueStart)}ms`);
+        const loadStart = Date.now();
+        for (let offset = 0, loaded = 0; ; offset += PART_SIZE) {
+          const res = await apiConnection.callMethod('upload.getFile', {
+            location,
+            offset,
+            limit: PART_SIZE
+          });
+          if (aborted) {
+            throw new Error('File download aborted');
+          }
+          parts.push(new Blob([res.bytes]));
+          loaded += res.bytes.byteLength;
+          if (onProgress) {
+            onProgress(loaded);
+          }
+          if (!mimeType) {
+            mimeType = this.getMimeType(res.type);
+          }
+          if (size && loaded >= size || !size && res.bytes.byteLength < PART_SIZE) {
+            break;
+          }
         }
-        parts.push(new Blob([res.bytes]));
-        loaded += res.bytes.byteLength;
-        if (onProgress) {
-          onProgress(loaded);
-        }
-        if (!mimeType) {
-          mimeType = this.getMimeType(res.type);
-        }
-        if (size && loaded >= size || !size && res.bytes.byteLength < PART_SIZE) {
-          break;
+        DEBUG && console.log('[File download]', location, `loaded for ${(Date.now() - loadStart)}ms`);
+      } finally {
+        this.queueDone();
+        this.connectionDone(apiConnection);
+      }
+      blob = new Blob(parts, {type: mimeType});
+      if (cache) {
+        try {
+          this.saveToCache(dbFileName, blob);
+        } catch (e) {
+          console.warn(e);
         }
       }
-      DEBUG && console.log('[File download]', location, `loaded for ${(Date.now() - loadStart)}ms`);
-    } finally {
-      this.queueDone();
-      this.connectionDone(apiConnection);
     }
 
-    const blob = new Blob(parts, {type: mimeType});
     const url = FileApiManager.getBlobUrl(blob);
 
-    if (cache) {
-      try {
-        this.saveToCache(dbFileName, blob, url);
-      } catch (e) {
-        console.warn(e);
-      }
-    }
+    this.blobUrls.set(dbFileName, url);
 
     return url;
   }
@@ -172,48 +176,40 @@ const FileApiManager = new class {
   }
 
   async getFromCache(dbFileName) {
-    if (this.blobUrls.has(dbFileName)) {
-      return this.blobUrls.get(dbFileName);
-    }
-
     const db = await this.openDb();
     const request = db.transaction(['files'], 'readonly')
         .objectStore('files')
         .get(dbFileName);
 
-    const blob = await this.getDbRequestPromise(request);
-    if (blob) {
-      const url = this.getBlobUrl(blob);
-      this.blobUrls.set(dbFileName, url);
-      return url;
-    }
+    return this.getDbRequestPromise(request);
   }
 
-  async saveToCache(dbFileName, blob, url) {
+  async saveToCache(dbFileName, blob) {
     const db = await this.openDb();
     const request = db.transaction(['files'], 'readwrite')
         .objectStore('files')
         .put(blob, dbFileName);
 
-    this.blobUrls.set(dbFileName, url);
-
     return this.getDbRequestPromise(request);
   }
 
-  openDb() {
+  async openDb() {
+    if (this.db) {
+      return this.db;
+    }
     return new Promise((resolve, reject) => {
       const request = indexedDB.open('telegram_cache', 1);
       request.onerror = (event) => {
         reject();
       };
       request.onsuccess = (event) => {
-        const db = event.target.result;
-        resolve(db);
+        this.db = event.target.result;
+        resolve(this.db);
       };
       request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        db.createObjectStore('files');
-        resolve(this.openDb());
+        this.db = event.target.result;
+        this.db.createObjectStore('files');
+        resolve(this.db);
       };
     });
   }
