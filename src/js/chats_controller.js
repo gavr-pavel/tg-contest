@@ -300,7 +300,7 @@ const ChatsController = new class {
     }
     let text = encodeHtmlEntities(message.message);
     if (!text) {
-      const label = this.getMessageContentTypeLabel(message.media);
+      const label = MessagesController.getMessageContentTypeLabel(message.media);
       text = `<span class="chats_item_message_content_label">${label}</span>`;
     }
     if (message.to_id._ === 'peerChannel' && message.from_id) {
@@ -311,48 +311,6 @@ const ChatsController = new class {
       text = `<span class="chats_item_message_author_label">You:</span> ${text}`;
     }
     return text;
-  }
-
-  getMessageContentTypeLabel(media) {
-    if (!media) {
-      return '';
-    }
-    switch (media._) {
-      case 'messageMediaPhoto':
-        return 'Photo';
-      case 'messageMediaDocument':
-        return this.getMessageContentDocumentLabel(media.document);
-      case 'messageMediaWebPage':
-        return 'Link';
-      case 'messageMediaPoll':
-        return 'Poll';
-      case 'messageMediaGeo':
-        return 'Geo';
-      case 'messageMediaGeoLive':
-        return 'Live Geo';
-      case 'messageMediaContact':
-        return 'Contact';
-      case 'messageMediaUnsupported':
-        return 'Message unsupported';
-    }
-    return '';
-  }
-
-  getMessageContentDocumentLabel(document) {
-    const attrs = MediaApiManager.getDocumentAttributes(document);
-    switch (attrs.type) {
-      case 'video':
-        return 'Video';
-      case 'gif':
-        return 'Gif';
-      case 'sticker':
-        return 'Sticker' + (attrs.stickerEmoji ? ' ' + attrs.stickerEmoji : '');
-      case 'voice':
-        return 'Voice';
-      case 'audio':
-        return 'Audio';
-    }
-    return 'File';
   }
 
   updateChatStatus(el, userStatus) {

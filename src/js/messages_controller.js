@@ -724,11 +724,13 @@ const MessagesController = new class {
     if (message) {
       const authorPeer = MessagesApiManager.getMessageAuthorPeer(message);
       const authorName = MessagesApiManager.getPeerName(authorPeer);
-      const shortText = cutText(message.message, 110, 100);
+      const shortText = message.message ? cutText(message.message, 110, 100) : this.getMessageContentTypeLabel(message.media);
       return `
-        <div class="message_reply_to_content">
-          <div class="message_reply_to_author">${authorName}</div>
-          <div class="message_reply_to_text">${encodeHtmlEntities(shortText)}</div>
+        <div class="message_reply_to_wrap">
+          <div class="message_reply_to_content">
+            <div class="message_reply_to_author">${authorName}</div>
+            <div class="message_reply_to_text">${encodeHtmlEntities(shortText)}</div>
+          </div>
         </div>
       `;
     }
@@ -965,6 +967,48 @@ const MessagesController = new class {
 
   formatMessageDateTime(date) {
     return `${this.formatMessageDateFull(date)} at ${formatTime(date)}`;
+  }
+
+  getMessageContentTypeLabel(media) {
+    if (!media) {
+      return '';
+    }
+    switch (media._) {
+      case 'messageMediaPhoto':
+        return 'Photo';
+      case 'messageMediaDocument':
+        return this.getMessageContentDocumentLabel(media.document);
+      case 'messageMediaWebPage':
+        return 'Link';
+      case 'messageMediaPoll':
+        return 'Poll';
+      case 'messageMediaGeo':
+        return 'Geo';
+      case 'messageMediaGeoLive':
+        return 'Live Geo';
+      case 'messageMediaContact':
+        return 'Contact';
+      case 'messageMediaUnsupported':
+        return 'Message unsupported';
+    }
+    return '';
+  }
+
+  getMessageContentDocumentLabel(document) {
+    const attrs = MediaApiManager.getDocumentAttributes(document);
+    switch (attrs.type) {
+      case 'video':
+        return 'Video';
+      case 'gif':
+        return 'Gif';
+      case 'sticker':
+        return 'Sticker' + (attrs.stickerEmoji ? ' ' + attrs.stickerEmoji : '');
+      case 'voice':
+        return 'Voice';
+      case 'audio':
+        return 'Audio';
+    }
+    return 'File';
   }
 
   getServiceMessageText(message) {

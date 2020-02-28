@@ -192,6 +192,8 @@
 .message-type-emoji {
   background: none;
   box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
 }
 
 .message-type-emoji {
@@ -374,11 +376,11 @@
 .webpage_content,
 .message_forwarded_content,
 .message_reply_to_content {
-  border-left: 2px solid #41A0EA;
+  border-left: 2px solid $primary_blue_color;
   padding-left: 8px;
   margin-top: 5px;
   .message-out & {
-    border-color: #65AB5A;
+    border-color: $primary_green_color;
   }
 }
 
@@ -395,19 +397,48 @@
   margin-top: 3px;
 }
 
+.message_reply_to_wrap {
+  .message-type-sticker &,
+  .message-type-emoji & {
+    position: absolute;
+    left: 100%;
+    background: #fff;
+    padding: 5px 10px;
+    border: 1px solid #DADCE0;
+    border-radius: 10px;
+  }
+  .message-type-sticker.message-out &,
+  .message-type-emoji.message-out & {
+    left: auto;
+    right: 100%;
+  }
+}
+
 .message_reply_to_content {
   margin-bottom: 5px;
   white-space: nowrap;
   cursor: pointer;
+  .message-type-sticker.message-out &,
+  .message-type-emoji.message-out & {
+    border-color: $primary_blue_color;
+  }
 }
 
 .message_reply_to_author {
   font-size: 13px;
   font-weight: 500;
   color: $primary_blue_color;
+  .message-out & {
+    color: $primary_green_color;
+  }
+  .message-type-sticker.message-out &,
+  .message-type-emoji.message-out & {
+    color: $primary_blue_color;
+  }
 }
 
 .message_reply_to_text {
+  font-size: 13px;
   max-width: 100%;
   text-overflow: ellipsis;
   overflow: hidden;
