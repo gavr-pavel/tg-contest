@@ -559,7 +559,7 @@ const MessagesApiManager = new class {
     if (peer._ === 'peerUser') {
       return this.getUserName(peerData, full);
     } else {
-      return peerData.title || '';
+      return this.getChatName(peerData);
     }
   }
 
@@ -571,6 +571,10 @@ const MessagesApiManager = new class {
     } else {
       return user.first_name || user.last_name || '';
     }
+  }
+
+  getChatName(chat) {
+    return chat.title || ''
   }
 
   getPeerPhoto(peer) {

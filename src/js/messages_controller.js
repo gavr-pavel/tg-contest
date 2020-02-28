@@ -2,7 +2,7 @@ import {
   $,
   buildHtmlElement,
   buildLoaderElement, cutText,
-  encodeHtmlEntities,
+  encodeHtmlEntities, formatCountShort, formatCountLong,
   formatDateFull,
   formatDateRelative,
   formatTime, Storage
@@ -172,12 +172,12 @@ const MessagesController = new class {
             let statusText = '';
             if (fullChat.participants_count) {
               if (MessagesApiManager.isMegagroup(chatId)) {
-                statusText = `${this.formatCount(fullChat.participants_count)} members, ${this.formatCount(fullChat.online_count)} online`;
+                statusText = `${formatCountLong(fullChat.participants_count)} members, ${formatCountLong(fullChat.online_count)} online`;
               } else {
-                statusText =`${this.formatCount(fullChat.participants_count)} followers`;
+                statusText =`${formatCountLong(fullChat.participants_count)} followers`;
               }
             } else if (fullChat.participants.participants) {
-              statusText = `${this.formatCount(fullChat.participants.participants.length)} members`;
+              statusText = `${formatCountLong(fullChat.participants.participants.length)} members`;
             }
             $('.messages_header_peer_status', this.header).innerText = statusText;
           });
@@ -342,7 +342,7 @@ const MessagesController = new class {
         stickToNext = false;
         lastDateGroup = buildHtmlElement(`
           <div class="messages_group-date" data-date="${messageMidnight}">
-            <div class="messages_item-type-service messages_item-type-date">${this.formatMessageDateFull(message.date)}</div>
+            <div class="message-type-service message-type-date">${this.formatMessageDateFull(message.date)}</div>
           </div>
         `);
         lastAuthorGroup = null;
@@ -355,7 +355,7 @@ const MessagesController = new class {
         }
       }
       if (!lastAuthorGroup || nextMessage.from_id !== message.from_id) {
-        const needPhoto = isChat && message.from_id !== App.getAuthUserId();
+        const needPhoto = isChat && message._ === 'message' && message.from_id !== App.getAuthUserId();
         lastAuthorGroup = buildHtmlElement(`
           <div class="messages_group-author ${needPhoto ? 'messages_group-author-with-photo' : ''}" data-author-id="${authorId}">
             ${needPhoto ? `<a class="messages_group_author_photo" href="#${this.getUserHref(message.from_id)}"></a>` : ''}
@@ -370,7 +370,7 @@ const MessagesController = new class {
       if (!newElementsAdded) {
         if (nextMessage && !this.compareMessagesDate(message, nextMessage)) {
           const lastEl = this.container.lastElementChild;
-          if (lastEl.classList.contains('messages_item-type-date')) {
+          if (lastEl.classList.contains('message-type-date')) {
             lastEl.remove();
           }
         }
@@ -409,14 +409,14 @@ const MessagesController = new class {
     if (message._ === 'message') {
       const isOut = (message.pFlags.out || MessagesApiManager.getMessageDialogPeerId(message) === App.getAuthUserId()) && message.from_id === App.getAuthUserId();
       el.className = this.getClasses({
-        'messages_item': true,
-        'messages_item-out': isOut,
-        'messages_item-stick-to-next': options.stickToNext,
-        'messages_item-stick-to-prev': options.stickToPrev,
+        'message': true,
+        'message-out': isOut,
+        'message-stick-to-next': options.stickToNext,
+        'message-stick-to-prev': options.stickToPrev,
       });
       this.renderMessageContent(el, message, options);
     } else if (message._ === 'messageService') {
-      el.className = 'messages_item-type-service';
+      el.className = 'message-type-service';
       el.innerText = this.getServiceMessageText(message);
     }
 
@@ -426,7 +426,7 @@ const MessagesController = new class {
   }
 
   appendPendingMessage(content) {
-    const el = buildHtmlElement(`<div class="messages_item messages_item-out messages_item-stick-to-next messages_item-stick-to-prev"></div>`);
+    const el = buildHtmlElement(`<div class="message message-out message-stick-to-next message-stick-to-prev"></div>`);
     el.append(content);
     const list = $('.messages_pending_list');
     list.appendChild(el);
@@ -452,20 +452,30 @@ const MessagesController = new class {
     const isEmojiMessage = this.isEmojiMessage(message);
     const mediaThumbData = this.getMessageMediaThumb(message, isEmojiMessage);
     const isStickerMessage = mediaThumbData && mediaThumbData.type === 'sticker';
-    const authorName = !options.stickToPrev && !isStickerMessage && !isEmojiMessage ? this.formatAuthorName(message) : '';
+    const authorName = !options.stickToPrev && !isStickerMessage && !isEmojiMessage && !message.pFlags.out ? this.formatAuthorName(message) : '';
+
+    let messageContent = this.formatMessageContent(message, mediaThumbData);
+    if (message.fwd_from) {
+      messageContent = this.formatFwdMessageContent(message.fwd_from, messageContent);
+    }
+    if (message.reply_to_msg_id) {
+      messageContent = this.formatReplyToMessageContent(message.reply_to_msg_id) + messageContent;
+    }
+
+    const messageStatus = this.formatMessageStatus(message, this.dialog);
 
     el.innerHTML = `
-      <div class="messages_item_content">
+      <div class="message_content">
         ${authorName}
-        ${this.formatMessageContent(message, mediaThumbData)}
-        <div class="messages_item_date" title="${formatDateFull(message.date)} ${formatTime(message.date, true)}">${formatTime(message.date)}</div>
+        ${messageContent}
+        <div class="message_date" title="${formatDateFull(message.date)} ${formatTime(message.date, true)}">${this.formatMessageViews(message)}${formatTime(message.date)}${messageStatus}</div>
       </div>
     `;
 
     if (isStickerMessage) {
-      el.classList.add('messages_item-type-sticker');
+      el.classList.add('message-type-sticker');
     } else if (isEmojiMessage) {
-      el.classList.add('messages_item-type-emoji');
+      el.classList.add('message-type-emoji');
     }
 
     if (mediaThumbData) {
@@ -507,14 +517,14 @@ const MessagesController = new class {
     if (message.from_id && this.dialog.peer._ !== 'peerUser') {
       const userId = message.from_id;
       const title = MessagesApiManager.getPeerName({_: 'peerUser', user_id: userId});
-      return `<a class="messages_item_author" href="#${this.getUserHref(userId)}">${encodeHtmlEntities(title)}</a>`;
+      return `<a class="message_author" href="#${this.getUserHref(userId)}">${encodeHtmlEntities(title)}</a>`;
     }
     return '';
   }
 
   onThumbClick = (event) => {
     const thumb = event.currentTarget;
-    const msgId = +thumb.dataset.messageId || +thumb.closest('.messages_item').dataset.id;
+    const msgId = +thumb.dataset.messageId || +thumb.closest('.message').dataset.id;
     const message = MessagesApiManager.messages.get(msgId);
     const thumbData = this.getMessageMediaThumb(message);
     if (thumb.firstElementChild.tagName === 'TGS-PLAYER') {
@@ -542,7 +552,7 @@ const MessagesController = new class {
     }
     thumb.dataset.loading = 1;
 
-    const msgId = +thumb.dataset.messageId || +thumb.closest('.messages_item').dataset.id;
+    const msgId = +thumb.dataset.messageId || +thumb.closest('.message').dataset.id;
     const message = MessagesApiManager.messages.get(msgId);
     if (!message) {
       return;
@@ -650,7 +660,7 @@ const MessagesController = new class {
   }
 
   async loadMessageMediaThumb(messageEl, mediaThumbData) {
-    let thumbEl = $('.messages_item_media_thumb', messageEl);
+    let thumbEl = $('.message_media_thumb', messageEl);
     if (!thumbEl) {
       debugger;
       return;
@@ -662,12 +672,12 @@ const MessagesController = new class {
     const inlineSize = MediaApiManager.choosePhotoSize(sizes, 'i');
     if (inlineSize) {
       const url = MediaApiManager.getPhotoStrippedSize(sizes);
-      thumbEl.innerHTML = `<img class="messages_item_media_thumb_image messages_item_media_thumb_image-blurred" src="${url}">`;
+      thumbEl.innerHTML = `<img class="message_media_thumb_image message_media_thumb_image-blurred" src="${url}">`;
     }
 
     if (mediaThumbData.type === 'sticker' && mediaThumbData.attributes.animated) {
       const url = await FileApiManager.loadDocument(mediaThumbData.object, {cache: true});
-      thumbEl.innerHTML = `<tgs-player autoplay src="${url}" class="messages_item_media_thumb_image"></tgs-player>`;
+      thumbEl.innerHTML = `<tgs-player autoplay src="${url}" class="message_media_thumb_image"></tgs-player>`;
     } else {
       try {
         const photoSize = MediaApiManager.choosePhotoSize(sizes, 'm');
@@ -679,11 +689,67 @@ const MessagesController = new class {
         } else {
           url = await FileApiManager.loadPhoto(mediaThumbData.object, photoSize.type);
         }
-        thumbEl.innerHTML = `<img class="messages_item_media_thumb_image" src="${url}">`;
+        thumbEl.innerHTML = `<img class="message_media_thumb_image" src="${url}">`;
       } catch (error) {
         console.log('thumb load error', error);
       }
     }
+  }
+
+  formatFwdMessageContent(fwdHeader, messageContent) {
+    let authorName = fwdHeader.from_name;
+    if (!authorName) {
+      if (fwdHeader.from_id) {
+        const user = MessagesApiManager.users.get(fwdHeader.from_id);
+        authorName = MessagesApiManager.getUserName(user);
+      }
+      if (fwdHeader.channel_id) {
+        const channel = MessagesApiManager.chats.get(fwdHeader.channel_id);
+        authorName = MessagesApiManager.getChatName(channel);
+      }
+    }
+    return `
+      <div class="message_forwarded_header">Forwarded message</div>
+      <div class="message_forwarded_content">
+        <div class="message_forwarded_author">
+          <a>${encodeHtmlEntities(authorName)}</a>
+        </div>
+        ${messageContent}
+      </div>
+    `;
+  }
+
+  formatReplyToMessageContent(messageId) {
+    const message = MessagesApiManager.messages.get(messageId);
+    if (message) {
+      const authorPeer = MessagesApiManager.getMessageAuthorPeer(message);
+      const authorName = MessagesApiManager.getPeerName(authorPeer);
+      const shortText = cutText(message.message, 110, 100);
+      return `
+        <div class="message_reply_to_content">
+          <div class="message_reply_to_author">${authorName}</div>
+          <div class="message_reply_to_text">${encodeHtmlEntities(shortText)}</div>
+        </div>
+      `;
+    }
+    return '';
+  }
+
+  formatMessageViews(message) {
+    if (message.views) {
+      return `
+        <div class="message_views">${formatCountShort(message.views)}</div>
+      `;
+    }
+    return '';
+  }
+
+  formatMessageStatus(message, dialog) {
+    if (message.pFlags.out && message.from_id) {
+      const status = message.id <= dialog.read_outbox_max_id ? 'read' : 'sent';
+      return `<div class="message_status message_status-${status}"></div>`;
+    }
+    return '';
   }
 
   formatMessageContent(message, mediaThumbData) {
@@ -774,7 +840,7 @@ const MessagesController = new class {
         const description = cutText(webpage.description, 300, 255);
         content += `<div class="webpage_description">${this.replaceLineBreaks(encodeHtmlEntities(description))}</div>`;
       }
-      return `<div class="webpage">${content}</div>`;
+      return `<div class="webpage_content">${content}</div>`;
     }
     return '';
   }
@@ -801,7 +867,7 @@ const MessagesController = new class {
     }
     if (text) {
       text = this.replaceLineBreaks(text);
-      text = `<span class="messages_item_text ${addClass}">${text}</span>`;
+      text = `<span class="message_text ${addClass}">${text}</span>`;
     }
     return text;
   }
@@ -861,11 +927,11 @@ const MessagesController = new class {
       if (caption && caption.length > 100 && thumbWidth < 300) {
         thumbWidth = 300;
       }
-      html += `<div class="messages_item_media_thumb messages_item_media_thumb-${mediaThumbData.type}" style="width:${thumbWidth}px;height:${thumbHeight}px;"></div>`;
+      html += `<div class="message_media_thumb message_media_thumb-${mediaThumbData.type}" style="width:${thumbWidth}px;height:${thumbHeight}px;"></div>`;
     }
     if (caption && mediaThumbData.type !== 'sticker') {
       const cssWidth = thumbWidth ? `width:${thumbWidth}px;` : '';
-      html += `<div class="messages_item_media_caption" style="${cssWidth}">${caption}</div>`;
+      html += `<div class="message_media_caption" style="${cssWidth}">${caption}</div>`;
     }
     return html;
   }
@@ -899,19 +965,6 @@ const MessagesController = new class {
 
   formatMessageDateTime(date) {
     return `${this.formatMessageDateFull(date)} at ${formatTime(date)}`;
-  }
-
-  formatCount(count) {
-    let str = '';
-    do {
-      let part = (count % 1000).toString();
-      if (count > 1000) {
-        part = part.padStart(3, '0');
-      }
-      str = part + ' ' + str;
-      count = Math.floor(count / 1000);
-    } while (count);
-    return str.trim();
   }
 
   getServiceMessageText(message) {

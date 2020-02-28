@@ -175,6 +175,29 @@ function cutText(text, checkLength, cutLength) {
   return text;
 }
 
+function formatCountShort(count) {
+  if (count > 1e6) {
+    return (count / 1e6).toFixed(1) + 'M';
+  }
+  if (count > 1e3) {
+    return (count / 1e3).toFixed(1) + 'K';
+  }
+  return count;
+}
+
+function formatCountLong(count) {
+  let str = '';
+  do {
+    let part = (count % 1000).toString();
+    if (count > 1000) {
+      part = part.padStart(3, '0');
+    }
+    str = part + ' ' + str;
+    count = Math.floor(count / 1000);
+  } while (count);
+  return str.trim();
+}
+
 export {
   Storage,
   Emitter,
@@ -192,5 +215,7 @@ export {
   formatDateFull,
   formatDateRelative,
   formatTime,
-  cutText
+  cutText,
+  formatCountShort,
+  formatCountLong
 };

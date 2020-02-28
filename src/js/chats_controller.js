@@ -1,4 +1,12 @@
-import {$, buildHtmlElement, buildLoaderElement, encodeHtmlEntities, formatDateFull, formatTime} from './utils';
+import {
+  $,
+  buildHtmlElement,
+  buildLoaderElement,
+  encodeHtmlEntities,
+  formatCountShort,
+  formatDateFull,
+  formatTime
+} from './utils';
 import {App} from './app';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
@@ -233,7 +241,7 @@ const ChatsController = new class {
   }
 
   renderChatPreviewContent(el, dialog) {
-    const title = this.isPeerMe(dialog.peer) ? 'Saved Messages' : MessagesApiManager.getPeerName(dialog.peer);
+    const title = this.isPeerSelf(dialog.peer) ? 'Saved Messages' : MessagesApiManager.getPeerName(dialog.peer);
     const badge = this.getChatBadge(dialog);
     const date = this.formatDate(dialog);
     const lastMessage = MessagesApiManager.messages.get(dialog.top_message);
@@ -278,15 +286,7 @@ const ChatsController = new class {
       if (dialog.notify_settings.mute_until) {
         badgeClass += ' chats_item_badge-unread_muted';
       }
-      let unreadCount;
-      if (dialog.unread_count > 1e6) {
-        unreadCount = (dialog.unread_count / 1e6).toFixed(1) + 'M';
-      } else if (dialog.unread_count > 1e3) {
-        unreadCount = (dialog.unread_count / 1e3).toFixed(1) + 'K';
-      } else {
-        unreadCount = dialog.unread_count;
-      }
-      return `<span class="${badgeClass}">${unreadCount}</span>`;
+      return `<span class="${badgeClass}">${formatCountShort(dialog.unread_count)}</span>`;
     } else if (dialog.pFlags.pinned) {
       return `<span class="chats_item_badge chats_item_badge-pinned"></span>`;
     }
@@ -363,7 +363,7 @@ const ChatsController = new class {
 
   loadChatPhoto(el, dialog) {
     const photoEl = $('.chats_item_photo', el);
-    if (this.isPeerMe(dialog.peer)) {
+    if (this.isPeerSelf(dialog.peer)) {
       photoEl.classList.add('chats_item_photo_saved_messages');
     } else {
       this.loadPeerPhoto(photoEl, dialog.peer);
@@ -417,7 +417,7 @@ const ChatsController = new class {
     MessagesController.setChat(dialog);
   };
 
-  isPeerMe(peer) {
+  isPeerSelf(peer) {
     return peer._ === 'peerUser' && peer.user_id === App.getAuthUserId();
   }
 
