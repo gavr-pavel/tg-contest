@@ -1,6 +1,7 @@
 .chats_header {
   display: flex;
   padding: 8px;
+  flex-shrink: 0;
 }
 
 .chats_header_menu_button {

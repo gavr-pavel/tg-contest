@@ -18,6 +18,7 @@
   padding: 0 18px;
   border-bottom: 1px solid #DADCE0;
   background: #fff;
+  position: relative;
 }
 .messages_header[hidden] {
   display: none;
@@ -88,7 +89,8 @@
 .messages_list {
   min-height: 100%;
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
+  justify-content: flex-end;
   max-width: 740px;
   margin: 0 auto;
   padding: 16px 20px 25px;
@@ -235,7 +237,7 @@
   .message_author + & {
     margin-top: 5px;
   }
-  .message_reply_to_content + & {
+  .message_reply_to_wrap + & {
     margin-top: 0;
   }
   .webpage_content & {
@@ -407,11 +409,15 @@
     padding: 5px 10px;
     border: 1px solid #DADCE0;
     border-radius: 10px;
+    max-width: 200px;
   }
   .message-type-sticker.message-out &,
   .message-type-emoji.message-out & {
     left: auto;
     right: 100%;
+  }
+  .message-has-thumb:not(.message-type-sticker) & {
+    display: flex;
   }
 }
 
@@ -419,9 +425,16 @@
   margin-bottom: 5px;
   white-space: nowrap;
   cursor: pointer;
+  &:hover {
+    background: rgba(0, 0, 0, .05);
+  }
   .message-type-sticker.message-out &,
   .message-type-emoji.message-out & {
     border-color: $primary_blue_color;
+  }
+  .message-has-thumb:not(.message-type-sticker) & {
+    width: 0;
+    flex-grow: 1;
   }
 }
 

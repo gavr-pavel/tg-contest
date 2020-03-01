@@ -5,7 +5,7 @@ import {
   encodeHtmlEntities, formatCountShort, formatCountLong,
   formatDateFull,
   formatDateRelative,
-  formatTime, Storage
+  formatTime, debounce
 } from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple';
@@ -278,9 +278,9 @@ const MessagesController = new class {
     const prevScrolling = !!this.scrolling;
     this.scrolling = scrollTop < scrollContainer.scrollHeight - scrollContainer.offsetHeight;
     if (this.scrolling !== prevScrolling) {
-      this.scrollContainer.classList.toggle('messages_scroll-scrolling', this.scrolling);
+      this.scrollContainer.classList.toggle('messages_scroll-scrolling', this.scrolling && !this.footer.hidden);
     }
-    if (!this.loading && !this.noMore && scrollTop < 150) {
+    if (!this.loading && !this.noMore && scrollTop < 300) {
       this.loadMore();
     }
   };
@@ -296,8 +296,6 @@ const MessagesController = new class {
       return;
     }
 
-    const prevScrollHeight = this.scrollContainer.scrollHeight;
-
     if (this.lastMsgId) {
       const frag = document.createDocumentFragment();
       for (let i = 0; messages[i].id > this.lastMsgId; i++) {
@@ -312,9 +310,13 @@ const MessagesController = new class {
       this.container.prepend(frag);
     }
 
+    const prevScrollTop = this.scrollContainer.scrollTop;
+    const prevScrollHeight = this.scrollContainer.scrollHeight;
+
     let newElementsAdded = false;
 
-    const isChat = this.dialog.peer._ === 'peerChat' || this.dialog.peer._ === 'peerChannel' && MessagesApiManager.isMegagroup(this.dialog.peer.channel_id);
+    const dialogPeer = this.dialog.peer;
+    const isGroupChat = dialogPeer._ === 'peerChat' || dialogPeer._ === 'peerChannel' && MessagesApiManager.isMegagroup(dialogPeer.channel_id);
 
     const dateGroups = [];
     let lastDateGroup;
@@ -332,8 +334,8 @@ const MessagesController = new class {
       let stickToNext = message.from_id && nextMessage && nextMessage.from_id === message.from_id;
       let stickToPrev = message.from_id && prevMessage && prevMessage.from_id === message.from_id;
       const messageMidnight = new Date(message.date * 1000).setHours(0, 0, 0, 0) / 1000;
-      if (!lastDateGroup && this.container.lastElementChild) {
-        const group = this.container.lastElementChild;
+      if (!lastDateGroup && this.container.firstElementChild) {
+        const group = this.container.firstElementChild;
         if (+group.dataset.date === messageMidnight) {
           lastDateGroup = group;
         }
@@ -346,7 +348,7 @@ const MessagesController = new class {
           </div>
         `);
         lastAuthorGroup = null;
-        dateGroups.push(lastDateGroup);
+        dateGroups.unshift(lastDateGroup);
       }
       if (!lastAuthorGroup && lastDateGroup.firstElementChild.nextElementSibling) {
         const group = lastDateGroup.firstElementChild.nextElementSibling;
@@ -355,7 +357,7 @@ const MessagesController = new class {
         }
       }
       if (!lastAuthorGroup || nextMessage.from_id !== message.from_id) {
-        const needPhoto = isChat && message._ === 'message' && message.from_id !== App.getAuthUserId();
+        const needPhoto = isGroupChat && message._ === 'message' && message.from_id !== App.getAuthUserId();
         lastAuthorGroup = buildHtmlElement(`
           <div class="messages_group-author ${needPhoto ? 'messages_group-author-with-photo' : ''}" data-author-id="${authorId}">
             ${needPhoto ? `<a class="messages_group_author_photo" href="#${this.getUserHref(message.from_id)}"></a>` : ''}
@@ -379,13 +381,15 @@ const MessagesController = new class {
       const el = this.buildMessageEl(message, {stickToNext, stickToPrev});
       lastAuthorGroup.prepend(el);
     });
-    this.container.append(...dateGroups);
+    this.container.prepend(...dateGroups);
 
     this.lastMsgId = messages[0].id;
     this.offsetMsgId = messages[messages.length - 1].id;
 
     if (this.scrolling) {
-      this.scrollContainer.scrollTop = this.scrollContainer.scrollHeight - prevScrollHeight;
+      requestAnimationFrame(() => {
+        this.scrollContainer.scrollTop = prevScrollTop + (this.scrollContainer.scrollHeight - prevScrollHeight);
+      });
     } else {
       if (this.scrollContainer.scrollHeight <= this.scrollContainer.offsetHeight) {
         setTimeout(this.loadMore, 0);
@@ -479,6 +483,7 @@ const MessagesController = new class {
     }
 
     if (mediaThumbData) {
+      el.classList.add('message-has-thumb');
       this.loadMessageMediaThumb(el, mediaThumbData);
     } else if (message.media && message.media.document) {
       const docBtn = $('.document_icon', el);
@@ -928,6 +933,8 @@ const MessagesController = new class {
       [thumbWidth, thumbHeight] = this.getThumbWidthHeight(photoSize, maxW, maxH);
       if (caption && caption.length > 100 && thumbWidth < 300) {
         thumbWidth = 300;
+      } else if (thumbWidth < 200 && mediaThumbData.type !== 'sticker') {
+        thumbWidth = 200;
       }
       html += `<div class="message_media_thumb message_media_thumb-${mediaThumbData.type}" style="width:${thumbWidth}px;height:${thumbHeight}px;"></div>`;
     }

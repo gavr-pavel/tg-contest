@@ -70,17 +70,20 @@ const MediaApiManager = new class {
           }
           if (hasThumb) {
             result.type = 'sticker';
+            if (document.mime_type === 'application/x-tgsticker') {
+              result.animated = true;
+            }
           }
           break;
         case 'documentAttributeImageSize':
           result.w = attribute.w;
           result.h = attribute.h;
-
           if (hasThumb) {
-            result.type = 'image';
             if (document.mime_type === 'application/x-tgsticker') {
               result.type = 'sticker';
               result.animated = true;
+            } else {
+              result.type = 'image';
             }
           }
           break;
@@ -93,6 +96,8 @@ const MediaApiManager = new class {
       }
     }
 
+    result.mime_type = document.mime_type;
+
     if (!result.mime_type) {
       switch (result.type) {
         case 'gif':
@@ -103,7 +108,7 @@ const MediaApiManager = new class {
           result.mime_type = 'video/mp4';
           break;
         case 'sticker':
-          result.mime_type = result.animated ? 'application/x-tgsticker' : 'image/webp';
+          result.mime_type = 'image/webp';
           break;
         case 'audio':
           result.mime_type = 'audio/mpeg';
