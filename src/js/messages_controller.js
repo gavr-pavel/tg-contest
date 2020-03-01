@@ -933,8 +933,6 @@ const MessagesController = new class {
       [thumbWidth, thumbHeight] = this.getThumbWidthHeight(photoSize, maxW, maxH);
       if (caption && caption.length > 100 && thumbWidth < 300) {
         thumbWidth = 300;
-      } else if (thumbWidth < 200 && mediaThumbData.type !== 'sticker') {
-        thumbWidth = 200;
       }
       html += `<div class="message_media_thumb message_media_thumb-${mediaThumbData.type}" style="width:${thumbWidth}px;height:${thumbHeight}px;"></div>`;
     }
