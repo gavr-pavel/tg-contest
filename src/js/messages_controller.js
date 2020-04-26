@@ -404,11 +404,12 @@ const MessagesController = new class {
       const newerAuthorGroup = newerGroup.children[1];
       const olderAuthorGroup = olderGroup.lastElementChild;
       if (newerAuthorGroup.dataset.authorId === olderAuthorGroup.dataset.authorId) {
-        olderAuthorGroup.append(...newerAuthorGroup.children);
-        newerAuthorGroup.remove();
+        newerAuthorGroup.prepend(...olderAuthorGroup.children);
+        olderAuthorGroup.remove();
       }
-      olderGroup.append(...Array.from(newerGroup.children).slice(1));
-      newerGroup.remove();
+      newerGroup.firstElementChild.remove();
+      newerGroup.prepend(...olderGroup.children);
+      olderGroup.remove();
     }
   }
 
