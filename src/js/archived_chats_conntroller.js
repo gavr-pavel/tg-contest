@@ -1,4 +1,4 @@
-import {$, buildLoaderElement, buildHtmlElement} from './utils';
+import {$, buildLoaderElement} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple/component';
 
@@ -86,14 +86,14 @@ const ArchivedChatsController = new class {
 
   buildChatPreviewElement(dialog) {
     const peerId = MessagesApiManager.getPeerId(dialog.peer);
-    const el = buildHtmlElement(`
+    const el = Tpl.html`
       <div class="chats_item" data-peer-id="${peerId}">
         <div class="chats_item_content mdc-ripple-surface">
           <div class="chats_item_photo"></div>
           <div class="chats_item_text"></div>        
         </div>
       </div>
-    `);
+    `.buildElement();
     ChatsController.renderChatPreviewContent(el, dialog);
     ChatsController.loadChatPhoto(el, dialog);
     el.addEventListener('click', ChatsController.onChatClick);

@@ -1,4 +1,4 @@
-import {$, buildHtmlElement, buildLoaderElement, encodeHtmlEntities} from './utils';
+import {$, buildLoaderElement, Tpl} from './utils';
 import {ChatsController} from './chats_controller';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
@@ -86,31 +86,31 @@ const GlobalSearchController = new class {
     if (!results.length) {
       return '';
     }
-    const container = buildHtmlElement(`
+    const container = Tpl.html`
       <div class="global_search_sublist">
         <div class="global_search_sublist_header">${header}</div>
       </div>
-    `);
+    `.buildElement();
     for (const peer of results) {
       const peerId = MessagesApiManager.getPeerId(peer);
       const name = MessagesApiManager.getPeerName(peer);
       const status = peer._ === 'peerUser' ? MessagesController.getUserStatusText(MessagesApiManager.getPeerData(peer)) : '';
 
-      const el = buildHtmlElement(`
-      <div class="contacts_item" data-peer-id="${peerId}">
-        <div class="contacts_item_content mdc-ripple-surface">
-          <div class="contacts_item_photo"></div>
-          <div class="contacts_item_text">
-            <div class="contacts_item_text_row">
-              <div class="contacts_item_title">${name}</div>
-            </div>
-            <div class="contacts_item_text_row">
-              <div class="contacts_item_status">${status}</div>
+      const el = Tpl.html`
+        <div class="contacts_item" data-peer-id="${peerId}">
+          <div class="contacts_item_content mdc-ripple-surface">
+            <div class="contacts_item_photo"></div>
+            <div class="contacts_item_text">
+              <div class="contacts_item_text_row">
+                <div class="contacts_item_title">${name}</div>
+              </div>
+              <div class="contacts_item_text_row">
+                <div class="contacts_item_status">${status}</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    `);
+      `.buildElement();
       ChatsController.loadPeerPhoto($('.contacts_item_photo', el), peer);
       el.addEventListener('click', this.onPeerClick);
       new MDCRipple(el.firstElementChild);
@@ -124,24 +124,24 @@ const GlobalSearchController = new class {
     if (!messages.length) {
       return '';
     }
-    const container = buildHtmlElement(`
+    const container = Tpl.html`
       <div class="global_search_sublist">
         <div class="global_search_sublist_header">${header}</div>
       </div>
-    `);
+    `.buildElement();
     for (const message of messages) {
       const peer = MessagesApiManager.getMessageDialogPeer(message);
       const peerId = MessagesApiManager.getPeerId(peer);
       const title = MessagesApiManager.getPeerName(peer);
       const date = ChatsController.formatMessageDate(message);
       const messagePreview = ChatsController.getMessagePreview(message);
-      const el = buildHtmlElement(`
+      const el = Tpl.html`
         <div class="messages_search_results_item" data-peer-id="${peerId}" data-message-id="${message.id}">
           <div class="messages_search_results_item_content mdc-ripple-surface">
             <div class="messages_search_results_item_photo"></div>
             <div class="messages_search_results_item_text">
               <div class="messages_search_results_item_text_row">
-                <div class="messages_search_results_item_title">${encodeHtmlEntities(title)}</div>
+                <div class="messages_search_results_item_title">${title}</div>
                 <div class="messages_search_results_item_date">${date}</div>
               </div>
               <div class="messages_search_results_item_text_row">
@@ -150,7 +150,7 @@ const GlobalSearchController = new class {
             </div>      
           </div>
         </div>
-      `);
+      `.buildElement();
       ChatsController.loadPeerPhoto($('.messages_search_results_item_photo', el), peer);
       el.addEventListener('click', this.onPeerClick);
       container.append(el);
@@ -161,7 +161,8 @@ const GlobalSearchController = new class {
   onPeerClick = (event) => {
     const el = event.currentTarget;
     const peerId = +el.dataset.peerId;
-    MessagesController.setChatByPeerId(peerId);
+    const messageId = +(el.dataset.messageId || 0);
+    MessagesController.setChatByPeerId(peerId, messageId);
   };
 
   saveTmpPeers(map, ...lists) {

@@ -4,10 +4,13 @@ const inliner = require('sass-inline-svg');
 module.exports = {
   mode: 'development',
   watch: true,
-  entry: ['./src/css/main.scss', './src/js/main.js'],
+  entry: {
+    'main': ['./src/css/main.scss', './src/js/main.js'],
+    'sw': './src/js/sw.js',
+  },
   output: {
-    filename: 'main.js',
-    path: path.resolve(__dirname, 'dist'),
+    filename: '[name].js',
+    path: path.join(__dirname, 'dist')
   },
   devServer: {
     contentBase: path.join(__dirname, 'dist'),

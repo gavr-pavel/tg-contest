@@ -1,4 +1,4 @@
-import {buildHtmlElement, getLabeledElements, $, Storage} from './utils';
+import {getLabeledElements, $, $$, Storage, Tpl} from './utils';
 import {EmojiConfig} from './emoji_config';
 import {ApiClient} from './api/api_client';
 import {MessagesFormController} from './messages_form_controller';
@@ -7,7 +7,7 @@ const EmojiDropdown = new class {
   stickerSets = new Map();
 
   init() {
-    this.container = buildHtmlElement(`
+    this.container = Tpl.html`
       <div class="emoji_dropdown" hidden>
         <div class="emoji_dropdown_top_nav nav_tabs_container">
           <div class="nav_tabs_item emoji_dropdown_top_nav_item" data-js-label="nav_emoji">
@@ -35,7 +35,7 @@ const EmojiDropdown = new class {
           </section>        
         </div>
       </div>
-    `);
+    `.buildElement();
 
     this.dom = getLabeledElements(this.container);
     this.dom.nav_emoji.addEventListener('click', this.onTopNavClick);
@@ -85,10 +85,10 @@ const EmojiDropdown = new class {
 
     let index = 0;
     for (const set of allStickers.sets) {
-      const el = buildHtmlElement(`<div class="emoji_dropdown_list" data-set-id="${set.id}"></div>`);
+      const el = Tpl.html`<div class="emoji_dropdown_list" data-set-id="${set.id}"></div>`.buildElement();
       frag.appendChild(el);
 
-      const bottomButton = buildHtmlElement(`<div class="emoji_dropdown_bottom_nav_item" data-set-id="${set.id}"></div>`);
+      const bottomButton = Tpl.html`<div class="emoji_dropdown_bottom_nav_item" data-set-id="${set.id}"></div>`.buildElement();
       bottomNavFrag.append(bottomButton);
 
       this.initStickerSet(set, el, bottomButton, index < 3);
@@ -114,7 +114,7 @@ const EmojiDropdown = new class {
 
     const frag = document.createDocumentFragment();
     fullSet.documents.forEach((document, index) => {
-      const stickerEl = buildHtmlElement(`<div class="emoji_dropdown_list_item" data-sticker-index="${index}"></div>`);
+      const stickerEl = Tpl.html`<div class="emoji_dropdown_list_item" data-sticker-index="${index}"></div>`.buildElement();
       frag.appendChild(stickerEl);
     });
     container.appendChild(frag);
@@ -258,7 +258,7 @@ const EmojiDropdown = new class {
     document.addEventListener('mousedown', this.onGlobalClick);
     this.input.focus();
 
-    const scrollContainers = this.container.querySelectorAll('.emoji_dropdown_section_content');
+    const scrollContainers = $$('.emoji_dropdown_section_content', this.container);
     for (const scrollContainer of scrollContainers) {
       scrollContainer.dispatchEvent(new Event('scroll')); // update bottom nav
     }

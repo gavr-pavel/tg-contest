@@ -1,4 +1,4 @@
-import {$, buildHtmlElement, debounce, encodeHtmlEntities} from './utils';
+import {$, debounce, Tpl} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {ChatsController} from './chats_controller';
 import {I18n} from './i18n';
@@ -85,13 +85,13 @@ const MessagesSearchController = new class {
       const title = MessagesApiManager.getPeerName(peer);
       const date = ChatsController.formatMessageDate(message);
       const messagePreview = ChatsController.getMessagePreview(message);
-      const el = buildHtmlElement(`
+      const el = Tpl.html`
         <div class="messages_search_results_item">
           <div class="messages_search_results_item_content mdc-ripple-surface">
             <div class="messages_search_results_item_photo"></div>
             <div class="messages_search_results_item_text">
               <div class="messages_search_results_item_text_row">
-                <div class="messages_search_results_item_title">${encodeHtmlEntities(title)}</div>
+                <div class="messages_search_results_item_title">${title}</div>
                 <div class="messages_search_results_item_date">${date}</div>
               </div>
               <div class="messages_search_results_item_text_row">
@@ -100,7 +100,7 @@ const MessagesSearchController = new class {
             </div>      
           </div>
         </div>
-      `);
+      `.buildElement();
       this.loadMessagePeerPhoto(el, peer);
       frag.append(el);
     }

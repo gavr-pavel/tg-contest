@@ -1,10 +1,8 @@
 import {
-  $,
-  buildHtmlElement,
+  $, $$, Tpl,
   buildLoaderElement,
-  encodeHtmlEntities,
   formatCountShort,
-  formatDateFull,
+  formatDateFull, formatDateWeekday,
   formatTime
 } from './utils';
 import {App} from './app';
@@ -84,7 +82,7 @@ const ChatsController = new class {
       }
     });
 
-    for (const item of menuContainer.querySelectorAll('.chats_header_menu_item')) {
+    for (const item of $$('.chats_header_menu_item', menuContainer)) {
       new MDCRipple(item).unbounded = true;
     }
 
@@ -220,14 +218,14 @@ const ChatsController = new class {
 
   buildChatPreviewElement(dialog) {
     const peerId = MessagesApiManager.getPeerId(dialog.peer);
-    const el = buildHtmlElement(`
+    const el = Tpl.html`
       <div class="chats_item ${dialog.pFlags.pinned ? ' chats_item_pinned' : ''}" data-peer-id="${peerId}">
         <div class="chats_item_content mdc-ripple-surface">
           <div class="chats_item_photo"></div>
           <div class="chats_item_text"></div>        
         </div>
       </div>
-    `);
+    `.buildElement();
     this.renderChatPreviewContent(el, dialog);
     this.loadChatPhoto(el, dialog);
     if (dialog.peer._ === 'peerUser') {
@@ -246,9 +244,9 @@ const ChatsController = new class {
     const date = this.formatDate(dialog);
     const lastMessage = MessagesApiManager.messages.get(dialog.top_message);
     const lastMessagePreview = lastMessage ? this.getMessagePreview(lastMessage) : '';
-    $('.chats_item_text', el).innerHTML = `
+    $('.chats_item_text', el).innerHTML = Tpl.html`
       <div class="chats_item_text_row">
-        <div class="chats_item_title">${encodeHtmlEntities(title)}</div>
+        <div class="chats_item_title">${title}</div>
         <div class="chats_item_date">${date}</div>
       </div>
       <div class="chats_item_text_row">
@@ -272,11 +270,12 @@ const ChatsController = new class {
     if (messageDate.getTime() > now - 86400000) {
       return formatTime(message.date);
     } else if (messageDate.getTime() > now - 86400000 * 6) {
-      return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][messageDate.getDay()];
-    } if (messageDate.getFullYear() === new Date().getFullYear()) {
-      return [messageDate.getDate(), messageDate.getMonth() + 1].join('/');
+      return formatDateWeekday(message.date);
     } else {
-      return formatDateFull(message.date);
+      return formatDateFull(message.date, {
+        longMonth: false,
+        withYear: messageDate.getFullYear() !== new Date().getFullYear()
+      });
     }
   }
 
@@ -286,31 +285,32 @@ const ChatsController = new class {
       if (dialog.notify_settings.mute_until) {
         badgeClass += ' chats_item_badge-unread_muted';
       }
-      return `<span class="${badgeClass}">${formatCountShort(dialog.unread_count)}</span>`;
+      return Tpl.html`<span class="${badgeClass}">${formatCountShort(dialog.unread_count)}</span>`;
     } else if (dialog.pFlags.pinned) {
-      return `<span class="chats_item_badge chats_item_badge-pinned"></span>`;
+      return Tpl.html`<span class="chats_item_badge chats_item_badge-pinned"></span>`;
     }
     return '';
   }
 
   getMessagePreview(message) {
     if (message._ === 'messageService') {
-      const text = MessagesController.getServiceMessageText(message);
-      return encodeHtmlEntities(text);
+      return MessagesController.getServiceMessageText(message);
     }
-    let text = encodeHtmlEntities(message.message);
-    if (!text) {
+    let result = '';
+    if (message.message) {
+      result = Tpl.html`${message.message}`;
+    } else {
       const label = MessagesController.getMessageContentTypeLabel(message.media);
-      text = `<span class="chats_item_message_content_label">${label}</span>`;
+      result = Tpl.html`<span class="chats_item_message_content_label">${label}</span>`;
     }
     if (message.to_id._ === 'peerChannel' && message.from_id) {
       const user = MessagesApiManager.users.get(message.from_id);
       const userName = MessagesApiManager.getUserName(user, false);
-      text = `<span class="chats_item_message_author_label">${encodeHtmlEntities(userName)}:</span> ${text}`;
+      result = Tpl.html`<span class="chats_item_message_author_label">${userName}:</span> ${result}`;
     } else if (message.pFlags.out) {
-      text = `<span class="chats_item_message_author_label">You:</span> ${text}`;
+      result = Tpl.html`<span class="chats_item_message_author_label">You:</span> ${result}`;
     }
-    return text;
+    return result;
   }
 
   updateChatStatus(el, userStatus) {

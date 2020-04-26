@@ -1,4 +1,4 @@
-import {$, buildHtmlElement, debounce, encodeHtmlEntities, getLabeledElements} from './utils';
+import {$, debounce, getLabeledElements} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
 import {EmojiDropdown} from './emoji_dropdown';
@@ -128,7 +128,7 @@ const MessagesFormController = new class {
   }
 
   buildFileUploadProgressElement(title, size) {
-    return buildHtmlElement(`
+    return Tpl.html`
       <div class="document">
         <div class="document_col">
           <div class="document_icon document_icon-loading">
@@ -138,11 +138,11 @@ const MessagesFormController = new class {
           </div>
         </div>
         <div class="document_col">
-          <div class="document_filename">${encodeHtmlEntities(title)}</div>
+          <div class="document_filename">${title}</div>
           <div class="document_size"><span class="document_size_percent">0%</span> &middot; ${ChatInfoController.getFileSizeFormatted(size)}</div>        
         </div>
       </div>
-    `);
+    `.buildElement();
   }
 };
 

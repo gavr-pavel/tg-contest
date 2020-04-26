@@ -1,4 +1,4 @@
-import {buildHtmlElement, $} from './utils';
+import {$, Tpl} from './utils';
 import {I18n} from './i18n';
 import {MessagesFormController} from './messages_form_controller';
 import {MDCRipple} from '@material/ripple';
@@ -6,7 +6,7 @@ import {MDCRipple} from '@material/ripple';
 const FileUploadPopup = new class {
 
   init() {
-    this.menu = buildHtmlElement(`
+    this.menu = Tpl.html`
       <div class="mdc-menu mdc-menu-surface messages_form_media_menu" hidden>
         <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">
           <li class="mdc-list-item messages_form_media_menu_item messages_form_media_menu_item-media" data-type="media" role="menuitem">
@@ -20,7 +20,7 @@ const FileUploadPopup = new class {
           </li>
         </ul>
       </div>
-    `);
+    `.buildElement();
 
     for (const item of $('.mdc-list', this.menu).children) {
       new MDCRipple(item).unbounded = true;
@@ -33,7 +33,7 @@ const FileUploadPopup = new class {
     if (itemType === 'media' || itemType === 'file') {
       const sendAsMedia = itemType === 'media';
       const accept = sendAsMedia ? 'image/*, video/*' : '*/*';
-      const input = buildHtmlElement(`<input type="file" multiple accept="${accept}">`);
+      const input = Tpl.html`<input type="file" multiple accept="${accept}">`.buildElement();
       input.click();
       input.onchange = () => this.onFilesSelected(input.files, sendAsMedia);
     }
@@ -116,7 +116,7 @@ const FileUploadPopup = new class {
     let itemsHtml = '';
     for (const file of files) {
       const fileExt = file.name.split('.').pop() || '';
-      itemsHtml += `
+      itemsHtml += Tpl.html`
         <div class="messages_upload_popup_files_item">
           <div class="messages_upload_popup_files_item_thumb"></div>
           <div class="messages_upload_popup_files_item_name">${file.name}</div>
@@ -125,7 +125,7 @@ const FileUploadPopup = new class {
       `;
     }
 
-    const popup = buildHtmlElement(`
+    const popup = Tpl.html`
       <div class="messages_upload_popup">
         <div class="messages_upload_popup_header">${ I18n.getPlural('messages_send_n_files', files.length) }</div>
         <button class="messages_upload_popup_send_button">Send</button>
@@ -133,7 +133,7 @@ const FileUploadPopup = new class {
         ${itemsHtml}
         <input class="messages_upload_popup_caption_input">
       </div>
-    `);
+    `.buildElement();
   }
 };
 

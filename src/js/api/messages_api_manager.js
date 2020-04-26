@@ -298,7 +298,7 @@ const MessagesApiManager = new class {
     return this.loadDialogs(offset, limit, 1);
   }
 
-  async loadChatMessages(dialog, offsetId, limit) {
+  async loadChatHistory(dialog, offsetId, limit) {
     const chatId = this.getPeerId(dialog.peer);
 
     let chatMessages;
@@ -322,18 +322,24 @@ const MessagesApiManager = new class {
       this.emitter.trigger('chatMessagesUpdate', {dialog, messages: chatMessages});
     }
 
+    const messages = await this.loadMessages(dialog.peer, offsetId, limit);
+
+    this.updateChatMessages(dialog, messages, true);
+
+    return messages;
+  }
+
+  async loadMessages(peer, offsetId, limit = 20, addOffset = 0) {
     const response = await ApiClient.callMethod('messages.getHistory', {
-      peer: this.getInputPeer(dialog.peer),
+      peer: this.getInputPeer(peer),
       offset_id: offsetId,
       limit: limit,
-      offset_date: 0,
+      add_offset: addOffset
     });
 
     this.updateMessages(response.messages);
     this.updateUsers(response.users);
     this.updateChats(response.chats);
-
-    this.updateChatMessages(dialog, response.messages, true);
 
     return response.messages;
   }
@@ -345,7 +351,7 @@ const MessagesApiManager = new class {
     this.dialogsPreloaded = true;
     for (const dialog of dialogs) {
       if (!this.chatMessages.has(this.getPeerId(dialog.peer))) {
-        await this.loadChatMessages(dialog, 0, 10);
+        await this.loadChatHistory(dialog, 0, 10);
         await wait(500);
       }
     }

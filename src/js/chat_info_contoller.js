@@ -1,4 +1,4 @@
-import {$, buildHtmlElement, encodeHtmlEntities, getLabeledElements} from "./utils";
+import {$, getLabeledElements, Tpl} from './utils';
 import {MDCCheckbox} from '@material/checkbox';
 import {MessagesApiManager} from "./api/messages_api_manager";
 import {ApiClient} from "./api/api_client";
@@ -57,7 +57,7 @@ const ChatInfoController = new class {
       peerDesc = MessagesController.getUserStatusText(peerData);
     }
 
-    this.container.innerHTML = `
+    this.container.innerHTML = Tpl.html`
       <div class="right_sidebar_scroll_wrap">
         <div class="sidebar_header">
           <button type="button" class="sidebar_close_button mdc-icon-button"></button>
@@ -66,8 +66,8 @@ const ChatInfoController = new class {
         </div>
         <div class="sidebar_user_info">
           <div class="sidebar_user_photo"></div>
-          <div class="sidebar_user_name">${encodeHtmlEntities(peerName)}</div>
-          <div class="sidebar_user_desc">${encodeHtmlEntities(peerDesc)}</div>
+          <div class="sidebar_user_name">${peerName}</div>
+          <div class="sidebar_user_desc">${peerDesc}</div>
         </div>
         <div class="chat_info_desc"></div>
         <div class="nav_tabs_container chat_info_shared_media_nav">
@@ -123,7 +123,7 @@ const ChatInfoController = new class {
   }
 
   getNotificationsCheckboxHtml() {
-    return `
+    return Tpl.html`
       <div class="mdc-form-field">
         <div class="mdc-checkbox">
           <input type="checkbox" class="mdc-checkbox__native-control" id="checkbox-notifications"/>
@@ -147,25 +147,25 @@ const ChatInfoController = new class {
       phone: peerData.phone ? `+${peerData.phone}` : '',
     };
 
-    let html = '';
+    const content = Tpl.html``;
     for (const field in descMap) {
       const value = descMap[field];
       if (!value) {
         continue;
       }
 
-      html += `
-      <div class="chat_info_desc_row">
-        <div class="chat_info_desc_icon chat_info_desc_icon-${field}"></div>
-        <div class="chat_info_desc_row_block">
-          <div class="chat_info_desc_row_text">${encodeHtmlEntities(value)}</div>
-          <div class="chat_info_desc_row_subtitle">${field}</div>
+      content.appendHtml`
+        <div class="chat_info_desc_row">
+          <div class="chat_info_desc_icon chat_info_desc_icon-${field}"></div>
+          <div class="chat_info_desc_row_block">
+            <div class="chat_info_desc_row_text">${value}</div>
+            <div class="chat_info_desc_row_subtitle">${field}</div>
+          </div>
         </div>
-      </div>
-    `;
+      `;
     }
 
-    html += `
+    content.appendHtml`
       <div class="chat_info_desc_row">
         <div class="chat_info_desc_checkbox">${this.getNotificationsCheckboxHtml()}</div>
         <label for="checkbox-notifications" class="chat_info_desc_row_block">
@@ -175,7 +175,7 @@ const ChatInfoController = new class {
       </div>
     `;
 
-    $('.chat_info_desc').innerHTML = html;
+    $('.chat_info_desc').innerHTML = content;
 
     const checkbox = new MDCCheckbox(document.querySelector('.mdc-checkbox'));
     checkbox.checked = notificationsEnabled;
@@ -233,9 +233,9 @@ const ChatInfoController = new class {
   renderSharedMedia(messages) {
     const frag = document.createDocumentFragment();
     for (const message of messages) {
-      const thumbEl = buildHtmlElement(`
+      const thumbEl = Tpl.html`
         <div class="chat_info_shared_media_item" data-message-id="${message.id}"></div>
-      `);
+      `.buildElement();
       thumbEl.addEventListener('click', MessagesController.onThumbClick);
       frag.append(thumbEl);
       this.loadMediaThumb(message, thumbEl);
@@ -254,15 +254,15 @@ const ChatInfoController = new class {
       const size = this.getFileSizeFormatted(document.size);
       const dateTime = MessagesController.formatMessageDateTime(message.date);
 
-      const docEl = buildHtmlElement(`
-        <div class="chat_info_shared_docs_item" data-message-id="${ message.id }">
-          <div class="chat_info_shared_docs_item_icon${iconClass}">${ type }</div>
+      const docEl = Tpl.html`
+        <div class="chat_info_shared_docs_item" data-message-id="${message.id}">
+          <div class="chat_info_shared_docs_item_icon${iconClass}">${type}</div>
           <div class="chat_info_shared_docs_item_info">
-            <div class="chat_info_shared_docs_item_name">${ encodeHtmlEntities(fileName) }</div>
-            <div class="chat_info_shared_docs_item_desc">${ size } &middot; ${ dateTime }</div>
+            <div class="chat_info_shared_docs_item_name">${fileName}</div>
+            <div class="chat_info_shared_docs_item_desc">${size} &middot; ${dateTime}</div>
           </div>
         </div>
-      `);
+      `.buildElement();
       docEl.addEventListener('click', MessagesController.onFileClick);
       frag.append(docEl);
       if (attrs.type === 'image') {
@@ -294,16 +294,16 @@ const ChatInfoController = new class {
         }
       }
 
-      const linkEl = buildHtmlElement(`
-        <a class="chat_info_shared_link_item" data-message-id="${ message.id }" target="_blank" href="${ url }">
+      const linkEl = Tpl.html`
+        <a class="chat_info_shared_link_item" data-message-id="${message.id}" target="_blank" href="${url}">
           <div class="chat_info_shared_link_item_image"></div>
           <div class="chat_info_shared_link_item_info">
-            <div class="chat_info_shared_link_item_title">${ encodeHtmlEntities(title) }</div>
-            <div class="chat_info_shared_link_item_desc">${ encodeHtmlEntities(desc) }</div>
-            <div class="chat_info_shared_link_item_url">${ encodeHtmlEntities(url) }</div>
+            <div class="chat_info_shared_link_item_title">${title}</div>
+            <div class="chat_info_shared_link_item_desc">${desc}</div>
+            <div class="chat_info_shared_link_item_url">${url}</div>
           </div>
         </a>
-      `);
+      `.buildElement();
       frag.append(linkEl);
 
       if (thumb) {

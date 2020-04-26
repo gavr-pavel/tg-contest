@@ -36,6 +36,59 @@ class Emitter {
   }
 }
 
+class Tpl {
+  static html(strings, ...data) {
+    let result = '';
+    for (const str of strings) {
+      result += str;
+      const val = data.shift();
+      if (val !== void(0)) {
+        result += val instanceof TplResult ? val.toString() : this.sanitize(val);
+      }
+    }
+    return new TplResult(result);
+  }
+  static raw(...args) {
+    return new TplResult(String.raw(...args));
+  }
+  static sanitize(text) {
+    const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+    return String(text).replace(/[&<>"']/g, (char) => map[char]);
+  }
+}
+
+class TplResult {
+  constructor(html) {
+    this.html = html;
+  }
+  appendHtml(...args) {
+    const res = Tpl.html(...args);
+    this.html += res.html;
+    return this;
+  }
+  replaceLineBreaks() {
+    this.html = this.html.replace(/\n/g, '<br>');
+    return this;
+  }
+  valueOf() {
+    return this.html;
+  }
+  toString() {
+    return this.html;
+  }
+  get length() {
+    return this.html.length;
+  }
+  buildFragment() {
+    const tmp = document.createElement('template');
+    tmp.innerHTML = this.html;
+    return tmp.content;
+  }
+  buildElement() {
+    return this.buildFragment().firstElementChild;
+  }
+}
+
 function getDeferred() {
   const deferred = {};
   deferred.promise = new Promise((resolve, reject) => {
@@ -73,12 +126,8 @@ function $(selector, parent = document) {
   return parent.querySelector(selector);
 }
 
-function encodeHtmlEntities(text) {
-  return String(text)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+function $$(selector, parent = document) {
+  return parent.querySelectorAll(selector);
 }
 
 function importTemplate(id) {
@@ -100,14 +149,8 @@ function getLabeledElements(container) {
   return result;
 }
 
-function buildHtmlElement(htmlStr) {
-  const tmp = document.createElement('div');
-  tmp.innerHTML = htmlStr;
-  return tmp.firstElementChild;
-}
-
 function buildLoaderElement(container = null) {
-  const el = buildHtmlElement('<div class="lds-ring"><div></div><div></div><div></div><div></div></div>');
+  const el = Tpl.html`<div class="lds-ring"><div></div><div></div><div></div><div></div></div>`.buildElement();
   if (container) {
     container.appendChild(el);
   }
@@ -133,9 +176,16 @@ function randomLong() {
   return crypto.getRandomValues(new Uint32Array(2));
 }
 
-function formatDateFull(ts) {
-  const date = new Date(ts * 1000);
-  return `${ date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+function formatDateFull(ts, {withYear = true, longMonth = true} = {}) {
+  return new Intl.DateTimeFormat('en-US', {
+    day: 'numeric',
+    month: longMonth ? 'long' : 'short',
+    year: withYear ? 'numeric' : void(0)
+  }).format(ts * 1000);
+}
+
+function formatDateWeekday(ts) {
+  return new Intl.DateTimeFormat('en-US', {weekday: 'short'}).format(ts * 1000);
 }
 
 function formatDateRelative(ts, now) {
@@ -159,13 +209,12 @@ function formatDateRelative(ts, now) {
   return formatDateFull(ts);
 }
 
-function formatTime(ts, withSeconds = false) {
-  const date = new Date(ts * 1000);
-  let result = date.getHours() + ':' + date.getMinutes().toString().padStart(2, '0');
-  if (withSeconds) {
-    result += ':' + date.getSeconds().toString().padStart(2, '0');
-  }
-  return result;
+function formatTime(ts, {withSeconds = false} = {}) {
+  return new Intl.DateTimeFormat('en-GB', {
+    hour: 'numeric',
+    minute: 'numeric',
+    second: withSeconds ? 'numeric' : void(0)
+  }).format(ts * 1000);
 }
 
 function cutText(text, checkLength, cutLength) {
@@ -176,43 +225,31 @@ function cutText(text, checkLength, cutLength) {
 }
 
 function formatCountShort(count) {
-  if (count > 1e6) {
-    return (count / 1e6).toFixed(1) + 'M';
-  }
-  if (count > 1e3) {
-    return (count / 1e3).toFixed(1) + 'K';
-  }
-  return count;
+  return new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short'
+  }).format(count);
 }
 
 function formatCountLong(count) {
-  let str = '';
-  do {
-    let part = (count % 1000).toString();
-    if (count > 1000) {
-      part = part.padStart(3, '0');
-    }
-    str = part + ' ' + str;
-    count = Math.floor(count / 1000);
-  } while (count);
-  return str.trim();
+  return new Intl.NumberFormat('en-US').format(count);
 }
 
 export {
   Storage,
   Emitter,
+  Tpl,
   getDeferred,
   debounce,
-  $,
+  $, $$,
   importTemplate,
-  buildHtmlElement,
   buildLoaderElement,
-  encodeHtmlEntities,
   getLabeledElements,
   cmpStrNum,
   wait,
   randomLong,
   formatDateFull,
+  formatDateWeekday,
   formatDateRelative,
   formatTime,
   cutText,

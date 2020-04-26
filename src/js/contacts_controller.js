@@ -1,4 +1,4 @@
-import {$, buildHtmlElement, buildLoaderElement} from './utils';
+import {$, buildLoaderElement, Tpl} from './utils';
 import {MDCRipple} from "@material/ripple/component";
 import {MessagesApiManager} from "./api/messages_api_manager";
 import {MessagesController} from "./messages_controller";
@@ -40,7 +40,7 @@ const ContactsController = new class {
     const name = MessagesApiManager.getUserName(user) || `+${user.phone}`;
     const status = MessagesController.getUserStatusText(user);
 
-    const el = buildHtmlElement(`
+    const el = Tpl.html`
       <div class="contacts_item" data-user-id="${user.id}">
         <div class="contacts_item_content mdc-ripple-surface">
           <div class="contacts_item_photo"></div>
@@ -54,7 +54,7 @@ const ContactsController = new class {
           </div>
         </div>
       </div>
-    `);
+    `.buildElement();
 
     this.loadContactPhoto(el, user);
 

@@ -62,7 +62,7 @@ const FileApiManager = new class {
     }
   }
 
-  async loadFile(location, dcId, options) {
+  loadFile(location, dcId, options) {
     const dbFileName = this.getDbFileName(location);
     if (this.requests.has(dbFileName)) {
       return this.requests.get(dbFileName);
@@ -71,11 +71,9 @@ const FileApiManager = new class {
     const request = this.loadFileRequest(location, dcId, options);
     this.requests.set(dbFileName, request);
 
-    request.finally(() => {
+    return request.finally(() => {
       this.requests.delete(dbFileName);
     });
-
-    return request;
   }
 
   async loadFileRequest(location, dcId, {priority = 1, cache = false, mimeType = '', size = 0, onProgress, signal} = {}) {

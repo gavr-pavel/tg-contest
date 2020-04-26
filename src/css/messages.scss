@@ -28,6 +28,7 @@
   cursor: pointer;
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
 .messages_header_peer_photo {
@@ -40,6 +41,7 @@
 }
 .messages_header_peer_description {
   margin-left: 16px;
+  min-width: 0;
 }
 .messages_header_peer_name {
   font-size: 16px;
@@ -52,6 +54,12 @@
 }
 .messages_header_peer_status-online {
   color: #458FE5;
+}
+.messages_header_peer_name,
+.messages_header_peer_status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .messages_header_action_search {
@@ -258,8 +266,7 @@
   background: #efefef;
   cursor: pointer;
 }
-.message_media_thumb-video::after,
-.message_media_thumb-gif::after {
+.message_media_thumb_play {
   content: '';
   position: absolute;
   left: 50%;
@@ -270,9 +277,13 @@
   margin-top: -27px;
   background: rgba(0, 0, 0, .6) svg('../icons/largeplay_svg.svg', (path: (fill: white))) no-repeat center;
   border-radius: 50%;
-}
-.message_media_thumb-loading::after {
-  display: none;
+  transition: opacity .2s;
+  &:hover {
+    opacity: 0.85;
+  }
+  .message_media_thumb-loading & {
+    display: none;
+  }
 }
 .message_media_thumb_image {
   width: 100%;
@@ -608,6 +619,10 @@
   margin-top: -27px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.5) svg('../icons/close_svg.svg', (path: (fill: white))) no-repeat center;
+  transition: opacity .2s;
+  &:hover {
+    opacity: 0.85;
+  }
 }
 
 .message_media_progress_svg {

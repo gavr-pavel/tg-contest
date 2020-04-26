@@ -1,11 +1,10 @@
 import {
-  $,
-  buildHtmlElement,
+  $, Tpl,
   buildLoaderElement, cutText,
-  encodeHtmlEntities, formatCountShort, formatCountLong,
+  formatCountShort, formatCountLong,
   formatDateFull,
   formatDateRelative,
-  formatTime, debounce
+  formatTime,
 } from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple';
@@ -19,10 +18,7 @@ import {MessagesSearchController} from './messages_search_controller';
 import {ApiClient} from './api/api_client';
 
 const MessagesController = new class {
-  dialog = null;
-  chatId = null;
   messageElements = new Map();
-  offsetMsgId = 0;
 
   init() {
     this.header = $('.messages_header');
@@ -49,7 +45,7 @@ const MessagesController = new class {
     MessagesApiManager.emitter.on('userStatusUpdate', this.onUserStatusUpdate);
   }
 
-  setChat(dialog) {
+  setChat(dialog, messageId = 0) {
     if (dialog === this.dialog) {
       this.scrollToBottom();
       return;
@@ -71,7 +67,11 @@ const MessagesController = new class {
 
     this.container.append(this.loader);
 
-    this.loadMore();
+    if (messageId) {
+      this.jumpToMessage(messageId);
+    } else {
+      this.loadHistory();
+    }
 
     const chatEl = ChatsController.chatElements.get(this.chatId);
     if (chatEl) {
@@ -79,13 +79,13 @@ const MessagesController = new class {
     }
   }
 
-  async setChatByPeerId(peerId) {
+  async setChatByPeerId(peerId, messageId = 0) {
     let dialog = MessagesApiManager.getDialog(peerId);
     if (!dialog) {
       const peer = MessagesApiManager.getPeerById(peerId);
       dialog = await MessagesApiManager.loadPeerDialog(peer);
     }
-    MessagesController.setChat(dialog);
+    MessagesController.setChat(dialog, messageId);
   }
 
   exitChat() {
@@ -101,19 +101,23 @@ const MessagesController = new class {
 
     this.header.hidden = true;
     this.footer.hidden = true;
-    this.messageElements.clear();
     this.dialog = null;
     this.chatId = null;
-    this.lastMsgId = null;
-    this.offsetMsgId = null;
+    this.clearMessages();
+  }
+
+  clearMessages() {
     this.container.innerHTML = '';
+    this.messageElements.clear();
+    this.minMsgId = null;
+    this.maxMsgId = null;
     this.loading = false;
     this.noMore = false;
     this.scrolling = false;
   }
 
   initPlaceholder() {
-    this.placeholder = buildHtmlElement(`
+    this.placeholder = Tpl.html`
       <div class="messages_placeholder">
         <div class="messages_placeholder_title">Open chat<br>or create a new one</div>
         <div class="messages_placeholder_actions">
@@ -122,7 +126,7 @@ const MessagesController = new class {
           <button class="messages_placeholder_action messages_placeholder_action-channel mdc-icon-button"><div class="messages_placeholder_action_label">Channel</div></button>  
         </div>
       </div>
-    `);
+    `.buildElement();
     this.container.append(this.placeholder);
   }
 
@@ -141,11 +145,11 @@ const MessagesController = new class {
       }
     }
 
-    this.header.innerHTML = `
+    this.header.innerHTML = Tpl.html`
       <div class="messages_header_peer">
         <div class="messages_header_peer_photo"></div>
         <div class="messages_header_peer_description">
-          <div class="messages_header_peer_name">${encodeHtmlEntities(peerName)}</div>
+          <div class="messages_header_peer_name">${peerName}</div>
           <div class="messages_header_peer_status ${peerStatusClass}">${peerStatus}</div>
         </div>
       </div>
@@ -194,16 +198,61 @@ const MessagesController = new class {
     });
   }
 
-  loadMore = () => {
+  loadHistory() {
     if (this.loading || this.noMore) {
       return;
     }
     this.loading = true;
-    MessagesApiManager.loadChatMessages(this.dialog, this.offsetMsgId, 30)
+    MessagesApiManager.loadChatHistory(this.dialog, this.minMsgId, 30)
         .then((messages) => {
           if (!messages.length) {
             this.noMore = true;
           }
+          this.prependHistory(messages);
+        })
+        .catch((error) => {
+          const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
+          App.alert(errorText);
+          console.log(error);
+        })
+        .finally(() => {
+          this.loading = false;
+        });
+  }
+
+  loadMore = ({down = false} = {}) => {
+    if (this.loading || this.noMore) {
+      return;
+    }
+    this.loading = true;
+    const limit = 20;
+    const addOffset = down ? -limit : 0;
+    const offsetId = down ? this.maxMsgId : this.minMsgId;
+    MessagesApiManager.loadMessages(this.dialog.peer, offsetId, limit, addOffset)
+        .then((messages) => {
+          if (down) {
+            this.appendHistory(messages);
+          } else {
+            this.prependHistory(messages);
+          }
+        })
+        .catch((error) => {
+          const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
+          App.alert(errorText);
+          console.log(error);
+        })
+        .finally(() => {
+          this.loading = false;
+        });
+  };
+
+  jumpToMessage(messageId) {
+    this.clearMessages();
+    this.loading = true;
+    MessagesApiManager.loadMessages(this.dialog.peer, messageId, 20, -10)
+        .then((messages) => {
+          console.log(messages);
+          this.prependHistory(messages);
         })
         .catch((error) => {
           const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
@@ -212,7 +261,7 @@ const MessagesController = new class {
         .finally(() => {
           this.loading = false;
         });
-  };
+  }
 
   canSendMessage(dialog) {
     const chat = MessagesApiManager.getPeerData(dialog.peer);
@@ -231,14 +280,15 @@ const MessagesController = new class {
   onChatMessagesUpdate = (event) => {
     const {dialog, messages} = event.detail;
     if (dialog === this.dialog) {
-      this.renderMessages(messages);
+      this.prependHistory(messages);
     }
   };
 
   onNewMessage = (event) => {
     const {dialog, message} = event.detail;
     if (dialog === this.dialog) {
-      this.renderNewMessage(message);
+      // todo remove pending message
+      this.appendHistory([message]);
     }
   };
 
@@ -275,13 +325,18 @@ const MessagesController = new class {
   onScroll = () => {
     const scrollContainer = this.scrollContainer;
     const scrollTop = scrollContainer.scrollTop;
+    const scrollBottom = scrollContainer.scrollHeight - (scrollTop + scrollContainer.clientHeight);
     const prevScrolling = !!this.scrolling;
-    this.scrolling = scrollTop < scrollContainer.scrollHeight - scrollContainer.offsetHeight;
+    this.scrolling = scrollBottom > 0;
     if (this.scrolling !== prevScrolling) {
       this.scrollContainer.classList.toggle('messages_scroll-scrolling', this.scrolling && !this.footer.hidden);
     }
-    if (!this.loading && !this.noMore && scrollTop < 300) {
-      this.loadMore();
+    if (!this.loading) {
+      if (scrollTop < 300 && !this.noMore) {
+        this.loadMore();
+      } else if (scrollBottom < 300 && this.maxMsgId < this.dialog.top_message) {
+        this.loadMore({down: true});
+      }
     }
   };
 
@@ -289,102 +344,24 @@ const MessagesController = new class {
     this.scrollContainer.scrollTop = this.scrollContainer.scrollHeight;
   }
 
-  renderMessages(messages) {
+  prependHistory(messages) {
     this.loader.remove();
-
+    if (this.minMsgId) {
+      messages = messages.filter(message => message.id < this.minMsgId);
+    }
     if (!messages.length) {
       return;
-    }
-
-    if (this.lastMsgId) {
-      const frag = document.createDocumentFragment();
-      for (let i = 0; messages[i].id > this.lastMsgId; i++) {
-        const message = messages[i];
-        const nextMessage = messages[i - 1];
-        const prevMessage = messages[i + 1];
-        const stickToNext = message.from_id && nextMessage && nextMessage.from_id === message.from_id;
-        const stickToPrev = message.from_id && prevMessage && prevMessage.from_id === message.from_id;
-        const el = this.buildMessageEl(message, {stickToNext, stickToPrev});
-        frag.append(el);
-      }
-      this.container.prepend(frag);
     }
 
     const prevScrollTop = this.scrollContainer.scrollTop;
     const prevScrollHeight = this.scrollContainer.scrollHeight;
 
-    let newElementsAdded = false;
+    const frag = this.buildMessagesBatch(messages);
+    this.mergeDateGroups(this.container.firstElementChild, frag.lastElementChild);
+    this.container.prepend(frag);
 
-    const dialogPeer = this.dialog.peer;
-    const isGroupChat = dialogPeer._ === 'peerChat' || dialogPeer._ === 'peerChannel' && MessagesApiManager.isMegagroup(dialogPeer.channel_id);
-
-    const dateGroups = [];
-    let lastDateGroup;
-    let lastAuthorGroup;
-    messages.forEach((message, i) => {
-      if (this.offsetMsgId && message.id >= this.offsetMsgId) {
-        return;
-      }
-
-      const nextMessage = messages[i - 1]; // earlier message
-      const prevMessage = messages[i + 1]; // later message
-
-      const authorId = MessagesApiManager.getMessageAuthorPeerId(message);
-
-      let stickToNext = message.from_id && nextMessage && nextMessage.from_id === message.from_id;
-      let stickToPrev = message.from_id && prevMessage && prevMessage.from_id === message.from_id;
-      const messageMidnight = new Date(message.date * 1000).setHours(0, 0, 0, 0) / 1000;
-      if (!lastDateGroup && this.container.firstElementChild) {
-        const group = this.container.firstElementChild;
-        if (+group.dataset.date === messageMidnight) {
-          lastDateGroup = group;
-        }
-      }
-      if (!lastDateGroup || !nextMessage || nextMessage.date > messageMidnight + 86400) {
-        stickToNext = false;
-        lastDateGroup = buildHtmlElement(`
-          <div class="messages_group-date" data-date="${messageMidnight}">
-            <div class="message-type-service message-type-date">${this.formatMessageDateFull(message.date)}</div>
-          </div>
-        `);
-        lastAuthorGroup = null;
-        dateGroups.unshift(lastDateGroup);
-      }
-      if (!lastAuthorGroup && lastDateGroup.firstElementChild.nextElementSibling) {
-        const group = lastDateGroup.firstElementChild.nextElementSibling;
-        if (+group.dataset.authorId === authorId) {
-          lastAuthorGroup = group;
-        }
-      }
-      if (!lastAuthorGroup || nextMessage.from_id !== message.from_id) {
-        const needPhoto = isGroupChat && message._ === 'message' && message.from_id !== App.getAuthUserId();
-        lastAuthorGroup = buildHtmlElement(`
-          <div class="messages_group-author ${needPhoto ? 'messages_group-author-with-photo' : ''}" data-author-id="${authorId}">
-            ${needPhoto ? `<a class="messages_group_author_photo" href="#${this.getUserHref(message.from_id)}"></a>` : ''}
-          </div>
-        `);
-        if (needPhoto) {
-          const photoEl = lastAuthorGroup.firstElementChild;
-          ChatsController.loadPeerPhoto(photoEl, MessagesApiManager.getMessageAuthorPeer(message));
-        }
-        lastDateGroup.firstElementChild.after(lastAuthorGroup);
-      }
-      if (!newElementsAdded) {
-        if (nextMessage && !this.compareMessagesDate(message, nextMessage)) {
-          const lastEl = this.container.lastElementChild;
-          if (lastEl.classList.contains('message-type-date')) {
-            lastEl.remove();
-          }
-        }
-        newElementsAdded = true;
-      }
-      const el = this.buildMessageEl(message, {stickToNext, stickToPrev});
-      lastAuthorGroup.prepend(el);
-    });
-    this.container.prepend(...dateGroups);
-
-    this.lastMsgId = messages[0].id;
-    this.offsetMsgId = messages[messages.length - 1].id;
+    this.minMsgId = messages[messages.length - 1].id;
+    this.maxMsgId = this.maxMsgId || messages[0].id;
 
     if (this.scrolling) {
       requestAnimationFrame(() => {
@@ -399,12 +376,93 @@ const MessagesController = new class {
     }
 
     if (this.dialog.unread_count) {
-      MessagesApiManager.readHistory(this.dialog, this.lastMsgId);
+      MessagesApiManager.readHistory(this.dialog, this.maxMsgId);
     }
   }
 
-  renderNewMessage(message) {
+  appendHistory(messages) {
+    if (!this.maxMsgId) {
+      return;
+    }
+    messages = messages.filter(message => message.id > this.maxMsgId);
+    if (!messages.length) {
+      return;
+    }
 
+    const frag = this.buildMessagesBatch(messages);
+    this.mergeDateGroups(frag.firstElementChild, this.container.lastElementChild);
+    this.container.append(frag);
+
+    this.maxMsgId = messages[0].id;
+  }
+
+  mergeDateGroups(newerGroup, olderGroup) {
+    if (!newerGroup || !olderGroup) {
+      return;
+    }
+    if (newerGroup.dataset.date === olderGroup.dataset.date) {
+      const newerAuthorGroup = newerGroup.children[1];
+      const olderAuthorGroup = olderGroup.lastElementChild;
+      if (newerAuthorGroup.dataset.authorId === olderAuthorGroup.dataset.authorId) {
+        olderAuthorGroup.append(...newerAuthorGroup.children);
+        newerAuthorGroup.remove();
+      }
+      olderGroup.append(...Array.from(newerGroup.children).slice(1));
+      newerGroup.remove();
+    }
+  }
+
+  buildMessagesBatch(messages) {
+    const dialogPeer = this.dialog.peer;
+    const isGroupChat = dialogPeer._ === 'peerChat' || dialogPeer._ === 'peerChannel' && MessagesApiManager.isMegagroup(dialogPeer.channel_id);
+    const frag = document.createDocumentFragment();
+    let lastDateGroup = null;
+    let lastDateGroupMidnight = 0;
+    let lastAuthorGroup = null;
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
+      const newerMessage = messages[i - 1];
+      const olderMessage = messages[i + 1];
+      const authorId = MessagesApiManager.getMessageAuthorPeerId(message);
+      let stickToNext = message.from_id && newerMessage && newerMessage.from_id === message.from_id;
+      let stickToPrev = message.from_id && olderMessage && olderMessage.from_id === message.from_id;
+      const messageMidnight = new Date(message.date * 1000).setHours(0, 0, 0, 0) / 1000;
+      if (!lastDateGroup || lastDateGroupMidnight !== messageMidnight || newerMessage && newerMessage.date > messageMidnight + 86400) {
+        stickToNext = false;
+        lastDateGroup = this.buildMessagesDateGroupEl(messageMidnight);
+        lastDateGroupMidnight = messageMidnight;
+        lastAuthorGroup = null;
+        frag.prepend(lastDateGroup);
+      }
+      if (!lastAuthorGroup || !newerMessage || newerMessage.from_id !== message.from_id) {
+        const needPhoto = isGroupChat && message._ === 'message' && authorId !== App.getAuthUserId();
+        lastAuthorGroup = this.buildMessagesAuthorGroupEl(authorId, needPhoto);
+        if (needPhoto) {
+          const photoEl = lastAuthorGroup.firstElementChild;
+          ChatsController.loadPeerPhoto(photoEl, MessagesApiManager.getMessageAuthorPeer(message));
+        }
+        lastDateGroup.firstElementChild.after(lastAuthorGroup);
+      }
+      const el = this.buildMessageEl(message, {stickToNext, stickToPrev});
+      lastAuthorGroup.prepend(el);
+    }
+    return frag;
+  }
+
+  buildMessagesDateGroupEl(date) {
+    return Tpl.html`
+      <div class="messages_group-date" data-date="${date}">
+        <div class="message-type-service message-type-date">${this.formatMessageDateFull(date)}</div>
+      </div>
+    `.buildElement();
+  }
+
+  buildMessagesAuthorGroupEl(authorId, needPhoto = false) {
+    return Tpl.html`
+      <div class="messages_group-author ${needPhoto ? 'messages_group-author-with-photo' : ''}" data-author-id="${authorId}">
+        ${needPhoto ? Tpl.html`<a class="messages_group_author_photo" href="#${this.getUserHref(authorId)}"></a>` : ''}
+      </div>
+    `.buildElement();
   }
 
   buildMessageEl(message, options) {
@@ -430,7 +488,7 @@ const MessagesController = new class {
   }
 
   appendPendingMessage(content) {
-    const el = buildHtmlElement(`<div class="message message-out message-stick-to-next message-stick-to-prev"></div>`);
+    const el = Tpl.html`<div class="message message-out message-stick-to-next message-stick-to-prev"></div>`.buildElement();
     el.append(content);
     const list = $('.messages_pending_list');
     list.appendChild(el);
@@ -463,16 +521,19 @@ const MessagesController = new class {
       messageContent = this.formatFwdMessageContent(message.fwd_from, messageContent);
     }
     if (message.reply_to_msg_id) {
-      messageContent = this.formatReplyToMessageContent(message.reply_to_msg_id) + messageContent;
+      messageContent = Tpl.html`${this.formatReplyToMessageContent(message.reply_to_msg_id)}${messageContent}`;
     }
 
+    const messageDateFull = formatDateFull(message.date) + ' ' + formatTime(message.date, {withSeconds: true});
+    const messageViews = this.formatMessageViews(message);
+    const messageTime = formatTime(message.date);
     const messageStatus = this.formatMessageStatus(message, this.dialog);
 
-    el.innerHTML = `
+    el.innerHTML = Tpl.html`
       <div class="message_content">
         ${authorName}
         ${messageContent}
-        <div class="message_date" title="${formatDateFull(message.date)} ${formatTime(message.date, true)}">${this.formatMessageViews(message)}${formatTime(message.date)}${messageStatus}</div>
+        <div class="message_date" title="${messageDateFull}">${messageViews}${messageTime}${messageStatus}</div>
       </div>
     `;
 
@@ -522,7 +583,7 @@ const MessagesController = new class {
     if (message.from_id && this.dialog.peer._ !== 'peerUser') {
       const userId = message.from_id;
       const title = MessagesApiManager.getPeerName({_: 'peerUser', user_id: userId});
-      return `<a class="message_author" href="#${this.getUserHref(userId)}">${encodeHtmlEntities(title)}</a>`;
+      return Tpl.html`<a class="message_author" href="#${this.getUserHref(userId)}">${title}</a>`;
     }
     return '';
   }
@@ -665,24 +726,27 @@ const MessagesController = new class {
   }
 
   async loadMessageMediaThumb(messageEl, mediaThumbData) {
-    let thumbEl = $('.message_media_thumb', messageEl);
-    if (!thumbEl) {
+    let thumbContainer = $('.message_media_thumb', messageEl);
+    if (!thumbContainer) {
       debugger;
       return;
     }
-    thumbEl.addEventListener('click', this.onThumbClick);
+    thumbContainer.addEventListener('click', this.onThumbClick);
 
     const sizes = mediaThumbData.sizes;
 
+    let inlineThumb;
     const inlineSize = MediaApiManager.choosePhotoSize(sizes, 'i');
     if (inlineSize) {
       const url = MediaApiManager.getPhotoStrippedSize(sizes);
-      thumbEl.innerHTML = `<img class="message_media_thumb_image message_media_thumb_image-blurred" src="${url}">`;
+      inlineThumb = Tpl.html`<img class="message_media_thumb_image message_media_thumb_image-blurred" src="${url}">`.buildElement();
+      thumbContainer.prepend(inlineThumb);
     }
 
     if (mediaThumbData.type === 'sticker' && mediaThumbData.attributes.animated) {
       const url = await FileApiManager.loadDocument(mediaThumbData.object, {cache: true});
-      thumbEl.innerHTML = `<tgs-player autoplay src="${url}" class="message_media_thumb_image"></tgs-player>`;
+      const thumb = Tpl.html`<tgs-player autoplay src="${url}" class="message_media_thumb_image"></tgs-player>`.buildElement();
+      thumbContainer.prepend(thumb);
     } else {
       try {
         const photoSize = MediaApiManager.choosePhotoSize(sizes, 'm');
@@ -694,10 +758,15 @@ const MessagesController = new class {
         } else {
           url = await FileApiManager.loadPhoto(mediaThumbData.object, photoSize.type);
         }
-        thumbEl.innerHTML = `<img class="message_media_thumb_image" src="${url}">`;
+        const thumb = Tpl.html`<img class="message_media_thumb_image" src="${url}">`.buildElement();
+        thumbContainer.prepend(thumb);
       } catch (error) {
         console.log('thumb load error', error);
       }
+    }
+
+    if (inlineThumb) {
+      inlineThumb.remove();
     }
   }
 
@@ -713,11 +782,11 @@ const MessagesController = new class {
         authorName = MessagesApiManager.getChatName(channel);
       }
     }
-    return `
+    return Tpl.html`
       <div class="message_forwarded_header">Forwarded message</div>
       <div class="message_forwarded_content">
         <div class="message_forwarded_author">
-          <a>${encodeHtmlEntities(authorName)}</a>
+          <a>${authorName}</a>
         </div>
         ${messageContent}
       </div>
@@ -730,11 +799,11 @@ const MessagesController = new class {
       const authorPeer = MessagesApiManager.getMessageAuthorPeer(message);
       const authorName = MessagesApiManager.getPeerName(authorPeer);
       const shortText = message.message ? cutText(message.message, 110, 100) : this.getMessageContentTypeLabel(message.media);
-      return `
+      return Tpl.html`
         <div class="message_reply_to_wrap">
           <div class="message_reply_to_content">
             <div class="message_reply_to_author">${authorName}</div>
-            <div class="message_reply_to_text">${encodeHtmlEntities(shortText)}</div>
+            <div class="message_reply_to_text">${shortText}</div>
           </div>
         </div>
       `;
@@ -744,7 +813,7 @@ const MessagesController = new class {
 
   formatMessageViews(message) {
     if (message.views) {
-      return `
+      return Tpl.html`
         <div class="message_views">${formatCountShort(message.views)}</div>
       `;
     }
@@ -754,7 +823,7 @@ const MessagesController = new class {
   formatMessageStatus(message, dialog) {
     if (message.pFlags.out && message.from_id) {
       const status = message.id <= dialog.read_outbox_max_id ? 'read' : 'sent';
-      return `<div class="message_status message_status-${status}"></div>`;
+      return Tpl.html`<div class="message_status message_status-${status}"></div>`;
     }
     return '';
   }
@@ -762,37 +831,38 @@ const MessagesController = new class {
   formatMessageContent(message, mediaThumbData) {
     const media = message.media;
     const caption = this.formatText(message);
+    const captionText = message.message;
     if (!media) {
       if (mediaThumbData) {
-        return this.formatThumb(mediaThumbData, caption);
+        return this.formatThumb(mediaThumbData, captionText);
       }
       return caption;
     }
     switch (media._) {
       case 'messageMediaPhoto':
-        return this.formatThumb(mediaThumbData, caption);
+        return this.formatThumb(mediaThumbData, captionText);
       case 'messageMediaDocument':
-        return this.formatDocument(media, mediaThumbData, caption);
+        return this.formatDocument(media, mediaThumbData, caption, captionText);
       case 'messageMediaWebPage':
-        return caption + this.formatWebPage(media, mediaThumbData, caption);
+        return Tpl.html`${caption}${this.formatWebPage(media, mediaThumbData)}`;
       case 'messageMediaPoll':
-        return caption + 'Poll';
+        return Tpl.html`${caption}Poll`;
       case 'messageMediaGeo':
-        return caption + 'Geo';
+        return Tpl.html`${caption}Geo`;
       case 'messageMediaGeoLive':
-        return caption + 'Live Geo';
+        return Tpl.html`${caption}Live Geo`;
       case 'messageMediaContact':
-        return caption + 'Contact';
+        return Tpl.html`${caption}Contact`;
       case 'messageMediaUnsupported':
         return 'Message unsupported';
       default:
-        return caption + '[' + media._ + ']';
+        return Tpl.html`${caption} [${media._}]`;
     }
   }
 
-  formatDocument(media, mediaThumbData, caption) {
+  formatDocument(media, mediaThumbData, caption, captionText) {
     if (mediaThumbData) {
-      return this.formatThumb(mediaThumbData, caption);
+      return this.formatThumb(mediaThumbData, captionText);
     }
 
     const attributes = MediaApiManager.getDocumentAttributes(media.document);
@@ -806,14 +876,14 @@ const MessagesController = new class {
         return '[sticker]';
     }
 
-    return `
+    return Tpl.html`
       ${caption}
       <div class="document">
         <div class="document_col">
           <div class="document_icon"></div>
         </div>
         <div class="document_col">
-          <div class="document_filename">${encodeHtmlEntities(attributes.file_name)}</div>
+          <div class="document_filename">${attributes.file_name}</div>
           <div class="document_size">${this.formatDocSize(media.document.size)}</div>        
         </div>      
       </div>
@@ -836,90 +906,85 @@ const MessagesController = new class {
   formatWebPage(media, mediaThumbData) {
     const webpage = media.webpage;
     if (webpage._ === 'webPage') {
-      let content = this.formatThumb(mediaThumbData);
+      const content = this.formatThumb(mediaThumbData);
       if (webpage.site_name) {
-        content += `<a class="wepbage_site_name" href="${encodeURI(webpage.url)}" target="_blank">${encodeHtmlEntities(webpage.site_name)}</a>`;
+        content.appendHtml`<a class="wepbage_site_name" href="${encodeURI(webpage.url)}" target="_blank">${webpage.site_name}</a>`;
       }
       if (webpage.title) {
-        content += `<div class="wepbage_title">${encodeHtmlEntities(webpage.title)}</div>`;
+        content.appendHtml`<div class="wepbage_title">${webpage.title}</div>`;
       }
       if (webpage.description) {
         const description = cutText(webpage.description, 300, 255);
-        content += `<div class="webpage_description">${this.replaceLineBreaks(encodeHtmlEntities(description))}</div>`;
+        content.appendHtml`<div class="webpage_description">${Tpl.raw`${description}`.replaceLineBreaks()}</div>`;
       }
-      return `<div class="webpage_content">${content}</div>`;
+      return Tpl.html`<div class="webpage_content">${content}</div>`;
     }
     return '';
   }
 
-  replaceLineBreaks(text = '') {
-    return text.replace(/\n/g, '<br>')
-  }
-
   formatText(message) {
     const sourceText = message.message;
-    let text = '';
+    let result = Tpl.html``;
     let addClass = '';
     if (message.entities) {
       let offset = 0;
       for (const entity of message.entities) {
-        text += encodeHtmlEntities(sourceText.substring(offset, entity.offset));
+        result.appendHtml`${sourceText.substring(offset, entity.offset)}`;
         offset = entity.offset + entity.length;
-        const entityText = encodeHtmlEntities(sourceText.substr(entity.offset, entity.length));
-        text += this.processEntity(entityText, entity);
+        const entityText = sourceText.substr(entity.offset, entity.length);
+        result.appendHtml`${this.processEntity(entityText, entity)}`;
       }
-      text += encodeHtmlEntities(sourceText.substring(offset));
+      result.appendHtml`${sourceText.substring(offset)}`;
     } else {
-      text = encodeHtmlEntities(sourceText);
+      result.appendHtml`${sourceText}`;
     }
-    if (text) {
-      text = this.replaceLineBreaks(text);
-      text = `<span class="message_text ${addClass}">${text}</span>`;
+    if (result.length) {
+      result.replaceLineBreaks();
+      return Tpl.html`<span class="message_text ${addClass}">${result}</span>`;
     }
-    return text;
+    return result;
   }
-
 
   processEntity(text, entity) {
     switch (entity._) {
       case 'messageEntityUrl':
         const url = /^https?:\/\//.test(text) ? text : 'http://' + text;
-        return `<a href="${url}" target="_blank" rel="noopener" data-entity="url">${cutText(text, 60, 50)}</a>`;
+        return Tpl.html`<a href="${url}" target="_blank" rel="noopener" data-entity="url">${cutText(text, 60, 50)}</a>`;
       case 'messageEntityTextUrl':
-        return `<a href="${entity.url}" target="_blank" rel="noopener" data-entity="text_url">${text}</a>`;
+        return Tpl.html`<a href="${entity.url}" target="_blank" rel="noopener" data-entity="text_url">${text}</a>`;
       case 'messageEntityBold':
-        return `<b>${text}</b>`;
+        return Tpl.html`<b>${text}</b>`;
       case 'messageEntityItalic':
-        return `<i>${text}</i>`;
+        return Tpl.html`<i>${text}</i>`;
       case 'messageEntityUnderline':
-        return `<u>${text}</u>`;
+        return Tpl.html`<u>${text}</u>`;
       case 'messageEntityStrike':
-        return `<s>${text}</s>`;
+        return Tpl.html`<s>${text}</s>`;
       case 'messageEntityCode':
-        return `<code>${text}</code>`;
+        return Tpl.html`<code>${text}</code>`;
       case 'messageEntityPre':
-        return `<pre>${text}</pre>`;
+        return Tpl.html`<pre>${text}</pre>`;
       case 'textEntityTypePreCode':
-        return `<pre><code>${text}</code></pre>`;
+        return Tpl.html`<pre><code>${text}</code></pre>`;
       case 'messageEntityMention':
-        return `<a href="#${text}" data-entity="mention">${text}</a>`;
+        return Tpl.html`<a href="#${text}" data-entity="mention">${text}</a>`;
       case 'messageEntityMentionName':
-        return`<a href="#${this.getUserHref(entity.user_id)}" data-entity="mention">${text}</a>`;
+        return Tpl.html`<a href="#${this.getUserHref(entity.user_id)}" data-entity="mention">${text}</a>`;
       case 'messageEntityHashtag':
-        return `<a data-entity="hashtag">${text}</a>`;
+        return Tpl.html`<a data-entity="hashtag">${text}</a>`;
       case 'messageEntityBotCommand':
-        return `<a data-entity="bot_command">${text}</a>`;
+        return Tpl.html`<a data-entity="bot_command">${text}</a>`;
       case 'messageEntityEmail':
-        return `<a href="mailto:${text}" data-entity="email_address">${text}</a>`;
+        return Tpl.html`<a href="mailto:${text}" data-entity="email_address">${text}</a>`;
       case 'messageEntityPhone':
-        return `<a href="tel:${text}" data-entity="phone_number">${text}</a>`;
+        return Tpl.html`<a href="tel:${text}" data-entity="phone_number">${text}</a>`;
       default:
         return text;
     }
   }
 
-  formatThumb(mediaThumbData, caption) {
-    let html = '';
+  formatThumb(mediaThumbData, captionText) {
+    const result = Tpl.html``;
     let thumbWidth;
     let thumbHeight;
     if (mediaThumbData) {
@@ -931,25 +996,20 @@ const MessagesController = new class {
       }
       const photoSize = MediaApiManager.choosePhotoSize(mediaThumbData.sizes);
       [thumbWidth, thumbHeight] = this.getThumbWidthHeight(photoSize, maxW, maxH);
-      if (caption && caption.length > 100 && thumbWidth < 300) {
+      if (captionText && captionText.length > 100 && thumbWidth < 300) {
         thumbWidth = 300;
       }
-      html += `<div class="message_media_thumb message_media_thumb-${mediaThumbData.type}" style="width:${thumbWidth}px;height:${thumbHeight}px;"></div>`;
+      result.appendHtml`
+        <div class="message_media_thumb message_media_thumb-${mediaThumbData.type}" style="width:${thumbWidth}px;height:${thumbHeight}px;">
+          ${ ['video', 'gif'].includes(mediaThumbData.type) ? Tpl.html`<div class="message_media_thumb_play"></div>"` : ''}
+        </div>
+      `;
     }
-    if (caption && mediaThumbData.type !== 'sticker') {
+    if (captionText && mediaThumbData.type !== 'sticker') {
       const cssWidth = thumbWidth ? `width:${thumbWidth}px;` : '';
-      html += `<div class="message_media_caption" style="${cssWidth}">${caption}</div>`;
+      result.appendHtml`<div class="message_media_caption" style="${cssWidth}">${captionText}</div>`;
     }
-    return html;
-  }
-
-  compareMessagesDate(message1, message2) {
-    const date1 = new Date(message1.date * 1000);
-    const date2 = new Date(message2.date * 1000);
-    if (date1.toDateString() !== date2.toDateString()) {
-      return message1.date > message2.date ? 1 : -1;
-    }
-    return 0;
+    return result;
   }
 
   formatMessageDateFull(messageDate) {
@@ -957,15 +1017,11 @@ const MessagesController = new class {
     let dateText;
     if (messageDate > todayMidnight) {
       dateText = 'Today';
-    } else if (messageDate > todayMidnight - 86400) {
-      dateText = 'Yesterday';
     } else {
-      const date = new Date(messageDate * 1000);
-      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-      dateText = months[date.getMonth()] + ' ' + date.getDate();
-      if (date.getFullYear() !== new Date().getFullYear()) {
-        dateText += ', ' + date.getFullYear();
-      }
+      dateText = formatDateFull(messageDate, {
+        longMonth: true,
+        withYear: new Date(messageDate * 1000).getFullYear() !== new Date().getFullYear()
+      });
     }
     return dateText;
   }
@@ -1119,27 +1175,33 @@ const MessagesController = new class {
     return '@' + userId;
   }
 
-  initBackground() {
-    const img = document.createElement('img');
-    img.src = 'bg.jpg';
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ratio = img.width / img.height;
-      if (screen.width > screen.height) {
-        canvas.width = screen.width;
-        canvas.height = screen.width / ratio;
-      } else {
-        canvas.width = screen.height * ratio;
-        canvas.height = screen.height;
-      }
+  async initBackground() {
+    const cache = await caches.open('v1');
+    const isCached = await cache.match('bg.jpg?blurred');
+
+    if (!isCached && window.OffscreenCanvas) {
+      const response = await fetch('bg.jpg');
+      const image = await createImageBitmap(await response.blob());
+      const ratio = image.width / image.height;
+      const canvas = new OffscreenCanvas(...getCanvasSize(ratio));
       const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#91b087';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.filter = 'blur(10px)';
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => {
-        const url = URL.createObjectURL(blob);
-        $('.messages_container').style.backgroundImage = `url(${url})`;
-      });
-    };
+      ctx.drawImage(image, -10, -10, canvas.width + 20, canvas.height + 20);
+      const blob = await canvas.convertToBlob({type: 'image/jpeg', quality: 0.95});
+      cache.put('bg.jpg?blurred', new Response(blob));
+    }
+
+    $('.messages_container').style.backgroundImage = `url(bg.jpg?blurred)`;
+
+    function getCanvasSize(ratio) {
+      if (screen.width > screen.height) {
+        return [screen.width, screen.width / ratio];
+      } else {
+        return [screen.height * ratio, screen.height];
+      }
+    }
   }
 
   async loadAnimatedEmojiStickerSet() {

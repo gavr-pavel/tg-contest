@@ -1,4 +1,4 @@
-import {$, importTemplate, getLabeledElements, buildHtmlElement} from './utils.js';
+import {$, importTemplate, getLabeledElements} from './utils.js';
 import {ApiClient} from './api/api_client.js';
 import {I18n} from './i18n.js';
 import {App} from './app';
@@ -6,6 +6,7 @@ import {MDCTextField} from '@material/textfield/index';
 import {MDCRipple} from '@material/ripple/component';
 import {CountryCodesConfig} from './country_codes_config';
 import {getCountryCodeEmojiFlag} from './emoji_config';
+import {Tpl} from './utils';
 
 const STEP_PHONE = 0;
 const STEP_CODE = 1;
@@ -331,7 +332,7 @@ const LoginController = new class {
   }
 
   buildInput(label, type = 'text') {
-    const input = buildHtmlElement(`
+    const input = Tpl.html`
       <div class="login_input mdc-text-field mdc-text-field--outlined">
         <input type="${type}" class="mdc-text-field__input">
         <div class="mdc-notched-outline">
@@ -342,7 +343,7 @@ const LoginController = new class {
           <div class="mdc-notched-outline__trailing"></div>
         </div>
       </div>
-    `);
+    `.buildElement();
     input.querySelector('input').addEventListener('keyup', this.checkInput);
     return input;
   }
@@ -352,7 +353,7 @@ const LoginController = new class {
 
     const input = $('input', wrap);
 
-    const button = buildHtmlElement(`<span class="login_password_visibility_button"></span>`);
+    const button = Tpl.html`<span class="login_password_visibility_button"></span>`.buildElement();
     button.addEventListener('click', () => {
       const visible = input.type === 'password';
       input.type = visible ? 'text' : 'password';
@@ -365,9 +366,9 @@ const LoginController = new class {
   }
 
   buildButton(text, hidden = true) {
-    const button = buildHtmlElement(`
+    const button = Tpl.html`
       <button class="login_button mdc-button mdc-button--unelevated" type="submit" ${hidden ? ' hidden' : ''}><span class="mdc-button__ripple"></span>${text}</button>
-    `);
+    `.buildElement();
     this.mdcComponents.push(new MDCRipple(button));
     return button;
   }
@@ -380,22 +381,22 @@ const LoginController = new class {
         continue;
       }
       const emoji = getCountryCodeEmojiFlag(code);
-      const el = buildHtmlElement(`
+      const el = Tpl.html`
         <li class="mdc-list-item login_countries_item" role="menuitem" data-code="${code}" data-name="${name.toLowerCase()}">
           <div class="login_countries_item_emoji">${emoji}</div>
           <div class="login_countries_item_country">${name}</div>
           <div class="login_countries_item_prefix">${prefix}</div>
         </li>
-      `);
+      `.buildElement();
       el.addEventListener('mousedown', onItemClick);
       items.push(el);
     }
 
-    const el = buildHtmlElement(`
+    const el = Tpl.html`
       <div class="mdc-menu mdc-menu-surface login_countries_menu" hidden>
         <ul class="mdc-list login_countries_list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1"></ul>
       </div>
-    `);
+    `.buildElement();
 
     $('.login_countries_list', el).append(...items);
 
@@ -438,9 +439,9 @@ const LoginController = new class {
   }
 
   buildEditPhoneButton() {
-    const el = buildHtmlElement(`
+    const el = Tpl.html`
       <span class="login_edit_phone_button"></span>
-    `);
+    `.buildElement();
     el.addEventListener('click', () => {
       this.setStep(STEP_PHONE);
     });

@@ -4,6 +4,7 @@ import {ChatsController} from './chats_controller';
 import {MessagesController} from './messages_controller.js';
 import {FileApiManager} from './api/file_api_manager';
 import {MDCSnackbar} from '@material/snackbar/component';
+import {Tpl} from './utils';
 
 const App = new class {
   API_ID = 884322;
@@ -77,13 +78,13 @@ const App = new class {
       this.snackbar.destroy();
     }
 
-    const el = Utils.buildHtmlElement(`
+    const el = Tpl.html`
       <div class="mdc-snackbar">
         <div class="mdc-snackbar__surface">
           <div class="mdc-snackbar__label">${text}</div>
         </div>
       </div>
-    `);
+    `.buildElement();
 
     document.body.append(el);
 

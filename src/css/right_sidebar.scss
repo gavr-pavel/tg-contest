@@ -1,18 +1,26 @@
 .right_sidebar {
   border-left: 1px solid #DADCE0;
+  background: #fff;
   display: flex;
   flex-direction: column;
   margin-right: 0;
   overflow: hidden;
-  position: relative;
-  transition: margin .1s, visibility .1s;
+  //position: relative;
+  //transition: margin .1s, visibility .1s;
   width: 420px;
   box-sizing: border-box;
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  transition: transform .2s, visibility .2s;
+  will-change: transform;
 }
 
 .right_sidebar[hidden] {
   display: block;
-  margin-right: -420px;
+  //margin-right: -420px;
+  transform: translateX(420px);
   visibility: hidden;
 }
 
