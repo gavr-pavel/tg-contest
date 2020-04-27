@@ -357,7 +357,7 @@ const MessagesController = new class {
     const prevScrollHeight = this.scrollContainer.scrollHeight;
 
     const frag = this.buildMessagesBatch(messages);
-    this.mergeDateGroups(this.container.firstElementChild, frag.lastElementChild);
+    this.mergeDateGroups(this.container.firstElementChild, frag.lastElementChild, true);
     this.container.prepend(frag);
 
     this.minMsgId = messages[messages.length - 1].id;
@@ -390,13 +390,13 @@ const MessagesController = new class {
     }
 
     const frag = this.buildMessagesBatch(messages);
-    this.mergeDateGroups(frag.firstElementChild, this.container.lastElementChild);
+    this.mergeDateGroups(frag.firstElementChild, this.container.lastElementChild, false);
     this.container.append(frag);
 
     this.maxMsgId = messages[0].id;
   }
 
-  mergeDateGroups(newerGroup, olderGroup) {
+  mergeDateGroups(newerGroup, olderGroup, moveToNewer) {
     if (!newerGroup || !olderGroup) {
       return;
     }
@@ -404,12 +404,21 @@ const MessagesController = new class {
       const newerAuthorGroup = newerGroup.children[1];
       const olderAuthorGroup = olderGroup.lastElementChild;
       if (newerAuthorGroup.dataset.authorId === olderAuthorGroup.dataset.authorId) {
-        newerAuthorGroup.prepend(...olderAuthorGroup.children);
-        olderAuthorGroup.remove();
+        if (moveToNewer) {
+          newerAuthorGroup.prepend(...olderAuthorGroup.children);
+          olderAuthorGroup.remove();
+        } else {
+          olderAuthorGroup.append(...olderAuthorGroup.children);
+          newerGroup.remove();
+        }
       }
-      newerGroup.firstElementChild.remove();
-      newerGroup.prepend(...olderGroup.children);
-      olderGroup.remove();
+      if (moveToNewer) {
+        newerGroup.firstElementChild.after(...Array.from(olderGroup.children).slice(1));
+        olderGroup.remove();
+      } else {
+        olderGroup.append(...Array.from(newerGroup.children).slice(1));
+        newerGroup.remove();
+      }
     }
   }
 
