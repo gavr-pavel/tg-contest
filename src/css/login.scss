@@ -36,8 +36,22 @@
 }
 
 .login_input {
+  position: relative;
   width: 100%;
   margin-bottom: 24px;
+}
+
+.login_input_arrow {
+  position: absolute;
+  right: 14px;
+  top: 16px;
+  width: 24px;
+  height: 24px;
+  background: svg('../icons/down_svg.svg', (path: (fill: $icon_mediumgray_color))) no-repeat center;
+}
+
+.login_input_arrow_open {
+  background: svg('../icons/up_svg.svg', (path: (fill: $icon_blue_color))) no-repeat center;
 }
 
 .login_button {

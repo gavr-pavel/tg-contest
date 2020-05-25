@@ -374,6 +374,9 @@ const LoginController = new class {
   }
 
   buildCountryMenu(inputWrap) {
+    const arrow = Tpl.html`<div class="login_input_arrow"></div>`.buildElement();
+    inputWrap.appendChild(arrow);
+
     const items = [];
     for (const country of CountryCodesConfig) {
       const [code, name, prefix] = country;
@@ -405,11 +408,11 @@ const LoginController = new class {
     const input = inputWrap.querySelector('input');
     input.addEventListener('focus', () => {
       if (itemsFound) {
-        el.hidden = false;
+        toggleVisibility(true);
       }
     });
     input.addEventListener('blur', () => {
-      el.hidden = true;
+      toggleVisibility(false);
     });
     input.addEventListener('input', () => {
       const value = input.value.trim().toLowerCase();
@@ -422,7 +425,7 @@ const LoginController = new class {
           item.style.display = 'none';
         }
       }
-      el.hidden = !itemsFound;
+      toggleVisibility(!!itemsFound);
     });
 
     function onItemClick(event) {
@@ -433,6 +436,11 @@ const LoginController = new class {
       LoginController.countryTextField.value = name;
       LoginController.phoneTextField.value = prefix;
       LoginController.phoneTextField.focus();
+    }
+
+    function toggleVisibility(visible) {
+      el.hidden = !visible;
+      arrow.classList.toggle('login_input_arrow_open', visible);
     }
 
     return el;
