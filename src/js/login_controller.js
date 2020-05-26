@@ -51,8 +51,8 @@ const LoginController = new class {
         this.setDomContent('subheader', 'Please enter your phone number', false);
         this.dom.form.innerHTML = '';
         const countryInput = this.buildInput('Country');
-        const countryMenu = this.buildCountryMenu(countryInput);
         const phoneInput = this.buildInput('Phone Number', 'tel');
+        const countryMenu = this.buildCountryMenu(countryInput, phoneInput);
         this.submitButton = this.buildButton('Next');
         this.countryTextField = new MDCTextField(countryInput);
         this.phoneTextField = new MDCTextField(phoneInput);
@@ -373,16 +373,15 @@ const LoginController = new class {
     return button;
   }
 
-  buildCountryMenu(inputWrap) {
+  buildCountryMenu(inputWrap, phoneInputWrap) {
     const arrow = Tpl.html`<div class="login_input_arrow"></div>`.buildElement();
     inputWrap.appendChild(arrow);
 
+    const prefixes = [];
     const items = [];
     for (const country of CountryCodesConfig) {
       const [code, name, prefix] = country;
-      if (!code) {
-        continue;
-      }
+      prefixes.push([prefix.replace(/\s+/g, ''), country]);
       const emoji = getCountryCodeEmojiFlag(code);
       const el = Tpl.html`
         <li class="mdc-list-item login_countries_item" role="menuitem" data-code="${code}" data-name="${name.toLowerCase()}">
@@ -441,6 +440,34 @@ const LoginController = new class {
     function toggleVisibility(visible) {
       el.hidden = !visible;
       arrow.classList.toggle('login_input_arrow_open', visible);
+    }
+
+    const phoneInput = phoneInputWrap.querySelector('input');
+    phoneInput.addEventListener('input', checkPhoneInput);
+
+    function checkPhoneInput() {
+      let val = phoneInput.value.replace(/(?<!^)\+|(?<=^|\+)0+|[^\d+]/g, '');
+      if (val && !val.startsWith('+')) {
+        val = '+' + val;
+      }
+      phoneInput.value = val;
+      const matchedPrefixes = [];
+      const maybePrefixes = [];
+      for (const item of prefixes) {
+        const [prefix] = item;
+        if (val.startsWith(prefix)) {
+          matchedPrefixes.push(item)
+        } else if (prefix.startsWith(val)) {
+          maybePrefixes.push(item);
+        }
+      }
+      console.log(matchedPrefixes);
+      if (matchedPrefixes.length && !maybePrefixes.length) {
+        const matchedCountry = matchedPrefixes.sort((a, b) => b[0].length - a[0].length)[0];
+        LoginController.countryTextField.value = matchedCountry[1][1];
+      } else {
+        LoginController.countryTextField.value = '';
+      }
     }
 
     return el;
