@@ -461,13 +461,13 @@ const LoginController = new class {
           maybePrefixes.push(item);
         }
       }
-      console.log(matchedPrefixes);
+      let matchedCountry;
       if (matchedPrefixes.length && !maybePrefixes.length) {
-        const matchedCountry = matchedPrefixes.sort((a, b) => b[0].length - a[0].length)[0];
-        LoginController.countryTextField.value = matchedCountry[1][1];
-      } else {
-        LoginController.countryTextField.value = '';
+        if (matchedPrefixes.length === 1 || matchedPrefixes[0][0] !== matchedPrefixes[1][0]) {
+          matchedCountry = matchedPrefixes.sort((a, b) => b[0].length - a[0].length)[0][1];
+        }
       }
+      LoginController.countryTextField.value = matchedCountry ? matchedCountry[1] : '';
     }
 
     return el;
