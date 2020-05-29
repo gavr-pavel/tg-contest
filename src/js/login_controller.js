@@ -27,17 +27,37 @@ const LoginController = new class {
     this.dom.container = container;
     this.dom.form.addEventListener('submit', this.onFormSubmit);
 
+    this.preloadAnimations();
+
     this.setStep(STEP_PHONE);
 
     document.body.append(container);
   }
 
   setDomContent(label, content) {
-    this.dom[label].innerHTML = content;
+    if (typeof content === 'string') {
+      this.dom[label].innerHTML = content;
+    } else {
+      this.dom[label].innerHTML = '';
+      this.dom[label].append(content);
+    }
   }
 
   setDomText(label, text) {
     this.dom[label].textContent = text;
+  }
+
+  setAnimatedImage(animation, segments = null) {
+    this.setDomContent('image', animation);
+    try {
+      if (segments) {
+        animation.getLottie().playSegments(segments, true);
+      } else {
+        animation.play();
+      }
+    } catch (e) {
+      console.log('Can not play animation', animation);
+    }
   }
 
   setStep(step, params = {}) {
@@ -45,8 +65,7 @@ const LoginController = new class {
 
     switch (step) {
       case STEP_PHONE: {
-        const img = '<div class="login_telegram_logo login_image_content"></div>';
-        this.setDomContent('image', img, false);
+        this.setDomContent('image', '<div class="login_telegram_logo login_image_content"></div>');
         this.setDomContent('header', 'Sign in to Telegram');
         this.setDomContent('subheader', 'Please enter your phone number', false);
         this.dom.form.innerHTML = '';
@@ -65,13 +84,12 @@ const LoginController = new class {
       } break;
 
       case STEP_CODE: {
-        const img = '<tgs-player autoplay="" loop="" intermission="1000" mode="normal" src="tgs/TwoFactorSetupMonkeyTracking.tgs" background="transparent" class="login_image_content"></tgs-player>';
-        this.setDomContent('image', img, false);
+        this.setAnimatedImage(this.animations.idle);
         this.setDomText('header', '+' + this.authParams.phoneNumber);
         this.setDomContent('subheader', 'We have sent you an SMS<br>with the code.');
         this.dom.header.append(this.buildEditPhoneButton());
         this.dom.form.innerHTML = '';
-        const input = this.buildInput('Code');
+        const input = this.buildCodeInput();
         this.submitButton = this.buildButton('Next');
         this.codeTextField = new MDCTextField(input);
         this.dom.form.append(input, this.submitButton);
@@ -79,8 +97,7 @@ const LoginController = new class {
       } break;
 
       case STEP_PASSWORD: {
-        const img =  '<tgs-player autoplay="" loop="" intermission="3000" mode="normal" src="tgs/TwoFactorSetupMonkeyPeek.tgs" background="transparent" class="login_image_content"></tgs-player>';
-        this.setDomContent('image', img);
+        this.setAnimatedImage(this.animations.close, [0, 50]);
         this.setDomContent('header', 'Enter a password');
         this.setDomContent('subheader','Your account is protected with<br>an additional password', false);
         this.dom.form.innerHTML = '';
@@ -93,7 +110,8 @@ const LoginController = new class {
       } break;
 
       case STEP_SIGN_UP: {
-        const img =  '<div class="login_upload_photo login_image_content">';
+        const img =  Tpl.html`<div class="login_upload_photo login_image_content">`.buildElement();
+        img.addEventListener('click', this.chooseProfilePhoto);
         this.setDomContent('image', img);
         this.setDomContent('header', 'Your Name');
         this.setDomContent('subheader','Enter your name and add<br>a profile picture', false);
@@ -279,6 +297,7 @@ const LoginController = new class {
     })
         .then((auth) => {
           this.onAuthResult(auth);
+          this.uploadProfilePhoto();
         })
         .catch((error) => {
           this.passwordTextField.valid = false;
@@ -348,19 +367,52 @@ const LoginController = new class {
     return input;
   }
 
+  buildCodeInput() {
+    const wrap = this.buildInput('Code');
+    const input = wrap.querySelector('input');
+    input.addEventListener('input', () => {
+      input.value = input.value.replace(/\D/g, '');
+      playTrackingAnimation();
+    });
+
+    let animationEl;
+    let animationPlaying = false;
+    const playTrackingAnimation = () => {
+      if (animationPlaying) {
+        return;
+      }
+      animationPlaying = true;
+      if (animationEl) {
+        animationEl.stop();
+        animationEl.play();
+      } else {
+        animationEl = this.animations.tracking;
+        this.setAnimatedImage(animationEl);
+        animationEl.addEventListener('complete', () => {
+          animationPlaying = false;
+        });
+      }
+    };
+
+    return wrap;
+  }
+
   buildPasswordInput() {
     const wrap = this.buildInput('Password', 'password');
-
     const input = $('input', wrap);
-
     const button = Tpl.html`<span class="login_password_visibility_button"></span>`.buildElement();
+    wrap.append(button);
+
     button.addEventListener('click', () => {
       const visible = input.type === 'password';
       input.type = visible ? 'text' : 'password';
       button.classList.toggle('login_password_visibility_button-visible', visible);
+      if (visible) {
+        this.setAnimatedImage(this.animations.peek, [0, 21]);
+      } else {
+        this.setAnimatedImage(this.animations.peek, [21, 33]);
+      }
     });
-
-    wrap.append(button);
 
     return wrap;
   }
@@ -443,14 +495,11 @@ const LoginController = new class {
     }
 
     const phoneInput = phoneInputWrap.querySelector('input');
-    phoneInput.addEventListener('input', checkPhoneInput);
-
-    function checkPhoneInput() {
+    phoneInput.addEventListener('input', () => {
       let val = phoneInput.value.replace(/(?<!^)\+|(?<=^|\+)0+|[^\d+]/g, '');
       if (val && !val.startsWith('+')) {
         val = '+' + val;
       }
-      phoneInput.value = val;
       const matchedPrefixes = [];
       const maybePrefixes = [];
       for (const item of prefixes) {
@@ -464,11 +513,16 @@ const LoginController = new class {
       let matchedCountry;
       if (matchedPrefixes.length && !maybePrefixes.length) {
         if (matchedPrefixes.length === 1 || matchedPrefixes[0][0] !== matchedPrefixes[1][0]) {
-          matchedCountry = matchedPrefixes.sort((a, b) => b[0].length - a[0].length)[0][1];
+          const prefix = matchedPrefixes.sort((a, b) => b[0].length - a[0].length)[0]; // longest matched prefix
+          if (val !== prefix[0]) {
+            val = val.replace(prefix[0], prefix[0] + ' ');
+          }
+          matchedCountry = prefix[1];
         }
       }
+      phoneInput.value = val;
       LoginController.countryTextField.value = matchedCountry ? matchedCountry[1] : '';
-    }
+    });
 
     return el;
   }
@@ -481,6 +535,40 @@ const LoginController = new class {
       this.setStep(STEP_PHONE);
     });
     return el;
+  }
+
+  preloadAnimations() {
+    this.animations = {
+      idle: Tpl.html`<tgs-player mode="normal" src="tgs/TwoFactorSetupMonkeyIdle.tgs" class="login_image_content"></tgs-player>`.buildElement(),
+      tracking: Tpl.html`<tgs-player mode="normal" src="tgs/TwoFactorSetupMonkeyTracking.tgs" class="login_image_content"></tgs-player>`.buildElement(),
+      close: Tpl.html`<tgs-player mode="normal" src="tgs/TwoFactorSetupMonkeyClose.tgs" class="login_image_content"></tgs-player>`.buildElement(),
+      peek: Tpl.html`<tgs-player mode="normal" src="tgs/TwoFactorSetupMonkeyPeek.tgs" class="login_image_content"></tgs-player>`.buildElement(),
+    };
+    const wrap = document.createElement('div');
+    wrap.hidden = true;
+    wrap.append(...Object.values(this.animations));
+    this.dom.container.appendChild(wrap);
+  }
+
+  chooseProfilePhoto = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.click();
+    input.addEventListener('change', () => {
+      this.profilePhotoFile = input.files[0];
+    });
+  };
+
+  async uploadProfilePhoto() {
+    if (!this.profilePhotoFile) {
+      return;
+    }
+    const inputFile = await FileApiManager.uploadFile(this.profilePhotoFile);
+    await ApiClient.callMethod('photos.uploadProfilePhoto', {
+      file: inputFile
+    });
+    MessagesApiManager.reloadUser(App.getAuthUserId());
   }
 
   destroy() {

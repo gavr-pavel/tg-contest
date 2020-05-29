@@ -208,12 +208,20 @@ const ChatsController = new class {
     this.container.append(frag);
 
     const lastDialog = dialogs[dialogs.length - 1];
-    const lastDialogMessage = MessagesApiManager.messages.get(lastDialog.top_message);
-    this.offset = {
-      id: lastDialog.top_message,
-      peer: lastDialog.peer,
-      date: lastDialogMessage.date,
-    };
+    if (lastDialog) {
+      const lastDialogMessage = MessagesApiManager.messages.get(lastDialog.top_message);
+      this.offset = {
+        id: lastDialog.top_message,
+        peer: lastDialog.peer,
+        date: lastDialogMessage.date,
+      };
+    } else {
+      this.offset = {
+        id: 0,
+        peer: 0,
+        date: 0,
+      };
+    }
   }
 
   buildChatPreviewElement(dialog) {

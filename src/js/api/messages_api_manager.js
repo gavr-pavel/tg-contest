@@ -655,6 +655,13 @@ const MessagesApiManager = new class {
     this.updateChats(res.chats, true);
   }
 
+  async reloadUser(userId) {
+    const res = await ApiClient.callMethod('users.getUsers', {
+      id: [this.getInputPeerById(userId)]
+    });
+    this.updateUsers(res);
+  }
+
   async loadChatFull(chatId) {
     if (this.chatsFull.has(chatId)) {
       return this.chatsFull.get(chatId);

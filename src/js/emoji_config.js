@@ -32,9 +32,21 @@ function getCountryCodeEmojiFlag(code) {
   return String.fromCodePoint(firstChar, secondChar);
 }
 
+function checkEmojiSupport() {
+  const node = document.createElement('canvas');
+  const ctx = node.getContext('2d');
+  const offset = 12;
+  ctx.fillStyle = '#f00';
+  ctx.textBaseline = 'top';
+  ctx.font = '32px Arial';
+  ctx.fillText('\ud83d\udc28', 0, 0); // U+1F428 KOALA
+  return ctx.getImageData(offset, offset, 1, 1).data[0] !== 0;
+}
+
 export {
   EmojiConfig,
   getEmojiMatches,
   isEmojiChar,
-  getCountryCodeEmojiFlag
+  getCountryCodeEmojiFlag,
+  checkEmojiSupport
 };

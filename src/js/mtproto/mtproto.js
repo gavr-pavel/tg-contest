@@ -382,6 +382,7 @@ class MTProto {
   }
 
   async parseEncryptedResponse(buffer) {
+    const self = this;
     const res = new TLDeserialization(buffer, {mtproto: true});
     const authKeyId = res.fetchIntBytes(64, false, 'auth_key_id');
     if (!bytesCmp(authKeyId, this.authKeyId)) {
@@ -398,7 +399,9 @@ class MTProto {
       override: {
         mt_rpc_result: function(result, field) {
           result.req_msg_id = this.fetchLong(field + '[req_msg_id]');
-          result.result = this.fetchObject('Object', field + '[result]');
+          const sentMessage = self.sentMessages.get(result.req_msg_id);
+          const type = sentMessage && sentMessage.resultType || 'Object';
+          result.result = this.fetchObject(type, field + '[result]');
         }
       }
     });

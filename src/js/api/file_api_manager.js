@@ -205,9 +205,12 @@ const FileApiManager = new class {
         resolve(this.db);
       };
       request.onupgradeneeded = (event) => {
-        this.db = event.target.result;
-        this.db.createObjectStore('files');
-        resolve(this.db);
+        const db = event.target.result;
+        db.createObjectStore('files');
+        event.target.transaction.oncomplete = () => {
+          this.db = db;
+          resolve(this.db);
+        };
       };
     });
   }
@@ -282,7 +285,7 @@ const FileApiManager = new class {
     return this.loadFile(location, set.thumb_dc_id, options);
   }
 
-  async uploadFile(blob, name = '', {onProgress, signal}) {
+  async uploadFile(blob, name = '', {onProgress, signal} = {}) {
     const randomId = randomLong();
 
     const isBigFile = blob.size > 10 * 1024 * 1024;
