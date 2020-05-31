@@ -6,6 +6,7 @@ const MediaViewController = new class {
   constructor() {
     this.container = Tpl.html`
       <div class="media_view" hidden>
+        <div class="media_view_author"  data-js-label="author"></div>
         <div class="media_view_controls">
           <button class="media_view_controls_item media_view_controls_item-delete" data-js-label="button_delete"></button>
           <button class="media_view_controls_item media_view_controls_item-forward" data-js-label="button_forward"></button>
@@ -29,53 +30,61 @@ const MediaViewController = new class {
     document.body.appendChild(this.container);
   }
 
-  showPhoto(photo, thumb) {
+  showPhoto(photo, thumb, message) {
     const photoSize = photo.sizes[photo.sizes.length - 1];
 
-    const state = this.initLoading(document, thumb, photoSize.size);
+    const state = this.initLoading(photo, thumb, message, photoSize.size);
     const abortController = this.state.abortController;
     const onProgress = this.state.onProgress;
 
     FileApiManager.loadPhoto(photo, photoSize.type, {onProgress, signal: abortController.signal})
         .then(url => {
-          this.dom.content.innerHTML = `<img class="media_view_content_image" src="${url}">`;
-          this.onLoaded(url, state);
+          const content = `<img class="media_view_content_image" src="${url}">`;
+          this.onLoaded(url, content, state);
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.log(err);
+        });
   }
 
-  showGif(document, thumb) {
-    const state = this.initLoading(document, thumb, document.size);
+  showGif(document, thumb, message) {
+    const state = this.initLoading(document, thumb, message, document.size);
     const abortController = this.state.abortController;
     const onProgress = this.state.onProgress;
 
     FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
         .then(url => {
-          this.dom.content.innerHTML = `<video class="media_view_content_gif" src="${url}" autoplay loop></video>`;
-          this.onLoaded(url, state);
+          const content = `<video class="media_view_content_gif" src="${url}" autoplay loop></video>`;
+          this.onLoaded(url, content, state);
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.log(err);
+        });
   }
 
-  showVideo(document, thumb) {
-    const state = this.initLoading(document, thumb, document.size);
+  showVideo(document, thumb, message) {
+    const state = this.initLoading(document, thumb, message, document.size);
     const abortController = this.state.abortController;
     const onProgress = this.state.onProgress;
 
     FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
         .then(url => {
-          this.dom.content.innerHTML = `<video class="media_view_content_video" src="${url}" autoplay controls></video>`;
-          this.onLoaded(url, state);
+          const content = `<video class="media_view_content_video" src="${url}" autoplay controls></video>`;
+          this.onLoaded(url, content, state);
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.log(err);
+        });
   }
 
-  initLoading(object, thumb, totalSize) {
+  initLoading(object, thumb, message, totalSize) {
     this.abort();
 
-    const state = {};
-    state.object = object;
-    state.abortController = new AbortController();
+    const state = {
+      object,
+      message,
+      abortController: new AbortController(),
+    };
 
     const progress = Tpl.html`
       <div class="message_media_progress">
@@ -116,13 +125,36 @@ const MediaViewController = new class {
     return state;
   }
 
-  onLoaded(url, state) {
-    if (state === this.state) {
-      this.container.hidden = false;
-      this.state.onDone();
-      this.state.url = url;
-      document.addEventListener('keyup', this.onKeyUp);
+  onLoaded(url, content, state) {
+    if (state !== this.state) {
+      return;
     }
+
+    this.dom.content.innerHTML = content;
+    this.renderAuthor();
+
+    this.state.url = url;
+    this.state.onDone();
+
+    this.container.hidden = false;
+    document.addEventListener('keyup', this.onKeyUp);
+  }
+
+  renderAuthor() {
+    const message = this.state.message;
+    const peer = MessagesApiManager.getMessageAuthorPeer(message);
+
+    this.dom.author.innerHTML = Tpl.html`
+      <div class="media_view_author_photo"></div>
+      <div class="media_view_author_description">
+        <div class="media_view_author_name">${MessagesApiManager.getPeerName(peer)}</div>
+        <div class="media_view_author_date">${MessagesController.formatMessageDateTime(message.date)}</div>
+      </div>
+    `;
+
+    const photoEl = $('.media_view_author_photo', this.dom.author);
+
+    ChatsController.loadPeerPhoto(photoEl, peer);
   }
 
   abort() {
@@ -138,6 +170,7 @@ const MediaViewController = new class {
 
   close = () => {
     this.state = null;
+    this.dom.author.innerHTML = '';
     this.dom.content.innerHTML = '';
     this.container.hidden = true;
     document.removeEventListener('keyup', this.onKeyUp);

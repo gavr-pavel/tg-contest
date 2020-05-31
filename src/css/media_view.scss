@@ -14,6 +14,39 @@
   opacity: 0;
 }
 
+.media_view_author {
+  position: absolute;
+  display: flex;
+  padding: 8px 20px;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity .2s;
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.media_view_author_description {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.media_view_author_photo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 16px;
+}
+
+.media_view_author_name {
+  font-weight: 500;
+  font-size: 15px;
+  margin-bottom: 3px;
+}
+
 .media_view_controls {
   position: absolute;
   top: 8px;

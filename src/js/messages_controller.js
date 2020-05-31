@@ -612,11 +612,11 @@ const MessagesController = new class {
       return;
     }
     if (thumbData.type === 'photo') {
-      MediaViewController.showPhoto(thumbData.object, thumb);
+      MediaViewController.showPhoto(thumbData.object, thumb, message);
     } else if (thumbData.type === 'video') {
-      MediaViewController.showVideo(thumbData.object, thumb);
+      MediaViewController.showVideo(thumbData.object, thumb, message);
     } else if (thumbData.type === 'gif') {
-      MediaViewController.showGif(thumbData.object, thumb);
+      MediaViewController.showGif(thumbData.object, thumb, message);
     }
   };
 

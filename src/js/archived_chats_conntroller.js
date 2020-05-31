@@ -1,4 +1,4 @@
-import {$, buildLoaderElement} from './utils';
+import {$, Tpl, buildLoaderElement} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MDCRipple} from '@material/ripple/component';
 
