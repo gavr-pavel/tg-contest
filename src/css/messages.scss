@@ -1,5 +1,4 @@
 .messages_container {
-  height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -9,19 +8,44 @@
   background-size: cover;
 }
 
+.messages_bg_image {
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: url(bg.jpg) center;
+  background-size: cover;
+  filter: blur(10px);
+}
+
 .messages_header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   flex-shrink: 0;
-  height: 60px;
-  padding: 0 18px;
-  border-bottom: 1px solid #DADCE0;
+  height: 56px;
+  padding: 0 13px 0 23px;
+  border: 1px solid #DADCE0;
+  border-top: 0;
+  border-bottom: 0;
   background: #fff;
   position: relative;
+  z-index: 1;
+  box-shadow: 0 3px 3px rgba(0, 0, 0, .1);
 }
 .messages_header[hidden] {
   display: none;
+}
+
+.messages_header_back {
+  display: none;
+  background: svg('../icons/back_svg.svg', (path: (fill: $icon_gray_color))) no-repeat center;
+  margin-left: -17px;
+  margin-right: 8px;
+  .mobile_view & {
+    display: block;
+  }
 }
 
 .messages_header_peer {
@@ -62,8 +86,12 @@
   white-space: nowrap;
 }
 
+.messages_header_actions {
+  display: flex;
+  margin-left: auto;
+}
+
 .messages_header_action_search {
-  margin-left: 10px;
   width: 44px;
   height: 44px;
   background: svg('../icons/search_svg.svg', (path: (fill: $icon_gray_color))) no-repeat center;
@@ -71,12 +99,7 @@
   overflow: hidden;
 }
 
-.messages_header_actions {
-  white-space: nowrap;
-}
-
 .messages_header_action_more {
-  margin-left: 10px;
   width: 44px;
   height: 44px;
   background: svg('../icons/more_svg.svg', (path: (fill: $icon_gray_color))) no-repeat center;
@@ -86,7 +109,8 @@
 
 .messages_scroll {
   height: 100%;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   transform: translateZ(0);
 }
 
@@ -103,6 +127,9 @@
   margin: 0 auto;
   padding: 16px 20px 25px;
   box-sizing: border-box;
+  .mobile_view & {
+    padding: 8px;
+  }
 }
 
 .messages_group-date,
@@ -110,6 +137,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .messages_group-author-with-photo {
@@ -139,7 +167,7 @@
 
 .message {
   display: flex;
-  max-width: 600px;
+  max-width: calc(100% - 50px);
   background: #fff;
   padding: 6px 10px;
   margin: 5px 0;
@@ -606,7 +634,7 @@
 }
 
 .messages_footer {
-  padding: 0 0 20px;
+  //padding: 0 0 20px;
 }
 
 .message_media_progress {

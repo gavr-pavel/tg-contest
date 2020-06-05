@@ -3,7 +3,7 @@ const inliner = require('sass-inline-svg');
 
 module.exports = {
   mode: 'development',
-  watch: true,
+  // watch: true,
   entry: {
     'main': ['./src/css/main.scss', './src/js/main.js'],
     'sw': './src/js/sw.js',

@@ -11,6 +11,7 @@
   transition: transform .2s, opacity .2s, visibility .2s;
   transform-origin: 29px calc(100% + 35px);
   will-change: transform;
+  user-select: none;
 }
 .emoji_dropdown[hidden] {
   display: block;
@@ -105,12 +106,20 @@
 .emoji_dropdown_section-stickers .emoji_dropdown_bottom_nav {
   overflow: hidden;
   white-space: nowrap;
+  &:after {
+    content: '';
+    display: block;
+    height: 50px;
+  }
 }
 
 .emoji_dropdown_section-stickers .emoji_dropdown_bottom_nav_item {
   display: inline-block;
-  width: 56px;
+  width: 47px;
   height: 100%;
+  padding: 0 3px;
+  overflow: hidden;
+  vertical-align: middle;
 }
 
 .emoji_dropdown_bottom_nav_item {

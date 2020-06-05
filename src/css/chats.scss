@@ -82,6 +82,9 @@
   padding: 8px;
   overflow-y: auto;
   overflow-x: hidden;
+  .mobile_view & {
+    padding: 0;
+  }
 }
 
 .chats_item,
@@ -91,6 +94,8 @@
   border-radius: 5px;
   cursor: pointer;
   position: relative;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .chats_item_content,
@@ -99,8 +104,12 @@
   display: flex;
   flex-direction: row;
   height: 54px;
-  padding: 9px;
+  padding: 8px;
   border-radius: 5px;
+  .mobile_view & {
+    border-radius: 0;
+    padding-right: 16px;
+  }
 }
 
 .chats_item_message_author_label {

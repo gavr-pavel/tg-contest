@@ -1,4 +1,4 @@
-import {getDeferred, randomLong} from '../utils';
+import {blobToBuffer, checkWebPSupport, convertWebP, getDeferred, randomLong} from '../utils';
 import {ApiConnection} from '../mtproto/api_connection';
 import {MessagesApiManager} from './messages_api_manager';
 
@@ -134,6 +134,12 @@ const FileApiManager = new class {
         this.connectionDone(apiConnection);
       }
       blob = new Blob(parts, {type: mimeType});
+      if (mimeType === 'image/webp') {
+        const isWebPSupported = await checkWebPSupport();
+        if (!isWebPSupported) {
+          blob = await convertWebP(await blobToBuffer(blob));
+        }
+      }
       if (cache) {
         try {
           this.saveToCache(dbFileName, blob);
@@ -198,7 +204,7 @@ const FileApiManager = new class {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open('telegram_cache', 1);
       request.onerror = (event) => {
-        reject();
+        reject(event.target.error);
       };
       request.onsuccess = (event) => {
         this.db = event.target.result;
@@ -221,7 +227,9 @@ const FileApiManager = new class {
 
   getDbRequestPromise(request) {
     return new Promise((resolve, reject) => {
-      request.onerror = reject;
+      request.onerror = (event) => {
+        reject(event.target.error);
+      };
       request.onsuccess = (event) => {
         resolve(event.target.result);
       }
@@ -309,7 +317,7 @@ const FileApiManager = new class {
           file_id: randomId,
           file_part: partIndex,
           file_total_parts: totalParts,
-          bytes: await blob.slice(offset, offset + partSize).arrayBuffer()
+          bytes: await blobToBuffer(blob.slice(offset, offset + partSize))
         });
         if (onProgress) {
           onProgress(Math.min(blob.size, offset + partSize));

@@ -1,3 +1,5 @@
+import {checkWebPSupport, convertWebP} from '../utils';
+
 const MediaApiManager = new class {
   choosePhotoSize(sizes, type = 'm') {
     const size = sizes.find(item => item.type === type);
@@ -13,8 +15,17 @@ const MediaApiManager = new class {
     return photoSize._ === 'photoCachedSize';
   }
 
-  getCachedPhotoSize(photoSize) {
-    const blob = new Blob([photoSize.bytes], {type: 'image/jpeg'});
+  async getCachedPhotoSize(photoSize, mimeType = 'image/jpeg') {
+    let blob;
+    if (mimeType === 'image/webp') {
+      const isWebPSupported = await checkWebPSupport();
+      if (!isWebPSupported) {
+        blob = await convertWebP(photoSize.bytes);
+      }
+    }
+    if (!blob) {
+      blob = new Blob([photoSize.bytes], {type: mimeType});
+    }
     return URL.createObjectURL(blob);
   }
 

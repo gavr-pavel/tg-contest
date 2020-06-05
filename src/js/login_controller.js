@@ -496,9 +496,12 @@ const LoginController = new class {
 
     const phoneInput = phoneInputWrap.querySelector('input');
     phoneInput.addEventListener('input', () => {
-      let val = phoneInput.value.replace(/(?<!^)\+|(?<=^|\+)0+|[^\d+]/g, '');
-      if (val && !val.startsWith('+')) {
-        val = '+' + val;
+      let val = phoneInput.value;
+      if (val && val !== '+') {
+        val = val.replace(/^0+|\D/g, '');
+        if (val) {
+          val = '+' + val;
+        }
       }
       const matchedPrefixes = [];
       const maybePrefixes = [];
@@ -559,6 +562,68 @@ const LoginController = new class {
       this.profilePhotoFile = input.files[0];
     });
   };
+
+  // showProfilePhotoCropBox(file) {
+  //   const layer = Tpl.html`
+  //     <div class="login_profile_photo_layer">
+  //         <div class="login_profile_photo_box">
+  //           <div class="login_profile_photo_box_title">Drag to Reposition</div>
+  //           <div class="login_profile_photo_box_close_btn"></div>
+  //           <div class="login_profile_photo_box_confirm_btn"></div>
+  //           <div class="login_profile_photo_box_image_wrap">
+  //             <img class="login_profile_photo_box_image" width="360" src="${URL.createObjectURL(file)}">
+  //           </div>
+  //         </div>
+  //     </div>
+  //   `.buildElement();
+  //
+  //   document.body.appendChild(layer);
+  //
+  //   const image = $('.login_profile_photo_box_image', layer);
+  //   const imageWrap = image.parentElement;
+  //
+  //   console.log(image.naturalWidth, image.naturalHeight);
+  //
+  //   let scale = 1;
+  //
+  //   imageWrap.addEventListener('mousewheel', (event) => {
+  //     scale += event.deltaY / 10;
+  //     scale = Math.min(5, Math.max(1, scale));
+  //     applyTransform();
+  //   });
+  //
+  //   let dragging = false;
+  //   let translateX = 0;
+  //   let translateY = 0;
+  //
+  //   let lastMouseX;
+  //   let lastMouseY;
+  //
+  //   imageWrap.addEventListener('mousedown', (event) => {
+  //     event.preventDefault();
+  //     dragging = true;
+  //     lastMouseX = event.pageX;
+  //     lastMouseY = event.pageY;
+  //     console.log('mousedown', event.pageX, event.pageY);
+  //   });
+  //   imageWrap.addEventListener('mouseup', () => {
+  //     dragging = false;
+  //   });
+  //   imageWrap.addEventListener('mousemove', (event) => {
+  //     if (dragging) {
+  //       translateX += event.pageX - lastMouseX;
+  //       translateY += event.pageY - lastMouseY;
+  //       lastMouseX = event.pageX;
+  //       lastMouseY = event.pageY;
+  //       console.log('mousemove', event.pageX, event.pageY);
+  //       applyTransform();
+  //     }
+  //   });
+  //
+  //   function applyTransform() {
+  //     image.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+  //   }
+  // }
 
   async uploadProfilePhoto() {
     if (!this.profilePhotoFile) {

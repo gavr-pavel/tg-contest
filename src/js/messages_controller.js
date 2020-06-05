@@ -57,6 +57,8 @@ const MessagesController = new class {
     this.dialog = dialog;
     this.chatId = MessagesApiManager.getPeerId(dialog.peer);
 
+    $('.main_container').dataset.chat = this.chatId;
+
     this.placeholder.remove();
 
     this.showHeader(dialog);
@@ -104,6 +106,8 @@ const MessagesController = new class {
     this.dialog = null;
     this.chatId = null;
     this.clearMessages();
+
+    delete $('.main_container').dataset.chat;
   }
 
   clearMessages() {
@@ -146,6 +150,7 @@ const MessagesController = new class {
     }
 
     this.header.innerHTML = Tpl.html`
+      <button class="messages_header_back mdc-icon-button"></button>
       <div class="messages_header_peer">
         <div class="messages_header_peer_photo"></div>
         <div class="messages_header_peer_description">
@@ -196,6 +201,10 @@ const MessagesController = new class {
       ChatInfoController.close();
       MessagesSearchController.show(this.chatId);
     });
+
+    $('.messages_header_back', this.header).addEventListener('click', () => {
+      this.exitChat();
+    });
   }
 
   loadHistory() {
@@ -221,7 +230,7 @@ const MessagesController = new class {
   }
 
   loadMore = ({down = false} = {}) => {
-    if (this.loading || this.noMore) {
+    if (this.loading || this.noMore || !this.chatId) {
       return;
     }
     this.loading = true;
@@ -230,6 +239,9 @@ const MessagesController = new class {
     const offsetId = down ? this.maxMsgId : this.minMsgId;
     MessagesApiManager.loadMessages(this.dialog.peer, offsetId, limit, addOffset)
         .then((messages) => {
+          if (!messages.length) {
+            this.noMore = true;
+          }
           if (down) {
             this.appendHistory(messages);
           } else {
@@ -332,7 +344,7 @@ const MessagesController = new class {
       this.scrollContainer.classList.toggle('messages_scroll-scrolling', this.scrolling && !this.footer.hidden);
     }
     if (!this.loading) {
-      if (scrollTop < 300 && !this.noMore) {
+      if (scrollTop < 500 && !this.noMore) {
         this.loadMore();
       } else if (scrollBottom < 300 && this.maxMsgId < this.dialog.top_message) {
         this.loadMore({down: true});
@@ -364,9 +376,9 @@ const MessagesController = new class {
     this.maxMsgId = this.maxMsgId || messages[0].id;
 
     if (this.scrolling) {
-      requestAnimationFrame(() => {
-        this.scrollContainer.scrollTop = prevScrollTop + (this.scrollContainer.scrollHeight - prevScrollHeight);
-      });
+      this.scrollContainer.style.overflow = 'hidden';
+      this.scrollContainer.scrollTop = prevScrollTop + (this.scrollContainer.scrollHeight - prevScrollHeight);
+      this.scrollContainer.style.overflow = '';
     } else {
       if (this.scrollContainer.scrollHeight <= this.scrollContainer.offsetHeight) {
         setTimeout(this.loadMore, 0);
@@ -762,9 +774,11 @@ const MessagesController = new class {
         const photoSize = MediaApiManager.choosePhotoSize(sizes, 'm');
         let url;
         if (MediaApiManager.isCachedPhotoSize(photoSize)) {
-          url = MediaApiManager.getCachedPhotoSize(photoSize);
+          const mimeType = mediaThumbData.object.mime_type;
+          url = await MediaApiManager.getCachedPhotoSize(photoSize, mimeType);
         } else if (mediaThumbData.object._ === 'document') {
-          url = await FileApiManager.loadDocumentThumb(mediaThumbData.object, photoSize.type);
+          const options = mediaThumbData.type === 'sticker' ? {mimeType: mediaThumbData.object.mime_type} : {};
+          url = await FileApiManager.loadDocumentThumb(mediaThumbData.object, photoSize.type, options);
         } else {
           url = await FileApiManager.loadPhoto(mediaThumbData.object, photoSize.type);
         }
@@ -998,7 +1012,7 @@ const MessagesController = new class {
     let thumbWidth;
     let thumbHeight;
     if (mediaThumbData) {
-      let maxW = 400;
+      let maxW = 300;
       let maxH = 200;
       if (mediaThumbData.type === 'sticker') {
         maxW = mediaThumbData.emoji ? 100 : 150;
@@ -1011,7 +1025,7 @@ const MessagesController = new class {
       }
       result.appendHtml`
         <div class="message_media_thumb message_media_thumb-${mediaThumbData.type}" style="width:${thumbWidth}px;height:${thumbHeight}px;">
-          ${ ['video', 'gif'].includes(mediaThumbData.type) ? Tpl.html`<div class="message_media_thumb_play"></div>"` : ''}
+          ${ ['video', 'gif'].includes(mediaThumbData.type) ? Tpl.html`<div class="message_media_thumb_play"></div>` : ''}
         </div>
       `;
     }
@@ -1186,6 +1200,11 @@ const MessagesController = new class {
   }
 
   async initBackground() {
+    const container = $('.messages_container');
+    if (!window.caches) {
+      container.prepend(Tpl.html`<div class="messages_bg_image"></div>`.buildElement());
+      return;
+    }
     const cache = await caches.open('v1');
     const isCached = await cache.match('bg.jpg?blurred');
 
@@ -1203,7 +1222,7 @@ const MessagesController = new class {
       cache.put('bg.jpg?blurred', new Response(blob));
     }
 
-    $('.messages_container').style.backgroundImage = `url(bg.jpg?blurred)`;
+    container.style.backgroundImage = `url(bg.jpg?blurred)`;
 
     function getCanvasSize(ratio) {
       if (screen.width > screen.height) {

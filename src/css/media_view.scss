@@ -16,6 +16,7 @@
 
 .media_view_author {
   position: absolute;
+  z-index: 1;
   display: flex;
   padding: 8px 20px;
   color: #fff;
@@ -39,6 +40,9 @@
   border-radius: 50%;
   overflow: hidden;
   margin-right: 16px;
+  .mobile_view & {
+    display: none;
+  }
 }
 
 .media_view_author_name {
@@ -52,6 +56,7 @@
   top: 8px;
   right: 12px;
   display: flex;
+  z-index: 1;
 }
 
 .media_view_controls_item {
@@ -89,12 +94,15 @@
 
 .media_view_content {
   box-sizing: border-box;
-  padding: 126px 200px;
+  padding: 126px 100px;
   height: 100%;
   display: flex;
   justify-content: center;
   align-content: center;
   transition: transform .2s;
+  .mobile_view & {
+    padding: 0;
+  }
 }
 .media_view[hidden] .media_view_content {
   transform: scale(0.7);

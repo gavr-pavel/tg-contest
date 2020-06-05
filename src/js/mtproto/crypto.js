@@ -107,7 +107,7 @@ const workerTask = (() => {
   let worker;
 
   const workerPromise = new Promise(resolve => {
-    new Worker('./worker.js').addEventListener('message', (event) => {
+    new Worker('./crypto_worker.js').addEventListener('message', (event) => {
       if (event.data === 'ready') {
         worker = event.target;
         resolve(worker);

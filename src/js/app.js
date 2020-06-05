@@ -2,7 +2,6 @@ import * as Utils from './utils.js';
 import {LoginController} from './login_controller.js';
 import {ChatsController} from './chats_controller';
 import {MessagesController} from './messages_controller.js';
-import {FileApiManager} from './api/file_api_manager';
 import {MDCSnackbar} from '@material/snackbar/component';
 import {Tpl} from './utils';
 
@@ -23,20 +22,21 @@ const App = new class {
       LoginController.init();
     }
 
-    ApiClient.emitter.on('updateConnectionState', (event) => {
-      const header = Utils.$('.header');
-      if (!header) {
-        return;
-      }
-      const state = event.detail;
-      if (state === 'connecting') {
-        header.innerText = 'Connecting...';
-      } else if (state === 'connected') {
-        header.innerText = '';
-      }
-    });
+    window.addEventListener('resize', this.onResize);
+    this.onResize();
 
-    window.FileApiManager = FileApiManager;
+    // ApiClient.emitter.on('updateConnectionState', (event) => {
+    //   const header = Utils.$('.header');
+    //   if (!header) {
+    //     return;
+    //   }
+    //   const state = event.detail;
+    //   if (state === 'connecting') {
+    //     header.innerText = 'Connecting...';
+    //   } else if (state === 'connected') {
+    //     header.innerText = '';
+    //   }
+    // });
   }
 
   authDone(auth) {
@@ -72,6 +72,10 @@ const App = new class {
     ChatsController.init();
     MessagesController.init();
   }
+
+  onResize = () => {
+    document.body.classList.toggle('mobile_view', window.innerWidth < 1160);
+  };
 
   alert(text) {
     if (this.snackbar) {

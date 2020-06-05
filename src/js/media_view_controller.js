@@ -6,8 +6,8 @@ const MediaViewController = new class {
   constructor() {
     this.container = Tpl.html`
       <div class="media_view" hidden>
-        <div class="media_view_author"  data-js-label="author"></div>
-        <div class="media_view_controls">
+        <div class="media_view_author" data-js-label="author"></div>
+        <div class="media_view_controls"  data-js-label="controls">
           <button class="media_view_controls_item media_view_controls_item-delete" data-js-label="button_delete"></button>
           <button class="media_view_controls_item media_view_controls_item-forward" data-js-label="button_forward"></button>
           <button class="media_view_controls_item media_view_controls_item-download" data-js-label="button_download"></button>
@@ -21,11 +21,8 @@ const MediaViewController = new class {
 
     this.dom.button_download.addEventListener('click', this.download);
     this.dom.button_close.addEventListener('click', this.close);
-    this.dom.content.addEventListener('click', (event) => {
-      if (event.target === event.currentTarget) {
-        this.close();
-      }
-    });
+    this.dom.content.addEventListener('click', this.onContentClick);
+    this.dom.content.addEventListener('touchstart', this.onContentTouchStart);
 
     document.body.appendChild(this.container);
   }
@@ -54,7 +51,7 @@ const MediaViewController = new class {
 
     FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
         .then(url => {
-          const content = `<video class="media_view_content_gif" src="${url}" autoplay loop></video>`;
+          const content = `<video class="media_view_content_gif" src="${url}" playsinline autoplay loop></video>`;
           this.onLoaded(url, content, state);
         })
         .catch((err) => {
@@ -69,7 +66,7 @@ const MediaViewController = new class {
 
     FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
         .then(url => {
-          const content = `<video class="media_view_content_video" src="${url}" autoplay controls></video>`;
+          const content = `<video class="media_view_content_video" src="${url}" playsinline autoplay controls></video>`;
           this.onLoaded(url, content, state);
         })
         .catch((err) => {
@@ -142,13 +139,23 @@ const MediaViewController = new class {
 
   renderAuthor() {
     const message = this.state.message;
-    const peer = MessagesApiManager.getMessageAuthorPeer(message);
+
+    let peer;
+    let date;
+    if (message.fwd_from) {
+      const fwd = message.fwd_from;
+      peer = MessagesApiManager.getPeerById(fwd.from_id || fwd.channel_id);
+      date = fwd.date;
+    } else {
+      peer = MessagesApiManager.getMessageAuthorPeer(message);
+      date = message.date;
+    }
 
     this.dom.author.innerHTML = Tpl.html`
       <div class="media_view_author_photo"></div>
       <div class="media_view_author_description">
         <div class="media_view_author_name">${MessagesApiManager.getPeerName(peer)}</div>
-        <div class="media_view_author_date">${MessagesController.formatMessageDateTime(message.date)}</div>
+        <div class="media_view_author_date">${MessagesController.formatMessageDateTime(date)}</div>
       </div>
     `;
 
@@ -200,6 +207,41 @@ const MediaViewController = new class {
     }
     return object._ + object.id;
   }
+
+  onContentClick = (event) => {
+    if (event.target === event.currentTarget) {
+      this.close();
+    }
+  };
+
+  onContentTouchStart = (event) => {
+    let startY = event.pageY;
+    let progress = 0;
+    const onTouchMove = (event) => {
+      const translateY = event.pageY - startY;
+      progress = Math.min(1, Math.pow(Math.abs(translateY), 2) / 10000);
+      this.dom.content.style.transform = `translateY(${translateY}px)`;
+      this.container.style.backgroundColor = `rgba(0, 0, 0, ${ 0.9 - 0.9 * progress })`;
+      this.dom.author.style.opacity = 0.5 - 0.5 * progress;
+      this.dom.controls.style.opacity = 1 - progress;
+    };
+    const onTouchEnd = () => {
+      if (progress === 1) {
+        this.close();
+      }
+      this.dom.content.removeEventListener('touchmove', onTouchMove);
+      this.dom.content.removeEventListener('touchend', onTouchEnd);
+      this.dom.content.style.transform = '';
+      this.dom.content.style.transition = '';
+      this.container.style.backgroundColor = '';
+      this.dom.author.style.opacity = '';
+      this.dom.controls.style.opacity = '';
+    };
+    this.dom.content.addEventListener('touchmove', onTouchMove);
+    this.dom.content.addEventListener('touchend', onTouchEnd);
+    this.dom.content.style.transition = 'none';
+  };
+
 };
 
 window.MediaViewController = MediaViewController;

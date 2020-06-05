@@ -4,8 +4,11 @@
   min-height: 100vh;
   align-items: center;
   justify-content: center;
-  margin-top: -50px;
+  //margin-top: -50px;
   text-align: center;
+  padding: 16px;
+  box-sizing: border-box;
+  overflow: auto;
 }
 
 .login_image {
@@ -31,7 +34,8 @@
 }
 
 .login_form {
-  width: 360px;
+  width: 100%;
+  max-width: 360px;
   position: relative;
 }
 
@@ -146,4 +150,51 @@
 }
 .login_password_visibility_button-visible {
   background: svg('../icons/eye2_svg.svg', (path: (fill: $icon_mediumgray_color))) no-repeat center;
+}
+
+.login_profile_photo_layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, .3);
+}
+
+.login_profile_photo_box {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.login_profile_photo_box_title {
+  position: absolute;
+  top: 0;
+}
+
+.login_profile_photo_box_image {
+
+}
+
+.login_profile_photo_box_image_wrap {
+  position: relative;
+  width: 500px;
+  height: 500px;
+  padding: 70px;
+  box-sizing: border-box;
+  &:before {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    width: 360px;
+    height: 360px;
+    border: 200px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    left: -130px;
+    top: -130px;
+  }
 }

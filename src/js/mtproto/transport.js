@@ -24,9 +24,11 @@ class WebSocketTransport extends Transport {
 
   initSocket() {
     const socket = new WebSocket(this.url, 'binary');
+    socket.binaryType = 'arraybuffer';
 
     this.socketReadyPromise = new Promise((resolve) => {
       socket.addEventListener('open', (event) => {
+        this.reconnectCount = 0;
         // console.log('ws open');
         this.socket = socket;
         resolve(socket);
@@ -41,12 +43,7 @@ class WebSocketTransport extends Transport {
   }
 
   onSocketMessage = (event) => {
-    const fileReader = new FileReader();
-    fileReader.onload = (event) => {
-      const buffer = event.target.result;
-      this.messageCallback(buffer);
-    };
-    fileReader.readAsArrayBuffer(event.data);
+    this.messageCallback(event.data);
   };
 
   onSocketError = (event) => {
@@ -56,8 +53,14 @@ class WebSocketTransport extends Transport {
   onSocketClose = (event) => {
     // console.log('ws close', event);
     this.socket = null;
-    this.initSocket()
-      .then(this.onReconnect);
+
+    this.reconnectCount = (this.reconnectCount || 0) + 1;
+    let timeout = this.reconnectCount > 5 ? 1000 : 0;
+
+    setTimeout(() => {
+      this.initSocket()
+          .then(this.onReconnect);
+    }, timeout);
   };
 
   async send(payload) {

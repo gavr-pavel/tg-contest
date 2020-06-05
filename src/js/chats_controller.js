@@ -3,7 +3,7 @@ import {
   buildLoaderElement,
   formatCountShort,
   formatDateFull, formatDateWeekday,
-  formatTime
+  formatTime, isTouchDevice
 } from './utils';
 import {App} from './app';
 import {MessagesApiManager} from './api/messages_api_manager';
@@ -63,7 +63,7 @@ const ChatsController = new class {
           </li>
         </ul>
       </div>
-      <input type="text" placeholder="Search" class="sidebar_search_input chats_header_search_input">
+      <input type="text" placeholder="Telegram Search" class="sidebar_search_input chats_header_search_input">
     `;
 
     this.initHeaderMenu();
@@ -75,7 +75,7 @@ const ChatsController = new class {
     const mdcMenu = new MDCMenu(menuContainer);
 
     const menuButton = $('.chats_header_menu_button', this.header);
-    menuButton.addEventListener('click', () => {
+    menuButton.addEventListener('mousedown', () => {
       if (!mdcMenu.open) {
         mdcMenu.open = true;
         mdcMenu.setAbsolutePosition(14, 60);
@@ -171,7 +171,7 @@ const ChatsController = new class {
 
   onScroll = () => {
     const container = this.container;
-    if (!this.loading && !this.noMore && container.scrollTop + container.offsetHeight > container.scrollHeight - 150) {
+    if (!this.loading && !this.noMore && container.scrollTop + container.offsetHeight > container.scrollHeight - 300) {
       this.loadMore();
     }
   };
@@ -241,7 +241,10 @@ const ChatsController = new class {
       this.updateChatStatus(el, user.status);
     }
     el.addEventListener('click', this.onChatClick);
-    new MDCRipple(el.firstElementChild);
+    // el.addEventListener('pointerup', this.onChatClick);
+    if (!isTouchDevice()) {
+      new MDCRipple(el.firstElementChild);
+    }
     this.chatElements.set(peerId, el);
     return el;
   }
@@ -377,6 +380,7 @@ const ChatsController = new class {
   }
 
   onChatClick = (event) => {
+    event.preventDefault();
     const el = event.currentTarget;
     const peerId = +el.dataset.peerId;
     const dialog = MessagesApiManager.getDialog(peerId);

@@ -32,10 +32,17 @@ const FileUploadPopup = new class {
     const itemType = event.currentTarget.dataset.type;
     if (itemType === 'media' || itemType === 'file') {
       const sendAsMedia = itemType === 'media';
-      const accept = sendAsMedia ? 'image/*, video/*' : '*/*';
-      const input = Tpl.html`<input type="file" multiple accept="${accept}">`.buildElement();
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = sendAsMedia ? 'image/*, video/*' : '*/*';
+      input.multiple = true;
       input.click();
-      input.onchange = () => this.onFilesSelected(input.files, sendAsMedia);
+      window.input = input;
+      input.onchange = () => {
+        this.onFilesSelected(input.files, sendAsMedia);
+        this.fileInput = null;
+      };
+      this.fileInput = input; // protection from GC in safari
     }
   };
 

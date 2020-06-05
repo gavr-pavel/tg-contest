@@ -173,7 +173,7 @@ class MTProto {
   }
 
   wrapMethodCallMessage(method, params = {}, options = {}) {
-    console.log('[MTProto] call method', {method, params});
+    // console.log('[MTProto] call method', {method, params});
     const s = new TLSerialization({mtproto: !options.api});
     options.resultType = s.storeMethod(method, params);
     options.source = method;

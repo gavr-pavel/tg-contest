@@ -235,6 +235,100 @@ function formatCountLong(count) {
   return new Intl.NumberFormat('en-US').format(count);
 }
 
+function isTouchDevice() {
+  return ('ontouchstart' in window);
+}
+
+const checkWebPSupport = (() => {
+  const promise = new Promise((resolve) => {
+    const image = new Image();
+    image.onerror = setResult;
+    image.onload = setResult;
+    image.src = 'data:image/webp;base64,UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAwA0JaQAA3AA/vuUAAA=';
+    function setResult(event) {
+      resolve(event && event.type === 'load' ? image.width === 1 : false);
+    }
+  }, 0);
+  return () => promise;
+})();
+
+const webPDecoderTask = (() => {
+  let worker;
+  let workerPromise;
+
+  const loadWorker = () => {
+    workerPromise = workerPromise || new Promise(resolve => {
+      new Worker('./webp_worker.js').addEventListener('message', (event) => {
+        if (event.data === 'ready') {
+          worker = event.target;
+          resolve(worker);
+        } else {
+          const deferred = tasksCallbacks[event.data.taskId];
+          delete tasksCallbacks[event.data.taskId];
+          if (event.data.error) {
+            deferred.reject(event.data.error);
+          } else {
+            deferred.resolve(event.data.result);
+          }
+        }
+      });
+    });
+  };
+
+  const newTaskId = (() => {
+    let i = 0;
+    return () => ++i;
+  })();
+
+  const tasksCallbacks = {};
+
+  return async (task, params) => {
+    if (!worker) {
+      loadWorker();
+      await workerPromise;
+    }
+    const taskId = newTaskId();
+    const deferred = getDeferred();
+    tasksCallbacks[taskId] = deferred;
+    worker.postMessage({taskId, task, params});
+    return deferred.promise;
+  }
+})();
+
+async function convertWebP(buffer) {
+  const bytes = new Uint8Array(buffer);
+  return convert(await webPDecoderTask('decode', {data: bytes}));
+
+  function convert({output, width, height}) {
+    return new Promise((resolve) => {
+      const imageData = new ImageData(new Uint8ClampedArray(output.buffer), width, height);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.putImageData(imageData, 0, 0);
+      canvas.toBlob(resolve, 'image/png');
+    });
+  }
+}
+
+function blobToBuffer(blob) {
+  if (blob.arrayBuffer) {
+    return blob.arrayBuffer();
+  }
+  return new Promise((resolve, reject) => {
+    const fileReader = new FileReader();
+    fileReader.onload = (event) => {
+      resolve(event.target.result);
+    };
+    fileReader.onerror = (event) => {
+      console.error(event);
+      reject();
+    };
+    fileReader.readAsArrayBuffer(blob);
+  });
+}
+
 export {
   Storage,
   Emitter,
@@ -254,5 +348,9 @@ export {
   formatTime,
   cutText,
   formatCountShort,
-  formatCountLong
+  formatCountLong,
+  isTouchDevice,
+  checkWebPSupport,
+  convertWebP,
+  blobToBuffer
 };

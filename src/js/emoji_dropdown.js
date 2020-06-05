@@ -1,4 +1,4 @@
-import {getLabeledElements, $, $$, Storage, Tpl} from './utils';
+import {getLabeledElements, $, $$, Storage, Tpl, isTouchDevice} from './utils';
 import {EmojiConfig} from './emoji_config';
 import {ApiClient} from './api/api_client';
 import {MessagesFormController} from './messages_form_controller';
@@ -103,7 +103,27 @@ const EmojiDropdown = new class {
     const bottomNavContainer = $('.emoji_dropdown_bottom_nav', this.dom.section_stickers);
     bottomNavContainer.append(bottomNavFrag);
     bottomNavContainer.addEventListener('click', this.onStickerNavClick);
-    bottomNavContainer.addEventListener('mousewheel', this.onStickersNavScroll);
+    if (isTouchDevice()) {
+      bottomNavContainer.style.overflowX = 'auto';
+    } else {
+      bottomNavContainer.addEventListener('mousewheel', this.onStickersNavScroll);
+    }
+
+    // bottomNavContainer.addEventListener('touchstart', (event) => {
+    //   let lastPageX = event.pageX;
+    //   const onTouchMove = (event) => {
+    //     const diff = lastPageX - event.pageX;
+    //     lastPageX = event.pageX;
+    //     event.currentTarget.scrollLeft += diff;
+    //     console.log(event);
+    //   };
+    //   const onTouchEnd = () => {
+    //     bottomNavContainer.removeEventListener('touchmove', onTouchMove);
+    //     bottomNavContainer.removeEventListener('touchend', onTouchEnd);
+    //   };
+    //   bottomNavContainer.addEventListener('touchmove', onTouchMove);
+    //   bottomNavContainer.addEventListener('touchend', onTouchEnd);
+    // });
   }
 
   async initStickerSet(set, container, bottomButton, preload = false) {
@@ -151,15 +171,22 @@ const EmojiDropdown = new class {
   }
 
   async loadStickerThumb(el, document, preload) {
-    const url = await FileApiManager.loadDocumentThumb(document, 'm', {cache: true, priority: preload ? 0 : 1});
+    const priority = preload ? 0 : 1;
+    const url = await FileApiManager.loadDocumentThumb(document, 'm', {cache: true, priority, mimeType: 'image/webp'});
     el.innerHTML = `<img class="emoji_dropdown_sticker_img" src="${url}">`;
   }
 
   async loadStickerSetThumb(el, fullSet) {
     if (fullSet.set.thumb) {
-      const url = await FileApiManager.loadStickerSetThumb(fullSet.set, {cache: true});
-      el.innerHTML = `<img class="emoji_dropdown_sticker_img" src="${url}">`;
-    } else {
+      const isAnimated = fullSet.set.pFlags.animated;
+      const mimeType = isAnimated ? 'application/x-tgsticker' : 'image/webp';
+      const url = await FileApiManager.loadStickerSetThumb(fullSet.set, {cache: true, mimeType});
+      if (isAnimated) {
+        el.innerHTML = `<tgs-player class="emoji_dropdown_sticker_img" src="${url}"></tgs-player>`;
+      } else {
+        el.innerHTML = `<img class="emoji_dropdown_sticker_img" src="${url}">`;
+      }
+    } else if (fullSet.documents[0]) {
       return this.loadStickerThumb(el, fullSet.documents[0]);
     }
   }
@@ -193,7 +220,10 @@ const EmojiDropdown = new class {
   onEmojiNavClick = (event) => {
     const category = event.target.dataset.category;
     const list = $(`.emoji_dropdown_list-${category}`, this.dom.section_emoji);
+    const container = $('.emoji_dropdown_section_content', this.dom.section_emoji);
+    container.style.overflow = 'hidden';
     list.scrollIntoView();
+    container.style.overflow = '';
   };
 
   onEmojiScroll = (event) => {
@@ -256,7 +286,9 @@ const EmojiDropdown = new class {
     this.container.hidden = false;
     this.button.classList.add('messages_form_emoji_button-active');
     document.addEventListener('mousedown', this.onGlobalClick);
-    this.input.focus();
+    if (!isTouchDevice()) {
+      this.input.focus();
+    }
 
     const scrollContainers = $$('.emoji_dropdown_section_content', this.container);
     for (const scrollContainer of scrollContainers) {

@@ -1,4 +1,4 @@
-import {$, debounce, getLabeledElements} from './utils';
+import {$, Tpl, debounce, getLabeledElements, isTouchDevice} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
 import {EmojiDropdown} from './emoji_dropdown';
@@ -43,7 +43,9 @@ const MessagesFormController = new class {
   }
 
   focus() {
-    this.dom.input.focus();
+    if (!isTouchDevice()) {
+      this.dom.input.focus();
+    }
   }
 
   clear() {
@@ -123,7 +125,12 @@ const MessagesFormController = new class {
       };
     }
 
-    await MessagesApiManager.sendMedia(peer, inputMedia);
+    try {
+      await MessagesApiManager.sendMedia(peer, inputMedia);
+    } catch (e) {
+      console.error(e);
+    }
+
     MessagesController.removePendingMessage(pendingMessageEl);
   }
 
