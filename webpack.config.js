@@ -7,6 +7,8 @@ module.exports = {
   entry: {
     'main': ['./src/css/main.scss', './src/js/main.js'],
     'sw': './src/js/sw.js',
+    // 'crypto_worker': './src/js/crypto_worker.js',
+    // 'webp_worker': './src/js/webp_worker.js',
   },
   output: {
     filename: '[name].js',
@@ -49,7 +51,7 @@ module.exports = {
               implementation: require('node-sass'),
               sassOptions: {
                 includePaths: ['./node_modules'],
-                functions: {svg: inliner('./src/css', {})}
+                functions: {svg: inliner('./src/css', {encodingFormat: 'uri'})}
               }
             },
           }

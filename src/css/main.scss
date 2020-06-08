@@ -5,10 +5,10 @@ $mdc-theme-on-primary: #ffffff;
 $mdc-shape-small-component-radius: 10px;
 $mdc-shape-medium-component-radius: 10px;
 //$mdc-shape-large-component-radius: 20px;
-$mdc-text-field-height: 54px;
+$mdc-text-field-height: 50px;
 $mdc-text-field-outlined-idle-border: #DADCE0;
-$mdc-button-height: 44px;
-$mdc-icon-button-size: 44px;
+$mdc-button-height: 50px;
+$mdc-icon-button-size: 40px;
 
 @import "@material/textfield/mdc-text-field";
 @import "@material/button/mdc-button";
@@ -70,6 +70,8 @@ a {
 
 button {
   -webkit-tap-highlight-color: transparent;
+  outline: none;
+  cursor: pointer;
 }
 
 pre {

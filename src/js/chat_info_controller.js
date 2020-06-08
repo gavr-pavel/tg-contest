@@ -1,4 +1,4 @@
-import {$, getLabeledElements, Tpl} from './utils';
+import {$, formatFileSize, getLabeledElements, Tpl} from './utils';
 import {MDCCheckbox} from '@material/checkbox';
 import {MessagesApiManager} from "./api/messages_api_manager";
 import {ApiClient} from "./api/api_client";
@@ -251,7 +251,7 @@ const ChatInfoController = new class {
       const fileName = attrs.file_name;
       const type = this.getFileExtension(document.mime_type);
       const iconClass = this.getFileIconClass(type);
-      const size = this.getFileSizeFormatted(document.size);
+      const size = formatFileSize(document.size);
       const dateTime = MessagesController.formatMessageDateTime(message.date);
 
       const docEl = Tpl.html`
@@ -490,11 +490,6 @@ const ChatInfoController = new class {
         return '7z';
     }
     return '';
-  }
-
-  getFileSizeFormatted(bytes) {
-    const i = bytes === 0 ? 0 : Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${ (bytes / Math.pow(1024, i)).toFixed(1) } ${ ['B', 'KB', 'MB', 'GB', 'TB'][i] }`;
   }
 
   getUrlFromText(message) {

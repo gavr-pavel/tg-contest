@@ -1,5 +1,5 @@
 import {FileApiManager} from './api/file_api_manager.js';
-import {getLabeledElements, $, Tpl} from './utils';
+import {getLabeledElements, $, Tpl, getEventPageXY} from './utils';
 import {MediaApiManager} from './api/media_api_manager';
 
 const MediaViewController = new class {
@@ -14,6 +14,7 @@ const MediaViewController = new class {
           <button class="media_view_controls_item media_view_controls_item-close" data-js-label="button_close"></button>
         </div>
         <div class="media_view_content" data-js-label="content"></div>
+        <div class="media_view_caption" data-js-label="caption"></div>
       </div>
     `.buildElement();
 
@@ -63,15 +64,38 @@ const MediaViewController = new class {
     const state = this.initLoading(document, thumb, message, document.size);
     const abortController = this.state.abortController;
     const onProgress = this.state.onProgress;
+    const attributes = MediaApiManager.getDocumentAttributes(document);
+    const loop = attributes.duration < 30;
 
-    FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
-        .then(url => {
-          const content = `<video class="media_view_content_video" src="${url}" playsinline autoplay controls></video>`;
-          this.onLoaded(url, content, state);
-        })
-        .catch((err) => {
-          console.log(err);
-        });
+    if (attributes.supports_streaming && window.MediaSource && document.size > 512 * 1024) {
+      import('./media_streaming_process.js')
+          .then(({MediaStreamingProcess}) => {
+            const process = new MediaStreamingProcess(document, onProgress);
+            this.state.streamingProcess = process;
+            return process.load();
+          })
+          .then((video) => {
+            if (state !== this.state) {
+              return;
+            }
+            video.classList.add('media_view_content_video');
+            video.playsinline = true;
+            video.autoplay = true;
+            video.controls = true;
+            video.loop = loop;
+            video.play();
+            this.onLoaded(video.src, video, state);
+          });
+    } else {
+      FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
+          .then(url => {
+            const content = `<video class="media_view_content_video" src="${url}" playsinline autoplay controls ${loop ? 'loop' : ''}></video>`;
+            this.onLoaded(url, content, state);
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+    }
   }
 
   initLoading(object, thumb, message, totalSize) {
@@ -127,7 +151,12 @@ const MediaViewController = new class {
       return;
     }
 
-    this.dom.content.innerHTML = content;
+    if (typeof content === 'string') {
+      this.dom.content.innerHTML = content;
+    } else {
+      this.dom.content.appendChild(content);
+    }
+    this.dom.caption.innerHTML = Tpl.html`<div class="media_view_caption_text">${state.message.message || ''}</div>`;
     this.renderAuthor();
 
     this.state.url = url;
@@ -176,6 +205,9 @@ const MediaViewController = new class {
   }
 
   close = () => {
+    if (this.state.streamingProcess) {
+      this.state.streamingProcess.stop();
+    }
     this.state = null;
     this.dom.author.innerHTML = '';
     this.dom.content.innerHTML = '';
@@ -215,10 +247,11 @@ const MediaViewController = new class {
   };
 
   onContentTouchStart = (event) => {
-    let startY = event.pageY;
+    let {pageY: startY} = getEventPageXY(event);
     let progress = 0;
     const onTouchMove = (event) => {
-      const translateY = event.pageY - startY;
+      const {pageY} = getEventPageXY(event);
+      const translateY = pageY - startY;
       progress = Math.min(1, Math.pow(Math.abs(translateY), 2) / 10000);
       this.dom.content.style.transform = `translateY(${translateY}px)`;
       this.container.style.backgroundColor = `rgba(0, 0, 0, ${ 0.9 - 0.9 * progress })`;

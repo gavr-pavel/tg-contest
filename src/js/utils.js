@@ -217,6 +217,14 @@ function formatTime(ts, {withSeconds = false} = {}) {
   }).format(ts * 1000);
 }
 
+function formatDuration(duration) {
+  duration = Math.round(duration);
+  const hours = Math.floor(duration / 3600);
+  const minutes = String(Math.floor(duration / 60) % 60).padStart(hours ? 2 : 1, '0');
+  const seconds = String(duration % 60).padStart(2, '0');
+  return (hours ? `${hours}:` : '') + `${minutes}:${seconds}`;
+}
+
 function cutText(text, checkLength, cutLength) {
   if (text && text.length > checkLength) {
     return text.substr(0, cutLength) + '...';
@@ -233,6 +241,11 @@ function formatCountShort(count) {
 
 function formatCountLong(count) {
   return new Intl.NumberFormat('en-US').format(count);
+}
+
+function formatFileSize(bytes) {
+  const i = bytes === 0 ? 0 : Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${ (bytes / Math.pow(1024, i)).toFixed(1) } ${ ['B', 'KB', 'MB', 'GB', 'TB'][i] }`;
 }
 
 function isTouchDevice() {
@@ -329,6 +342,39 @@ function blobToBuffer(blob) {
   });
 }
 
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.onload = () => resolve();
+    script.onerror = (event) => console.log(event) && 0 || reject(new Error('Could not load script'));
+    script.src = src;
+    document.head.appendChild(script);
+  });
+}
+
+function getEventPageXY(event) {
+  const {pageX, pageY} = event.touches ? event.touches[0] : event;
+  return {pageX, pageY};
+}
+
+function initAnimation(callback) {
+  let _args;
+  let _requestId;
+  function start(...args) {
+    stop();
+    _args = args;
+    loop();
+  }
+  function stop() {
+    cancelAnimationFrame(_requestId);
+  }
+  function loop() {
+    callback(..._args);
+    _requestId = requestAnimationFrame(loop);
+  }
+  return [start, stop];
+}
+
 export {
   Storage,
   Emitter,
@@ -346,11 +392,16 @@ export {
   formatDateWeekday,
   formatDateRelative,
   formatTime,
+  formatDuration,
   cutText,
   formatCountShort,
   formatCountLong,
+  formatFileSize,
   isTouchDevice,
   checkWebPSupport,
   convertWebP,
-  blobToBuffer
+  blobToBuffer,
+  loadScript,
+  getEventPageXY,
+  initAnimation
 };

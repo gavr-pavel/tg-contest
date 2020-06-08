@@ -2,8 +2,11 @@ import {blobToBuffer, checkWebPSupport, convertWebP, getDeferred, randomLong} fr
 import {ApiConnection} from '../mtproto/api_connection';
 import {MessagesApiManager} from './messages_api_manager';
 
-const PART_SIZE = 512 * 1024;
-const MAX_CONNECTIONS = 2;
+const KB = 1024;
+const MB = 1024 * KB;
+
+const PART_SIZE = 256 * KB;
+const MAX_CONNECTIONS = 4;
 
 const DEBUG = 0;
 
@@ -119,7 +122,7 @@ const FileApiManager = new class {
           parts.push(new Blob([res.bytes]));
           loaded += res.bytes.byteLength;
           if (onProgress) {
-            onProgress(loaded);
+            onProgress(loaded, res.bytes, offset);
           }
           if (!mimeType) {
             mimeType = this.getMimeType(res.type);
@@ -281,6 +284,37 @@ const FileApiManager = new class {
     };
     Object.assign(options, {mimeType: document.mime_type, size: document.size});
     return this.loadFile(location, document.dc_id, options);
+  }
+
+  async loadDocumentBytes(document, offset, limit) {
+    const location = {
+      _: 'inputDocumentFileLocation',
+      id: document.id,
+      access_hash: document.access_hash,
+      file_reference: document.file_reference
+    };
+
+    const apiConnection = this.getConnection(document.dc_id);
+    try {
+      await this.queueWait(1);
+      const realOffset = offset - (offset % KB);
+      let realLimit = limit + offset - realOffset;
+      realLimit += KB - (realLimit % KB);
+      realLimit = Math.min(realLimit, MB - (realOffset % MB));
+      const res = await apiConnection.callMethod('upload.getFile', {
+        location,
+        // offset,
+        // limit,
+        offset: realOffset,
+        limit: realLimit,
+        precise: true
+      });
+      const begin = offset - realOffset;
+      return new Uint8Array(res.bytes.subarray(begin));
+    } finally {
+      this.queueDone();
+      this.connectionDone(apiConnection);
+    }
   }
 
   loadStickerSetThumb(set, options = {}) {

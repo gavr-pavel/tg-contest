@@ -283,9 +283,15 @@ const MessagesApiManager = new class {
     this.updateMessages(messages);
     this.updateDialogs(dialogs);
 
-    const allDialogs = folderId ? this.archivedDialogs : this.dialogs;
+    for (const dialog of dialogs) {
+      if (dialog.folder_id === 1) {
+        this.archivedDialogs.push(dialog);
+      } else {
+        this.dialogs.push(dialog);
+      }
+    }
 
-    allDialogs.splice(allDialogs.length, 0, ...dialogs);
+    const allDialogs = folderId ? this.archivedDialogs : this.dialogs;
 
     this.emitter.trigger('dialogsUpdate', {dialogs: allDialogs, folderId});
 

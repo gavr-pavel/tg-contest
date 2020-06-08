@@ -1,10 +1,9 @@
-import {$, Tpl, debounce, getLabeledElements, isTouchDevice} from './utils';
+import {$, Tpl, debounce, getLabeledElements, isTouchDevice, formatFileSize} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
 import {EmojiDropdown} from './emoji_dropdown';
 import {MDCRipple} from '@material/ripple';
 import {FileUploadPopup} from './file_upload_popup';
-import {ChatInfoController} from './chat_info_contoller';
 
 const MessagesFormController = new class {
   init() {
@@ -146,7 +145,7 @@ const MessagesFormController = new class {
         </div>
         <div class="document_col">
           <div class="document_filename">${title}</div>
-          <div class="document_size"><span class="document_size_percent">0%</span> &middot; ${ChatInfoController.getFileSizeFormatted(size)}</div>        
+          <div class="document_size"><span class="document_size_percent">0%</span> &middot; ${formatFileSize(size)}</div>        
         </div>
       </div>
     `.buildElement();

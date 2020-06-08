@@ -108,6 +108,28 @@
   transform: scale(0.7);
 }
 
+.media_view_caption {
+  position: absolute;
+  top: calc(100% - 126px);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.media_view_caption_text {
+  padding: 10px;
+  max-width: 720px;
+  text-align: center;
+  color: #fff;
+  opacity: 0.5;
+  &:hover {
+    opacity: 1;
+  }
+}
+
 .media_view_content_image,
 .media_view_content_gif,
 .media_view_content_video {
@@ -116,4 +138,5 @@
   max-height: 100%;
   object-fit: contain;
   outline: none;
+  background: #000;
 }

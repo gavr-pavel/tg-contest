@@ -93,6 +93,12 @@ const ChatsController = new class {
       ContactsController.show();
     });
 
+    const savedButtonEl = $('.chats_header_menu_item-saved', menuContainer);
+    savedButtonEl.addEventListener('click', () => {
+      const dialog = MessagesApiManager.getDialog(App.getAuthUserId());
+      MessagesController.setChat(dialog);
+    });
+
     const archivedButtonEl = $('.chats_header_menu_item-archived', menuContainer);
     archivedButtonEl.addEventListener('click', () => {
       ArchivedChatsController.show();

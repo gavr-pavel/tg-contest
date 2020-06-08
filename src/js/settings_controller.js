@@ -1,5 +1,6 @@
-import {$} from "./utils";
+import {$, $$} from './utils';
 import {MDCMenu} from '@material/menu';
+import {MDCRipple} from '@material/ripple/component';
 import {MessagesApiManager} from "./api/messages_api_manager";
 import {ChatsController} from './chats_controller';
 
@@ -58,6 +59,10 @@ const SettingsController = new class {
 
     const logoutButtonEl = $('.settings_extra_menu_item-log_out', this.container);
     logoutButtonEl.addEventListener('click', this.onLogoutClick);
+
+    for (const item of $$('.mdc-list-item', this.container)) {
+      new MDCRipple(item);
+    }
   }
 
   loadUserPhoto(user) {

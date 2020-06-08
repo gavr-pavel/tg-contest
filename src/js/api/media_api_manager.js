@@ -53,14 +53,18 @@ const MediaApiManager = new class {
           break;
         case 'documentAttributeAudio':
           result.duration = attribute.duration;
-          result.audioTitle = attribute.title;
-          result.audioPerformer = attribute.performer;
+          result.audio_title = attribute.title;
+          result.audio_performer = attribute.performer;
+          result.waveform = attribute.waveform;
           result.type = attribute.pFlags.voice ? 'voice' : 'audio';
           break;
         case 'documentAttributeVideo':
           result.duration = attribute.duration;
           result.w = attribute.w;
           result.h = attribute.h;
+          if (attribute.pFlags.supports_streaming) {
+            result.supports_streaming = true;
+          }
           if (hasThumb && attribute.pFlags.round_message) {
             result.type = 'round';
           } else if (hasThumb) {

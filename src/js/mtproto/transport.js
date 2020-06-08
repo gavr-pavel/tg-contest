@@ -67,7 +67,11 @@ class WebSocketTransport extends Transport {
     if (!this.socket) {
       await this.socketReadyPromise;
     }
-    this.socket.send(payload);
+    if (this.socket.readyState === this.socket.OPEN) {
+      this.socket.send(payload);
+    } else {
+      // console.warn(`socket is not in OPEN state`, this.socket);
+    }
   }
 
   migrateDC(dcId) {
