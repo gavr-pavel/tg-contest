@@ -7,11 +7,11 @@ const MediaViewController = new class {
     this.container = Tpl.html`
       <div class="media_view" hidden>
         <div class="media_view_author" data-js-label="author"></div>
-        <div class="media_view_controls"  data-js-label="controls">
-          <button class="media_view_controls_item media_view_controls_item-delete" data-js-label="button_delete"></button>
-          <button class="media_view_controls_item media_view_controls_item-forward" data-js-label="button_forward"></button>
-          <button class="media_view_controls_item media_view_controls_item-download" data-js-label="button_download"></button>
-          <button class="media_view_controls_item media_view_controls_item-close" data-js-label="button_close"></button>
+        <div class="media_view_actions"  data-js-label="controls">
+          <button class="media_view_actions_item media_view_actions_item-delete" data-js-label="button_delete"></button>
+          <button class="media_view_actions_item media_view_actions_item-forward" data-js-label="button_forward"></button>
+          <button class="media_view_actions_item media_view_actions_item-download" data-js-label="button_download"></button>
+          <button class="media_view_actions_item media_view_actions_item-close" data-js-label="button_close"></button>
         </div>
         <div class="media_view_content" data-js-label="content"></div>
         <div class="media_view_caption" data-js-label="caption"></div>
@@ -256,7 +256,7 @@ const MediaViewController = new class {
       this.dom.content.style.transform = `translateY(${translateY}px)`;
       this.container.style.backgroundColor = `rgba(0, 0, 0, ${ 0.9 - 0.9 * progress })`;
       this.dom.author.style.opacity = 0.5 - 0.5 * progress;
-      this.dom.controls.style.opacity = 1 - progress;
+      this.dom.actions.style.opacity = 1 - progress;
     };
     const onTouchEnd = () => {
       if (progress === 1) {
@@ -268,7 +268,7 @@ const MediaViewController = new class {
       this.dom.content.style.transition = '';
       this.container.style.backgroundColor = '';
       this.dom.author.style.opacity = '';
-      this.dom.controls.style.opacity = '';
+      this.dom.actions.style.opacity = '';
     };
     this.dom.content.addEventListener('touchmove', onTouchMove);
     this.dom.content.addEventListener('touchend', onTouchEnd);

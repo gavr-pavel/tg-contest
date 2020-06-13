@@ -3,10 +3,9 @@ import {ApiClient} from './api/api_client.js';
 import {I18n} from './i18n.js';
 import {App} from './app';
 import {MDCTextField} from '@material/textfield/index';
-import {MDCRipple} from '@material/ripple/component';
 import {CountryCodesConfig} from './country_codes_config';
 import {getCountryCodeEmojiFlag} from './emoji_config';
-import {Tpl} from './utils';
+import {attachRipple, Tpl} from './utils';
 
 const STEP_PHONE = 0;
 const STEP_CODE = 1;
@@ -421,7 +420,7 @@ const LoginController = new class {
     const button = Tpl.html`
       <button class="login_button mdc-button mdc-button--unelevated" type="submit" ${hidden ? ' hidden' : ''}><span class="mdc-button__ripple"></span>${text}</button>
     `.buildElement();
-    this.mdcComponents.push(new MDCRipple(button));
+    this.mdcComponents.push(...attachRipple(button));
     return button;
   }
 

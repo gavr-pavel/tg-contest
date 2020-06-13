@@ -8,7 +8,7 @@ import {Tpl} from './utils';
 const App = new class {
   API_ID = 884322;
   API_HASH = '77498db3367014eec55b317377f52779';
-  APP_VERSION = '0.0.1';
+  APP_VERSION = '0.3.0';
 
   auth_user_id = 0;
 

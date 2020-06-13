@@ -4,8 +4,10 @@ const keys = {
   'login_flood_pluralize_hours': ['', 'Try again in {} hour', 'Try again in {} hours'],
 
   'messages_search_n_results_found': ['No messages found', '{} message found', '{} messages found'],
-
   'messages_send_n_files': ['', 'Send {} File', 'Send {} files'],
+
+  'chats_n_members': ['', '{n} member', '{n} members'],
+  'chats_n_followers': ['', '{n} follower', '{n} followers'],
 };
 
 const I18n = new class {

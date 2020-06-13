@@ -1,4 +1,4 @@
-import {$, buildLoaderElement, Tpl} from './utils';
+import {$, attachRipple, buildLoaderElement, Tpl} from './utils';
 import {MDCRipple} from "@material/ripple/component";
 import {MessagesApiManager} from "./api/messages_api_manager";
 import {MessagesController} from "./messages_controller";
@@ -59,7 +59,7 @@ const ContactsController = new class {
     this.loadContactPhoto(el, user);
 
     el.addEventListener('click', this.onContactClick);
-    new MDCRipple(el.firstElementChild);
+    attachRipple(el.firstElementChild);
 
     return el;
   }

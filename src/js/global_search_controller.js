@@ -1,8 +1,9 @@
-import {$, buildLoaderElement, Tpl} from './utils';
+import {$, attachRipple, buildLoaderElement, debounce, formatCountLong, Tpl} from './utils';
 import {ChatsController} from './chats_controller';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
-import {MDCRipple} from '@material/ripple/component';
+import {App} from './app';
+import {I18n} from './i18n';
 
 const GlobalSearchController = new class {
   users = new Map();
@@ -15,6 +16,8 @@ const GlobalSearchController = new class {
     ChatsController.container.hidden = true;
     this.container = $('.global_search_sidebar');
     this.container.hidden = false;
+
+    this.container.onscroll = this.onScroll;
 
     this.loader = buildLoaderElement();
 
@@ -44,8 +47,18 @@ const GlobalSearchController = new class {
     $('.chats_header_menu_button').hidden = false;
   };
 
-  onInput = () => {
+  onInput = debounce(() => {
     const value = this.input.value.trim();
+    if (value === this.lastQuery) {
+      return;
+    }
+    this.lastQuery = value;
+    this.nextRate = null;
+    this.noMore = false;
+    if (this.loadMoreAbortController) {
+      this.loadMoreAbortController.abort();
+      this.loadMoreAbortController = null;
+    }
     if (value) {
       this.container.innerHTML = '';
       this.container.append(this.loader);
@@ -53,7 +66,46 @@ const GlobalSearchController = new class {
     } else {
       this.onBack();
     }
+  }, 100);
+
+  onScroll = () => {
+    const container = this.container;
+    if (!this.loading && !this.noMore && container.scrollTop + container.offsetHeight > container.scrollHeight - 500) {
+      this.loadMore();
+    }
   };
+
+  loadMore() {
+    this.loadMoreAbortController = new AbortController();
+    const signal = this.loadMoreAbortController.signal;
+    const q = this.lastQuery;
+    this.loading = true;
+    ApiClient.callMethod('messages.searchGlobal', {
+      q,
+      limit: 20,
+      offset_rate: this.nextRate,
+      offset_peer: {_: 'inputPeerEmpty'}
+    }).then((messages) => {
+      if (signal.aborted) {
+        return;
+      }
+      if (!messages.messages.length) {
+        this.noMore = true;
+      } else {
+        MessagesApiManager.updateUsers(messages.users);
+        MessagesApiManager.updateChats(messages.chats);
+        this.nextRate = messages.next_rate;
+        const container = $('.global_search_sublist-messages', this.container);
+        this.appendMessages(container, messages.messages, q);
+      }
+    }).catch((error) => {
+      console.log(error);
+      const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
+      App.alert(errorText);
+    }).finally(() => {
+      this.loading = false;
+    });
+  }
 
   async loadResults(q, contactsLimit = 20, messagesLimit = 20) {
     const [contacts, messages] = await Promise.all([
@@ -68,33 +120,50 @@ const GlobalSearchController = new class {
     MessagesApiManager.updateChats(contacts.chats);
     MessagesApiManager.updateChats(messages.chats);
 
-    this.renderResults(contacts.my_results, contacts.results, messages.messages);
+    this.nextRate = messages.next_rate;
+
+    this.renderResults(q, contacts.my_results, contacts.results, messages.messages);
   }
 
-  renderResults(myResults, globalResults, messages) {
+  renderResults(q, myResults, globalResults, messages) {
     const frag = document.createDocumentFragment();
     frag.append(
-      this.buildContactsSublist('Contacts and Chats', myResults),
-      this.buildContactsSublist('Global Search', globalResults),
-      this.buildMessagesSublist('Messages', messages)
+      this.buildContactsSublist('Contacts and Chats', myResults, q, false),
+      this.buildContactsSublist('Global Search', globalResults, q, true),
+      this.buildMessagesSublist('Messages', messages, q)
     );
     this.container.innerHTML = '';
     this.container.append(frag);
   }
 
-  buildContactsSublist(header, results) {
+  buildContactsSublist(header, results, q, global) {
     if (!results.length) {
       return '';
     }
     const container = Tpl.html`
-      <div class="global_search_sublist">
+      <div class="global_search_sublist global_search_sublist-contacts">
         <div class="global_search_sublist_header">${header}</div>
       </div>
     `.buildElement();
     for (const peer of results) {
       const peerId = MessagesApiManager.getPeerId(peer);
+      const peerData = MessagesApiManager.getPeerData(peer);
       const name = MessagesApiManager.getPeerName(peer);
-      const status = peer._ === 'peerUser' ? MessagesController.getUserStatusText(MessagesApiManager.getPeerData(peer)) : '';
+      let status = '';
+      if (!global && peer._ === 'peerUser') {
+        const user = MessagesApiManager.getPeerData(peer);
+        status = MessagesController.getUserStatusText(user);
+      } else {
+        if (peerData.username) {
+          status = '@' + peerData.username;
+        }
+        if (peerData.participants_count) {
+          const isChannel = peerData._ === 'channel' && !peerData.megagroup;
+          status += (status ? ', ' : '') + I18n.getPlural(isChannel ? 'chats_n_followers' : 'chats_n_members', peerData.participants_count, {
+            n: formatCountLong(peerData.participants_count)
+          });
+        }
+      }
 
       const el = Tpl.html`
         <div class="contacts_item" data-peer-id="${peerId}">
@@ -113,28 +182,36 @@ const GlobalSearchController = new class {
       `.buildElement();
       ChatsController.loadPeerPhoto($('.contacts_item_photo', el), peer);
       el.addEventListener('click', this.onPeerClick);
-      new MDCRipple(el.firstElementChild);
+      attachRipple(el.firstElementChild);
 
       container.append(el);
     }
     return container;
   }
 
-  buildMessagesSublist(header, messages) {
+  buildMessagesSublist(header, messages, q) {
     if (!messages.length) {
       return '';
     }
     const container = Tpl.html`
-      <div class="global_search_sublist">
+      <div class="global_search_sublist global_search_sublist-messages">
         <div class="global_search_sublist_header">${header}</div>
       </div>
     `.buildElement();
+
+    this.appendMessages(container, messages, q);
+
+    return container;
+  }
+
+  appendMessages(container, messages, q) {
+    const frag = document.createDocumentFragment();
     for (const message of messages) {
       const peer = MessagesApiManager.getMessageDialogPeer(message);
       const peerId = MessagesApiManager.getPeerId(peer);
       const title = MessagesApiManager.getPeerName(peer);
       const date = ChatsController.formatMessageDate(message);
-      const messagePreview = ChatsController.getMessagePreview(message);
+      const messagePreview = ChatsController.getMessagePreview(message, q);
       const el = Tpl.html`
         <div class="messages_search_results_item" data-peer-id="${peerId}" data-message-id="${message.id}">
           <div class="messages_search_results_item_content mdc-ripple-surface">
@@ -153,9 +230,9 @@ const GlobalSearchController = new class {
       `.buildElement();
       ChatsController.loadPeerPhoto($('.messages_search_results_item_photo', el), peer);
       el.addEventListener('click', this.onPeerClick);
-      container.append(el);
+      frag.appendChild(el);
     }
-    return container;
+    container.appendChild(frag);
   }
 
   onPeerClick = (event) => {

@@ -6,7 +6,7 @@ module.exports = {
   // watch: true,
   entry: {
     'main': ['./src/css/main.scss', './src/js/main.js'],
-    'sw': './src/js/sw.js',
+    // 'sw': './src/js/sw.js',
     // 'crypto_worker': './src/js/crypto_worker.js',
     // 'webp_worker': './src/js/webp_worker.js',
   },
@@ -31,6 +31,12 @@ module.exports = {
               plugins: ["@babel/plugin-proposal-class-properties", "@babel/plugin-syntax-dynamic-import"]
             }
           }
+        ]
+      },
+      {
+        test: /\.module\.s?css$/,
+        use: [
+          {loader: 'css-loader'}
         ]
       },
       {

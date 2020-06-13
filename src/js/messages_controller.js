@@ -4,10 +4,9 @@ import {
   formatCountShort, formatCountLong,
   formatDateFull,
   formatDateRelative,
-  formatTime, formatDuration, initAnimation,
+  formatTime, formatDuration, initAnimation, attachRipple,
 } from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
-import {MDCRipple} from '@material/ripple';
 import {MediaApiManager} from './api/media_api_manager';
 import {MediaViewController} from './media_view_controller';
 import {getEmojiMatches} from './emoji_config';
@@ -15,6 +14,7 @@ import {MessagesFormController} from './messages_form_controller';
 import {ChatsController} from "./chats_controller";
 import {MessagesSearchController} from './messages_search_controller';
 import {ApiClient} from './api/api_client';
+import {I18n} from './i18n';
 
 const MessagesController = new class {
   messageElements = new Map();
@@ -47,7 +47,11 @@ const MessagesController = new class {
 
   setChat(dialog, messageId = 0) {
     if (dialog === this.dialog) {
-      this.scrollToBottom();
+      if (messageId) {
+        this.jumpToMessage(messageId);
+      } else {
+        this.scrollToBottom();
+      }
       return;
     }
     if (this.dialog) {
@@ -64,13 +68,15 @@ const MessagesController = new class {
     this.showHeader(dialog);
     this.footer.hidden = !this.canSendMessage(dialog);
     if (!this.footer.hidden) {
-      MessagesFormController.focus();
+      MessagesFormController.onShown();
     }
 
     this.container.append(this.loader);
 
     if (messageId) {
       this.jumpToMessage(messageId);
+    } else if (dialog.read_inbox_max_id < dialog.top_message) {
+      this.jumpToMessage(dialog.read_inbox_max_id, true);
     } else {
       this.loadHistory();
     }
@@ -151,7 +157,7 @@ const MessagesController = new class {
 
     this.header.innerHTML = Tpl.html`
       <button class="messages_header_back mdc-icon-button"></button>
-      <div class="messages_header_peer">
+      <div class="messages_header_peer mdc-ripple-surface">
         <div class="messages_header_peer_photo"></div>
         <div class="messages_header_peer_description">
           <div class="messages_header_peer_name">${peerName}</div>
@@ -159,6 +165,7 @@ const MessagesController = new class {
         </div>
       </div>
       <div class="messages_header_audio_wrap"></div>
+      <div class="messages_header_pinned_message_wrap"></div>
       <div class="messages_header_actions">
         <button class="messages_header_action_search mdc-icon-button"></button>
         <button class="messages_header_action_more mdc-icon-button"></button>
@@ -169,38 +176,26 @@ const MessagesController = new class {
     const peerEl = $('.messages_header_peer');
     peerEl.addEventListener('click', () => {
       MessagesSearchController.close();
-      import('./chat_info_controller.js')
-          .then(({ChatInfoController}) => {
-            this.ChatInfoController = ChatInfoController;
-            ChatInfoController.show(this.chatId)
-          });
+      if (this.ChatInfoController && this.ChatInfoController.isOpen()) {
+        this.ChatInfoController.close();
+      } else {
+        import('./chat_info_controller.js')
+            .then(({ChatInfoController}) => {
+              this.ChatInfoController = ChatInfoController;
+              ChatInfoController.show(this.chatId)
+            });
+      }
     });
+    attachRipple(peerEl);
 
     const photoEl = $('.messages_header_peer_photo', this.header);
     ChatsController.loadPeerPhoto(photoEl, dialog.peer);
 
     if (peer._ === 'peerChannel' || peer._ === 'peerChat') {
-      const chatId = peer.channel_id || peer.chat_id;
-      MessagesApiManager.loadChatFull(chatId)
-          .then((fullChat) => {
-            let statusText = '';
-            if (fullChat.participants_count) {
-              if (MessagesApiManager.isMegagroup(chatId)) {
-                statusText = `${formatCountLong(fullChat.participants_count)} members, ${formatCountLong(fullChat.online_count)} online`;
-              } else {
-                statusText =`${formatCountLong(fullChat.participants_count)} followers`;
-              }
-            } else if (fullChat.participants.participants) {
-              statusText = `${formatCountLong(fullChat.participants.participants.length)} members`;
-            }
-            $('.messages_header_peer_status', this.header).innerText = statusText;
-          });
+      this.loadChatHeaderInfo(peer);
     }
 
-    Array.from($('.messages_header_actions', this.header).children)
-        .forEach((button) => {
-          new MDCRipple(button).unbounded = true;
-        });
+    attachRipple(...$('.messages_header_actions', this.header).children);
 
     $('.messages_header_action_search', this.header).addEventListener('click', () => {
       this.ChatInfoController && this.ChatInfoController.close();
@@ -209,6 +204,60 @@ const MessagesController = new class {
 
     $('.messages_header_back', this.header).addEventListener('click', () => {
       this.exitChat();
+    });
+  }
+
+  async loadChatHeaderInfo(peer) {
+    const fullChat = await MessagesApiManager.loadChatFull(peer);
+    if (fullChat.pinned_msg_id) {
+      MessagesApiManager.loadMessagesById(peer, fullChat.pinned_msg_id)
+          .then(([pinnedMessage]) => {
+            this.renderPinnedMessage(pinnedMessage);
+          });
+    }
+
+    const isChannel = peer.channel_id && !MessagesApiManager.isMegagroup(peer);
+    let statusText = '';
+    let membersCount;
+    let onlineCount;
+
+    if (fullChat.participants_count) {
+      membersCount = fullChat.participants_count;
+      onlineCount = fullChat.online_count;
+    } else if (fullChat.participants.participants) {
+      membersCount = fullChat.participants.participants.length;
+    }
+    if (membersCount) {
+      statusText = I18n.getPlural(isChannel ? 'chats_n_followers' : 'chats_n_members', membersCount, {
+        n: formatCountLong(membersCount)
+      });
+      if (onlineCount) {
+        statusText += `, ${onlineCount} online`;
+      }
+    }
+    $('.messages_header_peer_status', this.header).innerText = statusText;
+  }
+
+  renderPinnedMessage(message) {
+    const container = $('.messages_header_pinned_message_wrap', this.header);
+    container.innerHTML = '';
+
+    const el = Tpl.html`
+      <div class="messages_header_pinned_message mdc-ripple-surface" data-message-id="${message.id}">
+        <div class="messages_header_pinned_message_content">
+          <div class="messages_header_pinned_message_title">Pinned message</div>
+          <div class="messages_header_pinned_message_text">${ChatsController.getMessagePreview(message)}</div>        
+        </div>
+      </div>
+    `.buildElement();
+
+    attachRipple(el);
+
+    container.appendChild(el);
+
+    el.addEventListener('click', (event) => {
+      const messageId = +event.currentTarget.dataset.messageId;
+      this.jumpToMessage(messageId);
     });
   }
 
@@ -263,13 +312,17 @@ const MessagesController = new class {
         });
   };
 
-  jumpToMessage(messageId) {
+  jumpToMessage(messageId, unread = false) {
+    if (this.messageElements.has(messageId)) {
+      this.scrollToMessage(messageId, unread);
+      return;
+    }
     this.clearMessages();
     this.loading = true;
     MessagesApiManager.loadMessages(this.dialog.peer, messageId, 20, -10)
         .then((messages) => {
-          console.log(messages);
           this.prependHistory(messages);
+          this.scrollToMessage(messageId, unread);
         })
         .catch((error) => {
           const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
@@ -278,6 +331,31 @@ const MessagesController = new class {
         .finally(() => {
           this.loading = false;
         });
+
+  }
+
+  scrollToMessage(messageId, unread = false) {
+    const el = this.messageElements.get(messageId);
+    if (!el) {
+      return;
+    }
+
+    if (unread) {
+      // const unreadEl = Tpl.html`<div class="message-type-service message-type-unread">Unread messages</div>`.buildElement();
+      // el.after(unreadEl);
+      const unreadEl = $('.message-type-unread', this.container);
+      unreadEl && unreadEl.scrollIntoView({block: 'center'});
+    } else {
+      const messageRect = el.getBoundingClientRect();
+      const containerRect = this.scrollContainer.getBoundingClientRect();
+      if (messageRect.top < containerRect.top || messageRect.bottom > containerRect.bottom) {
+        el.scrollIntoView({block: 'center'});
+      }
+      el.classList.add('message-highlighted');
+      requestAnimationFrame(() => {
+        el.classList.remove('message-highlighted');
+      });
+    }
   }
 
   canSendMessage(dialog) {
@@ -289,7 +367,7 @@ const MessagesController = new class {
       return true;
     }
     if (chat._ === 'channel') {
-      return chat.pFlags.creator || chat.pFlags.megagroup;
+      return chat.creator || chat.megagroup;
     }
     return false;
   }
@@ -362,8 +440,9 @@ const MessagesController = new class {
     if (!this.loading) {
       if (scrollTop < 500 && !this.noMore) {
         this.loadMore();
-      } else if (scrollBottom < 300 && this.maxMsgId < this.dialog.top_message) {
+      } else if (scrollBottom < 500 && this.maxMsgId < this.dialog.top_message) {
         this.loadMore({down: true});
+        this.scrolling = true;
       }
     }
   };
@@ -378,6 +457,10 @@ const MessagesController = new class {
       messages = messages.filter(message => message.id < this.minMsgId);
     }
     if (!messages.length) {
+      if (!this.container.children.length) {
+        this.emptyPlaceholder = Tpl.html`<div class="messages_empty_placeholder">No messages here yet...</div>`.buildElement();
+        this.container.appendChild(this.emptyPlaceholder);
+      }
       return;
     }
 
@@ -416,10 +499,20 @@ const MessagesController = new class {
     if (!messages.length) {
       return;
     }
+    if (this.emptyPlaceholder) {
+      this.emptyPlaceholder.remove();
+      this.emptyPlaceholder = null;
+    }
+
+    const scrolling = this.scrolling;
 
     const frag = this.buildMessagesBatch(messages);
     this.mergeDateGroups(frag.firstElementChild, this.container.lastElementChild, false);
     this.container.append(frag);
+
+    if (!scrolling) {
+      this.scrollToBottom();
+    }
 
     this.maxMsgId = messages[0].id;
   }
@@ -432,12 +525,16 @@ const MessagesController = new class {
       const newerAuthorGroup = newerGroup.children[1];
       const olderAuthorGroup = olderGroup.lastElementChild;
       if (newerAuthorGroup.dataset.authorId === olderAuthorGroup.dataset.authorId) {
+        if (this.dialog.peer._ !== 'peerChannel' || MessagesApiManager.isMegagroup(this.dialog.peer)) {
+          newerAuthorGroup.firstElementChild.classList.add('message-stick-to-prev');
+          olderAuthorGroup.lastElementChild.classList.add('message-stick-to-next');
+        }
         if (moveToNewer) {
           newerAuthorGroup.prepend(...olderAuthorGroup.children);
           olderAuthorGroup.remove();
         } else {
-          olderAuthorGroup.append(...olderAuthorGroup.children);
-          newerGroup.remove();
+          olderAuthorGroup.append(...newerAuthorGroup.children);
+          newerAuthorGroup.remove();
         }
       }
       if (moveToNewer) {
@@ -452,7 +549,8 @@ const MessagesController = new class {
 
   buildMessagesBatch(messages) {
     const dialogPeer = this.dialog.peer;
-    const isGroupChat = dialogPeer._ === 'peerChat' || dialogPeer._ === 'peerChannel' && MessagesApiManager.isMegagroup(dialogPeer.channel_id);
+    const readInboxMaxId = this.dialog.read_inbox_max_id;
+    const isGroupChat = dialogPeer._ === 'peerChat' || dialogPeer._ === 'peerChannel' && MessagesApiManager.isMegagroup(dialogPeer);
     const frag = document.createDocumentFragment();
     let lastDateGroup = null;
     let lastDateGroupMidnight = 0;
@@ -472,7 +570,16 @@ const MessagesController = new class {
         lastAuthorGroup = null;
         frag.prepend(lastDateGroup);
       }
-      if (!lastAuthorGroup || !newerMessage || newerMessage.from_id !== message.from_id) {
+      if (readInboxMaxId && message.id === readInboxMaxId && readInboxMaxId !== this.dialog.top_message) {
+        const unreadEl = Tpl.html`<div class="message-type-service message-type-unread">Unread messages</div>`.buildElement();
+        if (lastDateGroup.children.length === 1) { // only date
+          frag.prepend(unreadEl);
+        } else {
+          lastDateGroup.firstElementChild.after(unreadEl);
+          lastAuthorGroup = null;
+        }
+      }
+      if (!lastAuthorGroup || message._ === 'messageService' || !newerMessage || newerMessage.from_id !== message.from_id) {
         const needPhoto = isGroupChat && message._ === 'message' && authorId !== App.getAuthUserId();
         lastAuthorGroup = this.buildMessagesAuthorGroupEl(authorId, needPhoto);
         if (needPhoto) {
@@ -483,6 +590,9 @@ const MessagesController = new class {
       }
       const el = this.buildMessageEl(message, {stickToNext, stickToPrev});
       lastAuthorGroup.prepend(el);
+      if (message._ === 'messageService') {
+        lastAuthorGroup = null;
+      }
     }
     return frag;
   }
@@ -552,7 +662,7 @@ const MessagesController = new class {
     const mediaThumbData = this.getMessageMediaThumb(message, isEmojiMessage);
     const isStickerMessage = mediaThumbData && mediaThumbData.type === 'sticker';
     const isRoundMessage = mediaThumbData && mediaThumbData.type === 'round';
-    const authorName = !options.stickToPrev && !isStickerMessage && !isEmojiMessage && !message.pFlags.out ? this.formatAuthorName(message) : '';
+    const authorName = !options.stickToPrev && !isStickerMessage && !isEmojiMessage && !message.out ? this.formatAuthorName(message) : '';
 
     let messageContent = this.formatMessageContent(message, mediaThumbData);
     if (message.fwd_from) {
@@ -583,6 +693,13 @@ const MessagesController = new class {
       el.classList.add('message-type-emoji');
     }
 
+    if (message.reply_to_msg_id) {
+      const replyToWrap = $('.message_reply_to_wrap', el);
+      if (replyToWrap) {
+        replyToWrap.addEventListener('click', this.onReplyToClick);
+      }
+    }
+
     if (mediaThumbData) {
       el.classList.add('message-has-thumb');
       this.loadMessageMediaThumb(el, mediaThumbData);
@@ -597,11 +714,16 @@ const MessagesController = new class {
       if (docBtn) {
         docBtn.addEventListener('click', this.onFileClick);
       }
+    } else if (message.media && message.media.poll) {
+      import('./poll_controller.js')
+          .then(({PollController}) => {
+            PollController.init($('.poll', el))
+          });
     }
   }
 
   isOutMessage(message) {
-    return (message.pFlags.out || MessagesApiManager.getMessageDialogPeerId(message) === App.getAuthUserId()) && message.from_id === App.getAuthUserId();
+    return (message.out || MessagesApiManager.getMessageDialogPeerId(message) === App.getAuthUserId()) && message.from_id === App.getAuthUserId();
   }
 
   isEmojiMessage(message) {
@@ -638,6 +760,13 @@ const MessagesController = new class {
     return '';
   }
 
+  onReplyToClick = (event) => {
+    const target = event.currentTarget;
+    const msgId = +target.closest('.message').dataset.id;
+    const message = MessagesApiManager.messages.get(msgId);
+    this.jumpToMessage(message.reply_to_msg_id);
+  };
+
   onThumbClick = (event) => {
     const thumb = event.currentTarget;
     const msgId = +thumb.dataset.messageId || +thumb.closest('.message').dataset.id;
@@ -672,24 +801,29 @@ const MessagesController = new class {
       video.removeAttribute('muted');
       video.play();
       const progressEl = Tpl.html`
-        <svg class="message_media_thumb_round_progress_svg" viewBox="22 22 44 44">
+        <svg class="message_media_thumb_round_progress_svg" viewBox="22 22 44 44" xmlns="http://www.w3.org/2000/svg">
           <circle class="message_media_thumb_round_progress_circle" cx="44" cy="44" r="21" transform="rotate(-90 44 44)"></circle>
         </svg>
       `.buildElement();
       video.parentNode.appendChild(progressEl);
+      const durationEl = $('.message_media_duration', video.parentNode);
       const [startProgressAnimation, stopProgressAnimation] = initAnimation(() => {
         const progressValue = video.currentTime / video.duration;
         progressEl.firstElementChild.style.strokeDasharray = `${progressValue * 135}, 135`;
       });
       const onPlaying = () => startProgressAnimation();
       const onPause = () => stopProgressAnimation();
+      const onTimeupdate = () => durationEl.innerText = formatDuration(video.duration - video.currentTime);
       video.addEventListener('playing', onPlaying);
       video.addEventListener('pause', onPause);
+      video.addEventListener('timeupdate', onTimeupdate);
       video.addEventListener('ended', () => {
         stopProgressAnimation();
         video.removeEventListener('playing', onPlaying);
         video.removeEventListener('pause', onPause);
+        video.removeEventListener('timeupdate', onTimeupdate);
         progressEl.remove();
+        durationEl.innerText = formatDuration(video.duration);
         video.loop = true;
         video.muted = true;
         video.setAttribute('muted', '');
@@ -858,7 +992,7 @@ const MessagesController = new class {
         <div class="messages_header_audio_performer">${performer}</div>
       </div>
     `.buildElement();
-    new MDCRipple(el);
+    attachRipple(el);
     container.appendChild(el);
 
     audioPlayer.listen('play', () => {
@@ -895,7 +1029,7 @@ const MessagesController = new class {
         const document = media.document;
         const attributes = MediaApiManager.getDocumentAttributes(document);
         if (['video', 'gif', 'sticker', 'round'].includes(attributes.type)) {
-          return {type: attributes.type, object: document, sizes: document.thumbs, attributes};
+          return {type: attributes.type, object: document, sizes: document.thumbs, video_sizes: document.video_thumbs, attributes};
         }
       } break;
       case 'messageMediaWebPage': {
@@ -937,18 +1071,32 @@ const MessagesController = new class {
     thumbContainer.addEventListener('click', this.onThumbClick);
 
     const sizes = mediaThumbData.sizes;
-
     let inlineThumb;
-    const inlineSize = MediaApiManager.choosePhotoSize(sizes, 'i');
-    if (inlineSize) {
-      const url = MediaApiManager.getPhotoStrippedSize(sizes);
-      inlineThumb = Tpl.html`<img class="message_media_thumb_image message_media_thumb_image-blurred" src="${url}">`.buildElement();
-      thumbContainer.prepend(inlineThumb);
+    {
+      const photoSize = MediaApiManager.choosePhotoSize(sizes, 'm');
+      if (photoSize && MediaApiManager.isCachedPhotoSize(photoSize)) {
+        const mimeType = mediaThumbData.object.mime_type;
+        const url = await MediaApiManager.getCachedPhotoSize(photoSize, mimeType);
+        inlineThumb = Tpl.html`<img class="message_media_thumb_image" src="${url}">`.buildElement();
+      }
+      const inlineSize = MediaApiManager.choosePhotoSize(sizes, 'i');
+      if (inlineSize) {
+        const url = MediaApiManager.getPhotoStrippedSize(sizes);
+        inlineThumb = Tpl.html`<img class="message_media_thumb_image message_media_thumb_image-blurred" src="${url}">`.buildElement();
+      }
+      if (inlineThumb) {
+        thumbContainer.prepend(inlineThumb);
+      }
     }
 
-    if (mediaThumbData.type === 'sticker' && mediaThumbData.attributes.animated) {
+    if (mediaThumbData.type === 'sticker') {
       const url = await FileApiManager.loadDocument(mediaThumbData.object, {cache: true});
-      const thumb = Tpl.html`<tgs-player autoplay src="${url}" class="message_media_thumb_image"></tgs-player>`.buildElement();
+      let thumb;
+      if (mediaThumbData.attributes.animated) {
+        thumb = Tpl.html`<tgs-player autoplay src="${url}" class="message_media_thumb_image"></tgs-player>`.buildElement();
+      } else {
+        thumb = Tpl.html`<img class="message_media_thumb_image" src="${url}">`.buildElement();
+      }
       thumbContainer.prepend(thumb);
     } else if (mediaThumbData.type === 'round') {
       const photoSize = MediaApiManager.choosePhotoSize(sizes, 'm');
@@ -956,21 +1104,22 @@ const MessagesController = new class {
         FileApiManager.loadDocument(mediaThumbData.object),
         FileApiManager.loadDocumentThumb(mediaThumbData.object, photoSize.type)
       ]);
-      const thumb = Tpl.html`
-        <video src="${videoUrl}" poster="${thumbUrl}" playsinline muted autoplay loop class="message_media_thumb_round_video"></video>
-        <div class="message_media_thumb_round_muted_icon"></div>
-      `.buildFragment();
+      const thumb = Tpl.html`<video src="${videoUrl}" poster="${thumbUrl}" playsinline muted autoplay loop class="message_media_thumb_round_video"></video>`.buildElement();
       thumbContainer.prepend(thumb);
       thumbContainer.addEventListener('click', this.onRoundClick);
+    } else if (mediaThumbData.video_sizes) {
+      const videoSize = mediaThumbData.video_sizes[0];
+      const url = await FileApiManager.loadDocumentThumb(mediaThumbData.object, videoSize.type);
+      const thumb = Tpl.html`<video class="message_media_thumb_image" src="${url}" muted autoplay loop></video>`.buildElement();
+      thumbContainer.prepend(thumb);
     } else {
-      const photoSize = MediaApiManager.choosePhotoSize(sizes, 'm');
+      const photoSize = MediaApiManager.choosePhotoSize(sizes, 'x');
       let url;
       if (MediaApiManager.isCachedPhotoSize(photoSize)) {
         const mimeType = mediaThumbData.object.mime_type;
         url = await MediaApiManager.getCachedPhotoSize(photoSize, mimeType);
       } else if (mediaThumbData.object._ === 'document') {
-        const options = mediaThumbData.type === 'sticker' ? {mimeType: mediaThumbData.object.mime_type} : {};
-        url = await FileApiManager.loadDocumentThumb(mediaThumbData.object, photoSize.type, options);
+        url = await FileApiManager.loadDocumentThumb(mediaThumbData.object, photoSize.type);
       } else {
         url = await FileApiManager.loadPhoto(mediaThumbData.object, photoSize.type);
       }
@@ -1035,8 +1184,9 @@ const MessagesController = new class {
   }
 
   formatMessageStatus(message, dialog) {
-    if (message.pFlags.out && message.from_id) {
-      const status = message.id <= dialog.read_outbox_max_id ? 'read' : 'sent';
+    if (message.out && message.from_id) {
+      const readOutboxMaxId = dialog.read_outbox_max_id;
+      const status = !readOutboxMaxId || message.id <= readOutboxMaxId ? 'read' : 'sent';
       return Tpl.html`<div class="message_status message_status-${status}"></div>`;
     }
     return '';
@@ -1060,7 +1210,7 @@ const MessagesController = new class {
       case 'messageMediaWebPage':
         return Tpl.html`${caption}${this.formatWebPage(media, mediaThumbData)}`;
       case 'messageMediaPoll':
-        return Tpl.html`${caption}Poll`;
+        return Tpl.html`${caption}${this.formatPoll(media)}`;
       case 'messageMediaGeo':
         return Tpl.html`${caption}Geo`;
       case 'messageMediaGeoLive':
@@ -1205,6 +1355,56 @@ const MessagesController = new class {
     return '';
   }
 
+  formatPoll(media) {
+    const poll = media.poll;
+    const results = media.results;
+    console.log('poll', media);
+
+    const pollType = (poll.public_voters ? '' : 'Anonymous ') + (poll.quiz ? 'Quiz' : 'Poll');
+    let voted = false;
+
+    const pollOptions = Tpl.html``;
+    for (let i = 0; i < poll.answers.length; i++) {
+      const answer = poll.answers[i];
+      const answerVoters = results.results ? results.results[i] : {voters: 0};
+      const percent = results.total_voters ? Math.round(answerVoters.voters / results.total_voters * 100) : 0;
+      const chosenClass = answerVoters.chosen ? 'poll_option-chosen' : '';
+      const quizClass = poll.quiz ? (answerVoters.correct ? 'poll_option-correct' : 'poll_option-wrong') : '';
+      pollOptions.appendHtml`
+        <div class="poll_option ${chosenClass} ${quizClass}" data-index="${i}">
+          <div class="poll_option_text">${answer.text}</div>
+          <div class="poll_option_percent">${percent}%</div>
+          <div class="poll_option_scale" style="width: ${percent}%"></div>
+        </div>
+      `;
+      if (answerVoters.chosen) {
+        voted = true;
+      }
+    }
+
+    let pollFooter;
+    if (!voted && poll.multiple_choice) {
+      pollFooter = Tpl.html`<button class="poll_vote_button" disabled>Vote</button>`;
+    } else if (poll.public_voters) {
+      pollFooter = Tpl.html`<button class="poll_results_button">View Results</button>`;
+    } else {
+      const total = results.total_voters;
+      const text = poll.quiz ? (total ? `${total} answered` : 'Nobody answered yet') : (total ? `${total} voted` : 'No votes');
+      pollFooter = Tpl.html`<div class="poll_voters">${text}</div>`;
+    }
+
+    return Tpl.html`
+      <div class="poll ${voted ? 'poll-voted' : ''}">
+        <div class="poll_question">${poll.question}</div>
+        <div class="poll_type">${pollType}</div>
+        <div class="poll_options">
+          ${pollOptions}
+        </div>
+        ${pollFooter}
+      </div>
+    `;
+  }
+
   formatText(message) {
     const sourceText = message.message;
     let result = Tpl.html``;
@@ -1277,20 +1477,23 @@ const MessagesController = new class {
         maxH = mediaThumbData.emoji ? 100 : 150;
       }
       const photoSize = MediaApiManager.choosePhotoSize(mediaThumbData.sizes);
-      [thumbWidth, thumbHeight] = this.getThumbWidthHeight(photoSize, maxW, maxH);
-      if (captionText && captionText.length > 100 && thumbWidth < 300) {
-        thumbWidth = 300;
-      }
-      let durationString = '';
-      if (mediaThumbData.type === 'video' || mediaThumbData.type === 'round' || mediaThumbData.type === 'gif') {
-        durationString = mediaThumbData.type === 'gif' ? 'GIF' : formatDuration(mediaThumbData.attributes.duration);
-      }
-      result.appendHtml`
+      const videoSize = mediaThumbData.video_sizes && mediaThumbData.video_sizes[0];
+      if (photoSize || videoSize) {
+        [thumbWidth, thumbHeight] = this.getThumbWidthHeight((photoSize || videoSize), maxW, maxH);
+        if (captionText && captionText.length > 100 && thumbWidth < 300) {
+          thumbWidth = 300;
+        }
+        let durationString = '';
+        if (mediaThumbData.type === 'video' || mediaThumbData.type === 'round' || mediaThumbData.type === 'gif') {
+          durationString = mediaThumbData.type === 'gif' ? 'GIF' : formatDuration(mediaThumbData.attributes.duration);
+        }
+        result.appendHtml`
         <div class="message_media_thumb message_media_thumb-${mediaThumbData.type}" style="width:${thumbWidth}px;height:${thumbHeight}px;">
           ${ durationString ? Tpl.html`<div class="message_media_duration">${durationString}</div>` : '' }
           ${ ['video', 'gif'].includes(mediaThumbData.type) ? Tpl.html`<div class="message_media_thumb_play"></div>` : ''}
         </div>
       `;
+      }
     }
     if (captionText && mediaThumbData.type !== 'sticker') {
       const cssWidth = thumbWidth ? `width:${thumbWidth}px;` : '';
@@ -1431,7 +1634,7 @@ const MessagesController = new class {
   }
 
   getUserStatusText(user) {
-    if (user.pFlags.bot) {
+    if (user.bot) {
       return 'bot';
     }
     if (user.status) {
@@ -1468,10 +1671,15 @@ const MessagesController = new class {
       container.prepend(Tpl.html`<div class="messages_bg_image"></div>`.buildElement());
       return;
     }
-    const cache = await caches.open('v1');
-    const isCached = await cache.match('bg.jpg?blurred');
 
-    if (!isCached && window.OffscreenCanvas) {
+    const cacheUrl = 'bg.jpg?blurred';
+    const cache = await caches.open('v1');
+    const cachedResponse = await cache.match(cacheUrl);
+    let blob;
+
+    if (cachedResponse) {
+      blob = await cachedResponse.blob();
+    } else if (window.OffscreenCanvas){
       const response = await fetch('bg.jpg');
       const image = await createImageBitmap(await response.blob());
       const ratio = image.width / image.height;
@@ -1481,11 +1689,12 @@ const MessagesController = new class {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.filter = 'blur(10px)';
       ctx.drawImage(image, -10, -10, canvas.width + 20, canvas.height + 20);
-      const blob = await canvas.convertToBlob({type: 'image/jpeg', quality: 0.95});
-      cache.put('bg.jpg?blurred', new Response(blob));
+      blob = await canvas.convertToBlob({type: 'image/jpeg', quality: 0.95});
+      cache.put(cacheUrl, new Response(blob));
     }
 
-    container.style.backgroundImage = `url(bg.jpg?blurred)`;
+    const blobUrl = blob ? URL.createObjectURL(blob) : 'bg.jpg';
+    container.style.backgroundImage = `url(${blobUrl})`;
 
     function getCanvasSize(ratio) {
       if (screen.width > screen.height) {

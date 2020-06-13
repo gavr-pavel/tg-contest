@@ -1,7 +1,6 @@
-import {$, Tpl} from './utils';
+import {$, attachRipple, Tpl} from './utils';
 import {I18n} from './i18n';
 import {MessagesFormController} from './messages_form_controller';
-import {MDCRipple} from '@material/ripple';
 
 const FileUploadPopup = new class {
 
@@ -23,7 +22,7 @@ const FileUploadPopup = new class {
     `.buildElement();
 
     for (const item of $('.mdc-list', this.menu).children) {
-      new MDCRipple(item).unbounded = true;
+      attachRipple(item)
       item.addEventListener('click', this.onMenuItemClick);
     }
   }

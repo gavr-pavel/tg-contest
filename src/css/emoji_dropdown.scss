@@ -1,9 +1,14 @@
+$emoji_dropdown_desktop_size: 420px;
+$emoji_dropdown_mobile_height: 280px;
+$emoji_dropdown_nav_height: 48px;
+
 .emoji_dropdown {
   position: absolute;
   z-index: 10;
   left: 0;
   bottom: 64px;
-  width: 420px;
+  width: $emoji_dropdown_desktop_size;
+  height: $emoji_dropdown_desktop_size;
   background: #fff;
   border-radius: 10px;
   box-shadow: 0 10px 20px rgba(0, 0, 0, .5);
@@ -12,6 +17,18 @@
   transform-origin: 29px calc(100% + 35px);
   will-change: transform;
   user-select: none;
+  .mobile_view & {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 280px;
+    border-radius: 0;
+    transition: none;
+  }
+  .mobile_view &.emoji_dropdown-search {
+    height: 100%;
+  }
 }
 .emoji_dropdown[hidden] {
   display: block;
@@ -20,23 +37,78 @@
   transform: scale(0);
 }
 
-.emoji_dropdown_top_nav {
-  padding: 0 30px;
+.emoji_dropdown_bottom_nav {
+  position: relative;
+  display: flex;
+  justify-content: space-evenly;
+  height: 48px;
+  padding: 0 96px;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.emoji_dropdown_bottom_nav_item {
+  width: 48px;
+  height: 100%;
+  background: no-repeat center;
+  cursor: pointer;
+  transition: transform .2s, visibility .2s;
+  &:hover {
+    background-color: rgba(0, 0, 0, .05);
+  }
+  &[hidden] {
+    display: block;
+    transform: translateX(-100%);
+    visibility: hidden;
+  }
+}
+.emoji_dropdown_bottom_nav_item-search {
+  position: absolute;
+  left: 0;
+  background-image: svg('../icons/search_svg.svg', (path: (fill: $icon_mediumgray_color)));
+}
+.emoji_dropdown_bottom_nav_item-emoji {
+  background-image: svg('../icons/smile_svg.svg', (path: (fill: $icon_mediumgray_color)));
+}
+.emoji_dropdown_bottom_nav_item-stickers {
+  background-image: svg('../icons/stickers@1x.svg', (path: (fill: $icon_mediumgray_color)));
+}
+.emoji_dropdown_bottom_nav_item-gifs {
+  background-image: svg('../icons/gifs@1x.svg', (path: (fill: $icon_mediumgray_color)));
+}
+.emoji_dropdown_bottom_nav_item-active {
+  &.emoji_dropdown_bottom_nav_item-search {
+    background-image: svg('../icons/search_svg.svg', (path: (fill: $icon_blue_color)));
+  }
+  &.emoji_dropdown_bottom_nav_item-emoji {
+    background-image: svg('../icons/smile_svg.svg', (path: (fill: $icon_blue_color)));
+  }
+  &.emoji_dropdown_bottom_nav_item-stickers {
+    background-image: svg('../icons/stickers@1x.svg', (path: (fill: $icon_blue_color)));
+  }
+  &.emoji_dropdown_bottom_nav_item-gifs {
+    background-image: svg('../icons/gifs@1x.svg', (path: (fill: $icon_blue_color)));
+  }
 }
 
 .emoji_dropdown_sections_wrap {
   display: flex;
   width: 300%;
+  height: calc(100% - #{$emoji_dropdown_nav_height});
   transition: transform .2s;
 }
 
 .emoji_dropdown_section {
-  width: 420px;
+  width: calc(100% / 3);
+  height: 100%;
 }
 
 .emoji_dropdown_section_content {
-  height: 324px;
+  height: 100%;
   overflow: scroll;
+  .emoji_dropdown_section-emoji &,
+  .emoji_dropdown_section-stickers & {
+    height: calc(100% - #{$emoji_dropdown_nav_height});
+  }
 }
 
 .emoji_dropdown_section-emoji {
@@ -48,8 +120,13 @@
 
 .emoji_dropdown_section-emoji .emoji_dropdown_list {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-columns: repeat(auto-fill, 42px);
+  justify-content: space-evenly;
   padding: 10px;
+  .mobile_view & {
+    padding-left: 0;
+    padding-right: 0;
+  }
 }
 
 .emoji_dropdown_section-emoji .emoji_dropdown_list_item {
@@ -68,13 +145,35 @@
   height: 100%;
   box-sizing: border-box;
   pointer-events: none;
+  &[hidden] {
+    display: none;
+  }
 }
 
 .emoji_dropdown_section-stickers .emoji_dropdown_list {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  padding: 10px;
+  grid-template-columns: repeat(auto-fill, 70px);
+  justify-content: space-evenly;
+  gap: 5px;
+  padding: 30px 10px 10px;
+  position: relative;
+  .mobile_view & {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+.emoji_dropdown_section-stickers .emoji_dropdown_list_title {
+  position: absolute;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  left: 10px;
+  right: 10px;
+  top: 10px;
+  font-size: 12px;
+  color: $secondary_gray_color;
 }
 
 .emoji_dropdown_section-stickers .emoji_dropdown_list_item {
@@ -90,20 +189,20 @@
   background-color: #F4F4F5;
 }
 
-.emoji_dropdown_bottom_nav {
-  height: 47px;
-  border-top: 1px solid #DADCE0;
+.emoji_dropdown_top_nav {
+  height: 48px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
 }
 
-.emoji_dropdown_bottom_nav_item .emoji_dropdown_sticker_img {
-  padding: 5px;
+.emoji_dropdown_top_nav_item .emoji_dropdown_sticker_img {
+  padding: 9px;
 }
 
-.emoji_dropdown_section-emoji .emoji_dropdown_bottom_nav {
+.emoji_dropdown_section-emoji .emoji_dropdown_top_nav {
   display: flex;
 }
 
-.emoji_dropdown_section-stickers .emoji_dropdown_bottom_nav {
+.emoji_dropdown_section-stickers .emoji_dropdown_top_nav {
   overflow: hidden;
   white-space: nowrap;
   &:after {
@@ -113,70 +212,248 @@
   }
 }
 
-.emoji_dropdown_section-stickers .emoji_dropdown_bottom_nav_item {
+.emoji_dropdown_top_nav_item {
+  width: 100%;
+  background: no-repeat center;
+  cursor: pointer;
+  &:hover {
+    background-color: rgba(0, 0, 0, .05);
+  }
+}
+
+.emoji_dropdown_section-stickers .emoji_dropdown_top_nav_item {
   display: inline-block;
-  width: 47px;
+  width: 48px;
   height: 100%;
   padding: 0 3px;
   overflow: hidden;
   vertical-align: middle;
+  background-repeat: no-repeat;
+  background-position: center;
+  &[data-set-id=recent] {
+    background-image: svg('../icons/recent_svg.svg', (path: (fill: $icon_mediumgray_color)));
+  }
+  &[data-set-id=faved] {
+    background-image: svg('../icons/favourites.svg', (path: (fill: $icon_mediumgray_color)));
+  }
 }
 
-.emoji_dropdown_bottom_nav_item {
-  width: 100%;
-  background: no-repeat center;
-  cursor: pointer;
-}
-.emoji_dropdown_bottom_nav_item:hover {
-  background-color: rgba(0, 0, 0, .05);
-}
-
-.emoji_dropdown_bottom_nav_item-recent {
+.emoji_dropdown_top_nav_item-recent {
   background-image: svg('../icons/recent_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
-.emoji_dropdown_bottom_nav_item-smileys {
+.emoji_dropdown_top_nav_item-smileys {
   background-image: svg('../icons/smile_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
-.emoji_dropdown_bottom_nav_item-animals {
+.emoji_dropdown_top_nav_item-animals {
   background-image: svg('../icons/animals_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
-.emoji_dropdown_bottom_nav_item-food {
+.emoji_dropdown_top_nav_item-food {
   background-image: svg('../icons/eats_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
-.emoji_dropdown_bottom_nav_item-travel {
+.emoji_dropdown_top_nav_item-travel {
   background-image: svg('../icons/car_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
-.emoji_dropdown_bottom_nav_item-sports {
+.emoji_dropdown_top_nav_item-sports {
   background-image: svg('../icons/sport_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
-.emoji_dropdown_bottom_nav_item-objects {
+.emoji_dropdown_top_nav_item-objects {
   background-image: svg('../icons/lamp_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
-.emoji_dropdown_bottom_nav_item-flags {
+.emoji_dropdown_top_nav_item-flags {
   background-image: svg('../icons/flag_svg.svg', (path: (fill: $icon_mediumgray_color)));
 }
 
-.emoji_dropdown_bottom_nav_item-recent.emoji_dropdown_bottom_nav_item-active {
-  background-image: svg('../icons/recent_svg_blue.svg', (path: (fill: $icon_blue_color)));
+.emoji_dropdown_top_nav_item-active {
+  &.emoji_dropdown_top_nav_item-recent {
+    background-image: svg('../icons/recent_svg_blue.svg', (path: (fill: $icon_blue_color)));
+  }
+  &.emoji_dropdown_top_nav_item-smileys {
+    background-image: svg('../icons/smile_svg_blue.svg', (path: (fill: $icon_blue_color)));
+  }
+  &.emoji_dropdown_top_nav_item-animals {
+    background-image: svg('../icons/animals_svg_blue.svg', (path: (fill: $icon_blue_color)));
+  }
+  &.emoji_dropdown_top_nav_item-food {
+    background-image: svg('../icons/eats_svg_blue.svg', (path: (fill: $icon_blue_color)));
+  }
+  &.emoji_dropdown_top_nav_item-travel {
+    background-image: svg('../icons/car_svg_blue.svg', (path: (fill: $icon_blue_color)));
+  }
+  &.emoji_dropdown_top_nav_item-sports {
+    background-image: svg('../icons/sport_svg_blue.svg', (path: (fill: $icon_blue_color)));
+  }
+  &.emoji_dropdown_top_nav_item-objects {
+    background-image: svg('../icons/lamp_svg_blue.svg', (path: (fill: $icon_blue_color)));
+  }
+  &.emoji_dropdown_top_nav_item-flags {
+    background-image: svg('../icons/flag_svg_blue.svg', (path: (fill: $icon_blue_color)));
+  }
 }
-.emoji_dropdown_bottom_nav_item-smileys.emoji_dropdown_bottom_nav_item-active {
-  background-image: svg('../icons/smile_svg_blue.svg', (path: (fill: $icon_blue_color)));
+
+.emoji_dropdown_section-gifs .emoji_dropdown_section_content,
+.emoji_dropdown_search-gifs .emoji_dropdown_search_results,
+.emoji_dropdown_search-gifs .emoji_dropdown_search_trending {
+  box-sizing: border-box;
+  padding: 10px 5px 5px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  .mobile_view & {
+    padding: 5px 0 0 5px;
+  }
 }
-.emoji_dropdown_bottom_nav_item-animals.emoji_dropdown_bottom_nav_item-active {
-  background-image: svg('../icons/animals_svg_blue.svg', (path: (fill: $icon_blue_color)));
+
+.emoji_dropdown_section-gifs .emoji_dropdown_list_item,
+.emoji_dropdown_search-gifs .emoji_dropdown_list_item {
+  height: 100px;
+  flex: 1 0 auto;
+  margin: 0 5px 5px 0;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, .15);
+  background-position: center;
+  background-size: cover;
+  cursor: pointer;
+  &:last-child {
+    flex-grow: 0;
+  }
 }
-.emoji_dropdown_bottom_nav_item-food.emoji_dropdown_bottom_nav_item-active {
-  background-image: svg('../icons/eats_svg_blue.svg', (path: (fill: $icon_blue_color)));
+
+.emoji_dropdown_gif_inline_preview {
+  height: 100%;
+  background-position: center;
+  background-size: cover;
+  pointer-events: none;
+  filter: blur(10px);
 }
-.emoji_dropdown_bottom_nav_item-travel.emoji_dropdown_bottom_nav_item-active {
-  background-image: svg('../icons/car_svg_blue.svg', (path: (fill: $icon_blue_color)));
+
+.emoji_dropdown_gif_video {
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
-.emoji_dropdown_bottom_nav_item-sports.emoji_dropdown_bottom_nav_item-active {
-  background-image: svg('../icons/sport_svg_blue.svg', (path: (fill: $icon_blue_color)));
+
+.emoji_dropdown_search_container {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow-y: visible;
+  overflow-x: hidden;
+  background: #fff;
 }
-.emoji_dropdown_bottom_nav_item-objects.emoji_dropdown_bottom_nav_item-active {
-  background-image: svg('../icons/lamp_svg_blue.svg', (path: (fill: $icon_blue_color)));
+
+.emoji_dropdown_search_header {
+  display: flex;
+  padding: 8px;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
-.emoji_dropdown_bottom_nav_item-flags.emoji_dropdown_bottom_nav_item-active {
-  background-image: svg('../icons/flag_svg_blue.svg', (path: (fill: $icon_blue_color)));
+
+.emoji_dropdown_search_back_button {
+  flex-shrink: 0;
+  background: svg('../icons/back_svg.svg', (path: (fill: $icon_gray_color))) no-repeat center;
+}
+
+.emoji_dropdown_search_input {
+  background-color: #F4F4F5;
+  background-image: svg('../icons/search_svg.svg', (path: (fill: $icon_lightgray_color)));
+  background-position: 12px center;
+  background-repeat: no-repeat;
+  border: 2px solid transparent;
+  border-radius: 50px;
+  display: inline-block;
+  flex-basis: 100%;
+  font: inherit;
+  font-size: 15px;
+  height: 40px;
+  outline: none;
+  padding-left: 42px;
+  margin: 0 4px 0 20px;
+  box-sizing: border-box;
+  &::placeholder {
+    color: #8E969B;
+  }
+  &:focus {
+    border: 2px solid #5FA1E3;
+    background-image: svg('../icons/search_svg.svg', (path: (fill: $icon_blue_color)));
+  }
+}
+
+.emoji_dropdown_search_results,
+.emoji_dropdown_search_trending {
+  &[hidden] {
+    display: none;
+  }
+}
+
+.emoji_dropdown_search_sticker_set {
+  margin: 16px 0;
+}
+
+.emoji_dropdown_search_sticker_set_header {
+  display: flex;
+  align-items: center;
+  padding: 0 16px 8px;
+}
+
+.emoji_dropdown_search_sticker_set_description {
+  min-width: 0;
+  margin-top: 3px;
+  margin-right: 10px;
+}
+
+.emoji_dropdown_search_sticker_set_title {
+  font-size: 16px;
+  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.emoji_dropdown_search_sticker_set_count {
+  color: $secondary_gray_color;
+}
+
+.emoji_dropdown_search_sticker_set_add_button {
+  height: 30px;
+  line-height: 30px;
+  padding: 0 12px;
+  margin-left: auto;
+  border-radius: 15px;
+  font-size: 15px;
+  font-weight: 500;
+  background: $primary_blue_color;
+  color: white;
+}
+.emoji_dropdown_search_sticker_set_add_button-added {
+  background: #F1F3F4;
+  color: $secondary_gray_color;
+}
+
+.emoji_dropdown_search_sticker_set_preview {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  padding: 0 16px;
+  &:empty {
+     padding-top: calc((100% - 52px) / 5); // 52 = paddings (16px x 2) and gaps (5px x (5-1))
+   }
+  .mobile_view &:empty {
+    padding-top: calc((100% - 20px) / 5);
+  }
+}
+
+.emoji_dropdown_search_sticker_set_preview .emoji_dropdown_list_item {
+  font-size: 0;
+  padding-top: 100%;
+  position: relative;
+}
+
+.emoji_dropdown_search_sticker_set_preview .emoji_dropdown_sticker_img {
+  position: absolute;
+  left: 0;
+  top: 0;
 }

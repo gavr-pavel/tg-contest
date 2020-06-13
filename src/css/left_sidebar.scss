@@ -22,6 +22,9 @@
 
 .archived_chats_list {
   padding: 8px;
+  .mobile_view & {
+    padding: 0;
+  }
 }
 
 .settings_menu_header {

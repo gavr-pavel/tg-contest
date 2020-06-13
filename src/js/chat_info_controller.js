@@ -1,4 +1,4 @@
-import {$, formatFileSize, getLabeledElements, Tpl} from './utils';
+import {$, attachRipple, formatFileSize, getLabeledElements, Tpl} from './utils';
 import {MDCCheckbox} from '@material/checkbox';
 import {MessagesApiManager} from "./api/messages_api_manager";
 import {ApiClient} from "./api/api_client";
@@ -6,7 +6,6 @@ import {MediaApiManager} from "./api/media_api_manager";
 import {MessagesController} from "./messages_controller";
 import {ChatsController} from "./chats_controller";
 import {MediaViewController} from "./media_view_controller";
-import {MDCRipple} from '@material/ripple/component';
 
 const ChatInfoController = new class {
   sharedSteps = {
@@ -98,20 +97,22 @@ const ChatInfoController = new class {
     this.renderPeerPhoto(peer);
     this.bindListeners();
 
-    this.loadPeerFullInfo(peerData).then((peerInfo) => {
-      this.renderDesc(peerData, peerInfo);
+    this.loadPeerFullInfo(peer).then((peerFull) => {
+      this.renderDesc(peerData, peerFull);
     });
+
+    this._open = true;
   };
 
   bindListeners() {
-    const closeButtonEl = $('.sidebar_close_button', this.container);
-    closeButtonEl.addEventListener('click', this.close);
-    new MDCRipple(closeButtonEl).unbounded = true;
-
     document.addEventListener('keyup', this.onKeyUp);
 
+    const closeButtonEl = $('.sidebar_close_button', this.container);
+    closeButtonEl.addEventListener('click', this.close);
+    attachRipple(closeButtonEl);
+
     const extraMenuButtonEl = $('.sidebar_extra_menu_button', this.container);
-    new MDCRipple(extraMenuButtonEl).unbounded = true;
+    attachRipple(extraMenuButtonEl);
 
     this.scrollContainer.addEventListener('scroll', this.onScroll);
 
@@ -140,7 +141,7 @@ const ChatInfoController = new class {
   }
 
   renderDesc(peerData, peerInfo) {
-    const notificationsEnabled = !peerInfo.notify_settings.pFlags.mute_until;
+    const notificationsEnabled = !peerInfo.notify_settings.mute_until;
     const descMap = {
       bio: peerInfo.about,
       username: peerData.username,
@@ -186,11 +187,11 @@ const ChatInfoController = new class {
     ChatsController.loadPeerPhoto(photoEl, peer, true);
   }
 
-  async loadPeerFullInfo(peerData) {
-    if (peerData._ === 'user') {
-      return await MessagesApiManager.loadUserFull(this.peerId);
+  async loadPeerFullInfo(peer) {
+    if (peer._ === 'peerUser') {
+      return await MessagesApiManager.loadUserFull(peer);
     }
-    return await MessagesApiManager.loadChatFull(this.peerId);
+    return await MessagesApiManager.loadChatFull(peer);
   }
 
   async loadMoreShared() {
@@ -357,10 +358,15 @@ const ChatInfoController = new class {
     this.loadMoreShared();
   }
 
+  isOpen() {
+    return Boolean(this._open);
+  }
+
   close = () => {
-    if (!this.container) {
+    if (!this._open) {
       return;
     }
+    this._open = false;
     this.container.hidden = true;
     this.peerId = null;
     document.removeEventListener('keyup', this.onKeyUp);

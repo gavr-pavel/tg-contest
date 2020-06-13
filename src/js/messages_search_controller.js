@@ -1,7 +1,8 @@
-import {$, debounce, Tpl} from './utils';
+import {$, attachRipple, debounce, Tpl} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {ChatsController} from './chats_controller';
 import {I18n} from './i18n';
+import {MediaViewController} from './media_view_controller';
 
 const MessagesSearchController = new class {
   show(peerId) {
@@ -22,6 +23,7 @@ const MessagesSearchController = new class {
     `;
 
     const closeButton = $('.sidebar_close_button', this.container);
+    attachRipple(closeButton);
     closeButton.addEventListener('click', this.close);
 
     this.input = $('.messages_search_input', this.container);
@@ -32,12 +34,24 @@ const MessagesSearchController = new class {
     }, {once: true});
 
     this.listWrap = $('.messages_search_results_list', this.container);
+
+    document.addEventListener('keyup', this.onKeyUp);
+
+    this._open = true;
   }
 
   close = () => {
-    if (this.container) {
+    if (this._open) {
+      this._open = false;
       this.container.hidden = true;
       this.peerId = null;
+      document.removeEventListener('keyup', this.onKeyUp);
+    }
+  };
+
+  onKeyUp = (event) => {
+    if (event.keyCode === 27 && !MediaViewController.isOpen()) {
+      this.close();
     }
   };
 

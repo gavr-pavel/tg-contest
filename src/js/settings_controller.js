@@ -1,6 +1,5 @@
-import {$, $$} from './utils';
+import {$, $$, attachRipple} from './utils';
 import {MDCMenu} from '@material/menu';
-import {MDCRipple} from '@material/ripple/component';
 import {MessagesApiManager} from "./api/messages_api_manager";
 import {ChatsController} from './chats_controller';
 
@@ -15,13 +14,15 @@ const SettingsController = new class {
     this.container.innerHTML = `
       <div class="sidebar_header">
         <div class="sidebar_header_title">Settings</div>
-        <button type="button" class="sidebar_extra_menu_button mdc-icon-button"></button>
-        <div class="sidebar_extra_menu mdc-menu mdc-menu-surface">
-          <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">
-            <li class="mdc-list-item settings_extra_menu_item-log_out" role="menuitem">
-              <span class="mdc-list-item__text">Log out</span>
-            </li>
-          </ul>
+        <div class="mdc-menu-surface--anchor">
+          <button type="button" class="sidebar_extra_menu_button mdc-icon-button"></button>
+          <div class="sidebar_extra_menu mdc-menu mdc-menu-surface">
+            <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">
+              <li class="mdc-list-item settings_extra_menu_item-log_out" role="menuitem">
+                <span class="mdc-list-item__text">Log out</span>
+              </li>
+            </ul>
+          </div>        
         </div>
       </div>
       <div class="sidebar_user_info">
@@ -51,18 +52,18 @@ const SettingsController = new class {
     this.loadUserPhoto(user);
 
     const backButtonEl = $('.chats_header_back_button');
+    attachRipple(backButtonEl);
     backButtonEl.addEventListener('click', this.onBack);
     backButtonEl.hidden = false;
 
     const extraMenuButtonEl = $('.sidebar_extra_menu_button', this.container);
+    attachRipple(extraMenuButtonEl);
     extraMenuButtonEl.addEventListener('click', this.onExtraMenuClick);
 
     const logoutButtonEl = $('.settings_extra_menu_item-log_out', this.container);
     logoutButtonEl.addEventListener('click', this.onLogoutClick);
 
-    for (const item of $$('.mdc-list-item', this.container)) {
-      new MDCRipple(item);
-    }
+    attachRipple(...$$('.mdc-list-item', this.container));
   }
 
   loadUserPhoto(user) {
@@ -82,10 +83,10 @@ const SettingsController = new class {
   onExtraMenuClick = () => {
     const menuEl = $('.sidebar_extra_menu', this.container);
     const menu = new MDCMenu(menuEl);
-
+console.log(menu);
     if (!menu.open) {
       menu.open = true;
-      menu.setAbsolutePosition(239, 57);
+      // menu.setAbsolutePosition(239, 57);
     }
   };
 

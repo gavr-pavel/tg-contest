@@ -1,3 +1,6 @@
+import {MDCRipple} from '@material/ripple/component';
+import {MDCMenu} from '@material/menu';
+
 class Storage {
   static get(key) {
     try {
@@ -40,13 +43,21 @@ class Tpl {
   static html(strings, ...data) {
     let result = '';
     for (const str of strings) {
-      result += str;
-      const val = data.shift();
-      if (val !== void(0)) {
-        result += val instanceof TplResult ? val.toString() : this.sanitize(val);
-      }
+      result += str + this.stringifyValue(data.shift());
     }
     return new TplResult(result);
+  }
+  static stringifyValue(val) {
+    if (val === void(0)) {
+      return '';
+    }
+    if (val instanceof TplResult) {
+      return val.toString();
+    }
+    if (Array.isArray(val)) {
+      return val.map((v) => this.stringifyValue(v)).join('');
+    }
+    return this.sanitize(val);
   }
   static raw(...args) {
     return new TplResult(String.raw(...args));
@@ -64,6 +75,11 @@ class TplResult {
   appendHtml(...args) {
     const res = Tpl.html(...args);
     this.html += res.html;
+    return this;
+  }
+  prependHtml(...args) {
+    const res = Tpl.html(...args);
+    this.html = res.html + this.html;
     return this;
   }
   replaceLineBreaks() {
@@ -87,6 +103,10 @@ class TplResult {
   buildElement() {
     return this.buildFragment().firstElementChild;
   }
+}
+
+function escapeRegExp(string){
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
 function getDeferred() {
@@ -375,10 +395,54 @@ function initAnimation(callback) {
   return [start, stop];
 }
 
+function attachMenuListener(el, callback) {
+  if (isTouchDevice()) {
+    let timeoutId;
+    el.addEventListener('touchstart', () => {
+      const onTouchEnd = (event) => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        } else {
+          event.preventDefault();
+        }
+        el.removeEventListener('touchend', onTouchEnd);
+        el.removeEventListener('touchmove', onTouchEnd);
+      };
+      el.addEventListener('touchend', onTouchEnd);
+      el.addEventListener('touchmove', onTouchEnd);
+      timeoutId = setTimeout(() => {
+        timeoutId = null;
+        callback();
+      }, 300);
+    });
+  } else {
+    el.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      callback();
+    });
+  }
+}
+
+function attachRipple(...elements) {
+  return elements.map((el) => {
+    const r = new MDCRipple(el);
+    if (el.classList.contains('mdc-icon-button')) {
+      r.unbounded = true;
+    }
+    return r;
+  });
+}
+
+function initMenu(container) {
+  attachRipple(...$$('.mdc-list-item', container));
+  return new MDCMenu(container);
+}
+
 export {
   Storage,
   Emitter,
   Tpl,
+  escapeRegExp,
   getDeferred,
   debounce,
   $, $$,
@@ -403,5 +467,8 @@ export {
   blobToBuffer,
   loadScript,
   getEventPageXY,
-  initAnimation
+  initAnimation,
+  attachMenuListener,
+  attachRipple,
+  initMenu
 };

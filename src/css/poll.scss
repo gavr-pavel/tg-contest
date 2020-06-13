@@ -1,0 +1,129 @@
+.poll {
+  min-width: 155px;
+}
+
+.poll_question {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.poll_type {
+  font-size: 13px;
+  color: $secondary_gray_color;
+  margin-bottom: 5px;
+}
+
+.poll_option {
+  position: relative;
+  padding-left: 35px;
+  margin: 10px 0 30px;
+  font-size: 15px;
+  cursor: pointer;
+  .poll-voted & {
+    cursor: default;
+    &:before {
+      display: none;
+    }
+  }
+  &:before,
+  &:after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    box-sizing: border-box;
+  }
+  &:before {
+    border: #DADBDC 2px solid;
+    transition: transform .2s;
+  }
+  &:active:before {
+    transform: scale(0.9);
+  }
+  &:hover:before {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  &:after {
+    background: $primary_blue_color svg('../icons/poll_check_svg.svg', (path: (fill: white))) no-repeat center;
+    border-radius: 50%;
+    visibility: hidden;
+    transform: scale(0);
+    transition: transform .2s, visibility .2s;
+    transition-timing-function: cubic-bezier(0.42, 0, 0.52, 1.88);
+  }
+  &.poll_option-chosen.poll_option-wrong:after {
+    background-color: $error_red_color;
+    background-image: svg('../icons/close_svg.svg', (path: (fill: white)));
+    background-size: 16px;
+  }
+  &.poll_option-selected:after {
+    transform: none;
+    visibility: visible;
+  }
+  &.poll_option-correct:after,
+  &.poll_option-chosen:after {
+    transition: none;
+    transform: scale(0.9);
+    visibility: visible;
+    left: 7px;
+    bottom: -23px;
+    top: auto;
+  }
+}
+
+.poll_vote_button,
+.poll_results_button {
+  padding: 0;
+  border: 0;
+  background: none;
+  display: block;
+  margin: 0 auto;
+  font-size: 15px;
+  color: $primary_blue_color;
+}
+
+.poll_voters {
+  text-align: center;
+  font-size: 13px;
+  color: $secondary_gray_color;
+}
+
+.poll_option_percent {
+  position: absolute;
+  top: 0;
+  right: 100%;
+  margin-right: -26px;
+  font-weight: 500;
+  font-size: 13px;
+  display: none;
+  .poll-voted & {
+    display: block;
+  }
+}
+
+.poll_option_scale {
+  position: absolute;
+  left: 0;
+  bottom: -15px;
+  padding-left: 35px;
+  box-sizing: border-box;
+  display: none;
+  .poll-voted & {
+    display: block;
+  }
+  &:before {
+    content: '';
+    display: block;
+    min-width: 4px;
+    height: 4px;
+    border-radius: 2px;
+    background: $primary_blue_color;
+  }
+  .poll_option-chosen.poll_option-wrong &:before {
+    background: $error_red_color;
+  }
+}

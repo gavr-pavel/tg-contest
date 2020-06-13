@@ -2,6 +2,9 @@ import {checkWebPSupport, convertWebP} from '../utils';
 
 const MediaApiManager = new class {
   choosePhotoSize(sizes, type = 'm') {
+    if (!sizes) {
+      return;
+    }
     const size = sizes.find(item => item.type === type);
     if (size) {
       return size;
@@ -56,16 +59,16 @@ const MediaApiManager = new class {
           result.audio_title = attribute.title;
           result.audio_performer = attribute.performer;
           result.waveform = attribute.waveform;
-          result.type = attribute.pFlags.voice ? 'voice' : 'audio';
+          result.type = attribute.voice ? 'voice' : 'audio';
           break;
         case 'documentAttributeVideo':
           result.duration = attribute.duration;
           result.w = attribute.w;
           result.h = attribute.h;
-          if (attribute.pFlags.supports_streaming) {
+          if (attribute.supports_streaming) {
             result.supports_streaming = true;
           }
-          if (hasThumb && attribute.pFlags.round_message) {
+          if (hasThumb && attribute.round_message) {
             result.type = 'round';
           } else if (hasThumb) {
             result.type = 'video';

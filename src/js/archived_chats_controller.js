@@ -1,6 +1,5 @@
-import {$, Tpl, buildLoaderElement} from './utils';
+import {$, Tpl, buildLoaderElement, attachRipple} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
-import {MDCRipple} from '@material/ripple/component';
 
 const ArchivedChatsController = new class {
   chatElements = new Map();
@@ -26,11 +25,11 @@ const ArchivedChatsController = new class {
 
     MessagesApiManager.emitter.on('dialogsUpdate', this.onDialogsUpdate);
 
-    if (MessagesApiManager.archivedDialogs.length) {
+    if (MessagesApiManager.archivedDialogs) {
       this.renderChats(MessagesApiManager.archivedDialogs);
-    } else {
-      this.loadMore();
+      this.saveOffset(MessagesApiManager.archivedDialogs.slice(-1)[0]);
     }
+    this.loadMore();
   }
 
   onBack = (event) => {
@@ -54,11 +53,23 @@ const ArchivedChatsController = new class {
         .then((dialogs) => {
           if (!dialogs.length) {
             this.noMore = true;
+          } else {
+            this.renderChats(dialogs);
+            this.saveOffset(dialogs.slice(-1)[0]);
           }
         })
         .finally(() => {
           this.loading = false;
         });
+  }
+
+  saveOffset(dialog) {
+    const message = MessagesApiManager.messages.get(dialog.top_message);
+    this.offset = {
+      id: dialog.top_message,
+      peer: dialog.peer,
+      date: message.date,
+    };
   }
 
   renderChats(dialogs) {
@@ -74,14 +85,6 @@ const ArchivedChatsController = new class {
       frag.append(el);
     }
     this.scrollContainer.append(frag);
-
-    const lastDialog = dialogs[dialogs.length - 1];
-    const lastDialogMessage = MessagesApiManager.messages.get(lastDialog.top_message);
-    this.offset = {
-      id: lastDialog.top_message,
-      peer: lastDialog.peer,
-      date: lastDialogMessage.date,
-    };
   }
 
   buildChatPreviewElement(dialog) {
@@ -97,7 +100,7 @@ const ArchivedChatsController = new class {
     ChatsController.renderChatPreviewContent(el, dialog);
     ChatsController.loadChatPhoto(el, dialog);
     el.addEventListener('click', ChatsController.onChatClick);
-    new MDCRipple(el.firstElementChild);
+    attachRipple(el.firstElementChild);
     this.chatElements.set(peerId, el);
     return el;
   }

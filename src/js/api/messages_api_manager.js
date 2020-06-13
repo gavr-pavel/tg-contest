@@ -51,7 +51,7 @@ const MessagesApiManager = new class {
         const dialog = this.peerDialogs.get(chatId);
         if (dialog) {
           dialog.top_message = message.id;
-          if (!message.pFlags.out && message.id > dialog.read_inbox_max_id) {
+          if (!message.out && message.id > dialog.read_inbox_max_id) {
             dialog.unread_count++;
           }
           this.updateChatMessages(dialog, [message]);
@@ -89,6 +89,7 @@ const MessagesApiManager = new class {
         if (dialog) {
           dialog.unread_count = update.still_unread_count;
           dialog.read_inbox_max_id = update.max_id;
+          console.log('chatUnreadCountUpdate', {dialog}, dialog.read_inbox_max_id, dialog.unread_count);
           this.emitter.trigger('chatUnreadCountUpdate', {dialog});
         }
       } break;
@@ -108,7 +109,7 @@ const MessagesApiManager = new class {
         const peerId = this.getPeerId(update.peer);
         const dialog = this.peerDialogs.get(peerId);
         if (dialog) {
-          dialog.pFlags.pinned = update.pFlags.pinned;
+          dialog.pinned = update.pinned;
           this.handleDialogOrder(dialog);
         }
       } break;
@@ -119,11 +120,14 @@ const MessagesApiManager = new class {
           dialog.draft = update.draft;
         }
       } break;
+      default: {
+        console.log('Unhandled update', update._, update);
+      }
     }
   }
 
   handleUpdateShortMessage(update) {
-    const isOut = update.pFlags.out;
+    const isOut = update.out;
     const fromId = update.from_id || (isOut ? App.getAuthUserId() : update.user_id);
     let toIdPeer;
     if (update.chat_id) {
@@ -133,21 +137,15 @@ const MessagesApiManager = new class {
       toIdPeer = {_: 'peerUser', user_id: userId};
     }
 
+    const message = {_: 'message', from_id: fromId, to_id: toIdPeer};
+    const copyFields = ['flags', 'out', 'mentioned', 'media_unread', 'silent', 'id', 'message', 'date', 'fwd_from', 'via_bot_id', 'reply_to_msg_id', 'entities'];
+    for (const field of copyFields) {
+      message[field] = update[field];
+    }
+
     this.handleUpdate({
       _: 'updateNewMessage',
-      message: {
-        _: 'message',
-        flags: update.flags,
-        pFlags: update.pFlags,
-        id: update.id,
-        from_id: fromId,
-        to_id: toIdPeer,
-        date: update.date,
-        message: update.message,
-        fwd_from: update.fwd_from,
-        reply_to_msg_id: update.reply_to_msg_id,
-        entities: update.entities
-      },
+      message,
       pts: update.pts,
       pts_count: update.pts_count
     });
@@ -161,23 +159,21 @@ const MessagesApiManager = new class {
     });
 
     const isChannel = !!peer.channel_id;
-    const isMegagroup = isChannel && this.isMegagroup(peer.channel_id);
+    const isMegagroup = isChannel && this.isMegagroup(peer);
 
     const message = {
       _: 'message',
+      flags: updates.flags,
+      out: updates.out,
       id: updates.id,
+      date: updates.date,
+      entities: updates.entities,
       from_id: isChannel && !isMegagroup ? 0 : App.getAuthUserId(),
       to_id: peer,
-      flags: updates.flags,
-      pFlags: updates.pFlags,
-      date: updates.date,
-      message: text
+      message: text,
     };
     if (updates.media && updates.media._ !== 'messageMediaEmpty') {
       message.media = updates.media;
-    }
-    if (updates.entities) {
-      message.entities = updates.entities;
     }
 
     this.handleUpdate({
@@ -209,18 +205,18 @@ const MessagesApiManager = new class {
       if (!dialog) {
         dialog = await this.loadPeerDialog(item.peer);
       }
-      dialog.pFlags.pinned = true;
+      dialog.pinned = true;
       pinnedDialogs.push(dialog);
     }
 
     let prevPinnedCount = 0;
     for (const dialog of this.dialogs) {
-      if (!dialog.pFlags.pinned) {
+      if (!dialog.pinned) {
         break;
       }
       prevPinnedCount++;
       if (pinnedDialogs.indexOf(dialog) === -1) {
-        delete dialog.pFlags.pinned;
+        delete dialog.pinned;
         unpinnedDialogs.push(dialog);
       }
     }
@@ -237,7 +233,7 @@ const MessagesApiManager = new class {
   }
 
   handleDialogOrder(dialog) {
-    if (dialog.pFlags.pinned) {
+    if (dialog.pinned) {
       return;
     }
 
@@ -255,7 +251,7 @@ const MessagesApiManager = new class {
     }
 
     const newIndex = dialogs.findIndex((item) => {
-      if (!item.pFlags.pinned && item.top_message) {
+      if (!item.pinned && item.top_message) {
         const itemMessage = this.messages.get(item.top_message);
         return itemMessage && itemMessage.date < lastMessage.date;
       }
@@ -506,8 +502,8 @@ const MessagesApiManager = new class {
         max_id: maxId
       });
     }
-    dialog.unread_count = 0; // todo fix count actual unread messages left
-    this.emitter.trigger('chatUnreadCountUpdate', {dialog});
+    // dialog.unread_count = 0; // todo fix count actual unread messages left
+    // this.emitter.trigger('chatUnreadCountUpdate', {dialog});
   }
 
   saveDraft(peer, message) {
@@ -531,7 +527,7 @@ const MessagesApiManager = new class {
 
   getMessageDialogPeer(message) {
     if (message.to_id._ === 'peerUser') {
-      return message.pFlags.out ? message.to_id : {_: 'peerUser', user_id: message.from_id};
+      return message.out ? message.to_id : {_: 'peerUser', user_id: message.from_id};
     }
     return message.to_id;
   }
@@ -576,7 +572,7 @@ const MessagesApiManager = new class {
   }
 
   getUserName(user, full = true) {
-    if (user.pFlags.deleted) {
+    if (user.deleted) {
       return 'Deleted Account';
     } else if (full) {
       return [user.first_name, user.last_name].join(' ').trim();
@@ -612,6 +608,10 @@ const MessagesApiManager = new class {
     }
   }
 
+  getInputUser(user) {
+    return {_: 'inputUser', user_id: user.id, access_hash: user.access_hash || 0};
+  }
+
   getInputPeerById(peerId) {
     return this.getInputPeer(this.getPeerById(peerId));
   }
@@ -642,16 +642,16 @@ const MessagesApiManager = new class {
   }
 
   getPeerById(peerId) {
-    if (this.users.has(peerId)) {
-      return this.getUserPeer(this.users.get(peerId));
-    } else if (this.chats.has(peerId)) {
+    if (this.chats.has(peerId)) {
       return this.getChatPeer(this.chats.get(peerId));
+    } else {
+      return {_: 'peerUser', user_id: peerId};
     }
   }
 
-  isMegagroup(channelId) {
-    const channel = this.chats.get(channelId);
-    return !!channel.pFlags.megagroup;
+  isMegagroup(peer) {
+    const channel = this.chats.get(peer.channel_id);
+    return !!channel.megagroup;
   }
 
   async reloadChannel(channelId) {
@@ -668,7 +668,8 @@ const MessagesApiManager = new class {
     this.updateUsers(res);
   }
 
-  async loadChatFull(chatId) {
+  async loadChatFull(peer) {
+    const chatId = this.getPeerId(peer);
     if (this.chatsFull.has(chatId)) {
       return this.chatsFull.get(chatId);
     }
@@ -692,12 +693,13 @@ const MessagesApiManager = new class {
     return fullChat;
   }
 
-  async loadUserFull(userId) {
+  async loadUserFull(peer) {
+    const userId = this.getPeerId(peer);
     if (this.usersFull.has(userId)) {
       return this.usersFull.get(userId);
     }
 
-    const inputPeer = this.getInputPeerById(userId);
+    const inputPeer = this.getInputPeer(peer);
     const user = await ApiClient.callMethod('users.getFullUser', {
       id: inputPeer,
     });
@@ -705,6 +707,27 @@ const MessagesApiManager = new class {
     this.usersFull.set(userId, user);
 
     return user;
+  }
+
+  async loadMessagesById(peer, ...messageIds) {
+    let res;
+    if (peer && peer.channel_id) {
+      const channel = this.chats.get(peer.channel_id);
+      res = await ApiClient.callMethod('channels.getMessages', {
+        channel: {_: 'inputChannel', channel_id: channel.id, access_hash: channel.access_hash},
+        id: messageIds.map((id) => {return {_: 'inputMessageID', id}})
+      });
+    } else {
+      res = await ApiClient.callMethod('messages.getMessages', {
+        id: messageIds.map((id) => {return {_: 'inputMessageID', id}})
+      });
+    }
+
+    this.updateUsers(res.users);
+    this.updateChats(res.chats);
+    this.updateMessages(res.messages);
+
+    return res.messages;
   }
 };
 

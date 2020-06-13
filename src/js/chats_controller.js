@@ -1,19 +1,14 @@
 import {
-  $, $$, Tpl,
+  $, Tpl,
   buildLoaderElement,
   formatCountShort,
   formatDateFull, formatDateWeekday,
-  formatTime, isTouchDevice
+  formatTime, isTouchDevice, attachMenuListener, attachRipple, initMenu
 } from './utils';
 import {App} from './app';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
-import {SettingsController} from './settings_controller';
-import {MDCRipple} from '@material/ripple/component';
-import {MDCMenu} from '@material/menu';
-import {ContactsController} from "./contacts_controller";
 import {GlobalSearchController} from './global_search_controller';
-import {ArchivedChatsController} from './archived_chats_conntroller';
 
 const ChatsController = new class {
   chatElements = new Map();
@@ -72,25 +67,23 @@ const ChatsController = new class {
 
   initHeaderMenu() {
     const menuContainer = $('.chats_header_menu', this.header);
-    const mdcMenu = new MDCMenu(menuContainer);
+    const mdcMenu = initMenu(menuContainer);
 
     const menuButton = $('.chats_header_menu_button', this.header);
-    menuButton.addEventListener('mousedown', () => {
+    attachRipple(menuButton);
+    menuButton.addEventListener('click', () => {
       if (!mdcMenu.open) {
         mdcMenu.open = true;
         mdcMenu.setAbsolutePosition(14, 60);
       }
     });
 
-    for (const item of $$('.chats_header_menu_item', menuContainer)) {
-      new MDCRipple(item).unbounded = true;
-    }
-
-    new MDCRipple(menuButton).unbounded = true;
-
     const contactsButtonEl = $('.chats_header_menu_item-contacts', menuContainer);
     contactsButtonEl.addEventListener('click', () => {
-      ContactsController.show();
+      import('./contacts_controller.js')
+          .then(({ContactsController}) => {
+            ContactsController.show();
+          });
     });
 
     const savedButtonEl = $('.chats_header_menu_item-saved', menuContainer);
@@ -101,12 +94,18 @@ const ChatsController = new class {
 
     const archivedButtonEl = $('.chats_header_menu_item-archived', menuContainer);
     archivedButtonEl.addEventListener('click', () => {
-      ArchivedChatsController.show();
+      import('./archived_chats_controller.js')
+          .then(({ArchivedChatsController}) => {
+            ArchivedChatsController.show();
+          });
     });
 
     const settingsButtonEl = $('.chats_header_menu_item-settings', menuContainer);
     settingsButtonEl.addEventListener('click', () => {
-      SettingsController.show();
+      import('./settings_controller.js')
+          .then(({SettingsController}) => {
+            SettingsController.show();
+          });
     });
   }
 
@@ -177,7 +176,7 @@ const ChatsController = new class {
 
   onScroll = () => {
     const container = this.container;
-    if (!this.loading && !this.noMore && container.scrollTop + container.offsetHeight > container.scrollHeight - 300) {
+    if (!this.loading && !this.noMore && container.scrollTop + container.offsetHeight > container.scrollHeight - 500) {
       this.loadMore();
     }
   };
@@ -233,7 +232,7 @@ const ChatsController = new class {
   buildChatPreviewElement(dialog) {
     const peerId = MessagesApiManager.getPeerId(dialog.peer);
     const el = Tpl.html`
-      <div class="chats_item ${dialog.pFlags.pinned ? ' chats_item_pinned' : ''}" data-peer-id="${peerId}">
+      <div class="chats_item ${dialog.pinned ? ' chats_item_pinned' : ''}" data-peer-id="${peerId}">
         <div class="chats_item_content mdc-ripple-surface">
           <div class="chats_item_photo"></div>
           <div class="chats_item_text"></div>        
@@ -249,8 +248,9 @@ const ChatsController = new class {
     el.addEventListener('click', this.onChatClick);
     // el.addEventListener('pointerup', this.onChatClick);
     if (!isTouchDevice()) {
-      new MDCRipple(el.firstElementChild);
+      attachRipple(el.firstElementChild);
     }
+    attachMenuListener(el, (...args) => alert(args));
     this.chatElements.set(peerId, el);
     return el;
   }
@@ -303,19 +303,24 @@ const ChatsController = new class {
         badgeClass += ' chats_item_badge-unread_muted';
       }
       return Tpl.html`<span class="${badgeClass}">${formatCountShort(dialog.unread_count)}</span>`;
-    } else if (dialog.pFlags.pinned) {
+    } else if (dialog.pinned) {
       return Tpl.html`<span class="chats_item_badge chats_item_badge-pinned"></span>`;
     }
     return '';
   }
 
-  getMessagePreview(message) {
+  getMessagePreview(message, highlightText = null) {
     if (message._ === 'messageService') {
       return MessagesController.getServiceMessageText(message);
     }
     let result = '';
     if (message.message) {
-      result = Tpl.html`${message.message}`;
+      let text = Tpl.sanitize(message.message);
+      if (highlightText) {
+        highlightText = Tpl.sanitize(highlightText);
+        text = text.replace(RegExp(highlightText, 'i'), '<span class="chats_item_message_highlight">$&</span>');
+      }
+      result = Tpl.raw`${text}`;
     } else {
       const label = MessagesController.getMessageContentTypeLabel(message.media);
       result = Tpl.html`<span class="chats_item_message_content_label">${label}</span>`;
@@ -323,9 +328,9 @@ const ChatsController = new class {
     if (message.to_id._ === 'peerChannel' && message.from_id) {
       const user = MessagesApiManager.users.get(message.from_id);
       const userName = MessagesApiManager.getUserName(user, false);
-      result = Tpl.html`<span class="chats_item_message_author_label">${userName}:</span> ${result}`;
-    } else if (message.pFlags.out) {
-      result = Tpl.html`<span class="chats_item_message_author_label">You:</span> ${result}`;
+      result.prependHtml`<span class="chats_item_message_author_label">${userName}:</span> `;
+    } else if (message.out) {
+      result.prependHtml`<span class="chats_item_message_author_label">You:</span> `;
     }
     return result;
   }
@@ -349,7 +354,7 @@ const ChatsController = new class {
     const peerId = MessagesApiManager.getPeerId(peer);
     const peerData = MessagesApiManager.getPeerData(peer);
     const photo = peerData.photo;
-    if (peerData.pFlags.deleted) {
+    if (peerData.deleted) {
       this.setChatPhotoDeletedPlaceholder(el, peerId);
       return;
     }

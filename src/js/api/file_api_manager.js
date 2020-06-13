@@ -101,17 +101,13 @@ const FileApiManager = new class {
     if (!blob) {
       const parts = [];
       const apiConnection = this.getConnection(dcId);
-      let aborted = false;
-      if (signal) {
-        signal.addEventListener('abort', () => aborted = true);
-      }
       try {
         const queueStart = Date.now();
         await this.queueWait(priority);
         DEBUG && console.log('[File download]', location, `waited queue for ${(Date.now() - queueStart)}ms`);
         const loadStart = Date.now();
         for (let offset = 0, loaded = 0; ; offset += PART_SIZE) {
-          if (aborted) {
+          if (signal && signal.aborted) {
             throw new Error('File download aborted');
           }
           const res = await apiConnection.callMethod('upload.getFile', {
@@ -272,6 +268,9 @@ const FileApiManager = new class {
       file_reference: document.file_reference,
       thumb_size: size
     };
+    if (size === 'v') {
+      options.mimeType = 'video/mp4';
+    }
     return this.loadFile(location, document.dc_id, options);
   }
 

@@ -19,10 +19,11 @@
 }
 
 .right_sidebar[hidden] {
-  display: block;
+  display: none;
+  //display: block;
   //margin-right: -420px;
-  transform: translateX(420px);
-  visibility: hidden;
+  //transform: translateX(420px);
+  //visibility: hidden;
 }
 
 .right_sidebar_scroll_wrap {
@@ -93,7 +94,7 @@
 .chat_info_shared_media_nav {
   background: #fff;
   position: sticky;
-  top: 60px;
+  top: 56px;
   z-index: 1;
 }
 

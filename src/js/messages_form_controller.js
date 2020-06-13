@@ -1,8 +1,6 @@
-import {$, Tpl, debounce, getLabeledElements, isTouchDevice, formatFileSize} from './utils';
+import {$, Tpl, debounce, getLabeledElements, formatFileSize, attachRipple, isTouchDevice} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
-import {EmojiDropdown} from './emoji_dropdown';
-import {MDCRipple} from '@material/ripple';
 import {FileUploadPopup} from './file_upload_popup';
 
 const MessagesFormController = new class {
@@ -30,21 +28,30 @@ const MessagesFormController = new class {
     input.addEventListener('keydown', this.onKeyDown);
     this.dom.submit_button.addEventListener('click', this.onSubmit);
 
-    new MDCRipple(this.dom.submit_button).unbounded = true;
-
-    EmojiDropdown.init();
-    EmojiDropdown.bind(this.dom.emoji_button, input);
+    attachRipple(this.dom.submit_button);
 
     FileUploadPopup.init();
     FileUploadPopup.bind(this.dom.media_button);
+  }
 
-    input.parentNode.appendChild(EmojiDropdown.container);
+  onShown() {
+    if (!this.emojiInited) {
+      this.emojiInited = true;
+      import('./emoji_dropdown.js')
+          .then(({EmojiDropdown}) => {
+            EmojiDropdown.init();
+            EmojiDropdown.bind(this.dom.emoji_button, this.dom.input);
+            this.dom.input.parentNode.appendChild(EmojiDropdown.container);
+          });
+    }
+
+    if (!isTouchDevice()) {
+      this.focus();
+    }
   }
 
   focus() {
-    if (!isTouchDevice()) {
-      this.dom.input.focus();
-    }
+    this.dom.input.focus();
   }
 
   clear() {
