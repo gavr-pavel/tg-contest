@@ -25,6 +25,8 @@ const App = new class {
     window.addEventListener('resize', this.onResize);
     this.onResize();
 
+    document.addEventListener('visibilitychange', this.onDocumentVisibilityChange);
+
     // ApiClient.emitter.on('updateConnectionState', (event) => {
     //   const header = Utils.$('.header');
     //   if (!header) {
@@ -71,7 +73,44 @@ const App = new class {
 
     ChatsController.init();
     MessagesController.init();
+
+    this.startOnlineInterval();
   }
+
+  startOnlineInterval() {
+    if (!this._onlineInterval) {
+      const tick = () => {
+        ApiClient.callMethod('account.updateStatus', {offline: false});
+      };
+      this._onlineInterval = setInterval(tick, 5 * 60 * 1000);
+      tick();
+    }
+  }
+
+  stopOnlineInterval()  {
+    if (this._onlineInterval) {
+      clearInterval(this._onlineInterval);
+      this._onlineInterval = null;
+    }
+  }
+
+  onDocumentVisibilityChange = () => {
+    if (!this.getAuthUserId()) {
+      return;
+    }
+    if (document.visibilityState !== 'visible') {
+      this.stopOnlineInterval();
+      this._offlineTimeout = setTimeout(() => {
+        ApiClient.callMethod('account.updateStatus', {offline: true});
+      }, 5000);
+    } else {
+      this.startOnlineInterval();
+      if (this._offlineTimeout) {
+        clearTimeout(this._offlineTimeout);
+        this._offlineTimeout = null;
+      }
+    }
+  };
 
   onResize = () => {
     document.body.classList.toggle('mobile_view', window.innerWidth < 1160);

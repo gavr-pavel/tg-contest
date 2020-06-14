@@ -37,8 +37,8 @@
 
 .messages_form_input_wrap {
   width: 100%;
-  margin-right: 9px;
   position: relative;
+  z-index: 1;
   &:after {
     content: '';
     position: absolute;
@@ -99,25 +99,45 @@
   background: svg('../icons/attach_svg.svg', (path: (fill: $icon_blue_color)));
 }
 
-.messages_form_button {
+.messages_form_submit_button,
+.messages_form_cancel_button {
+  --main-box-shadow: 0 1px 2px rgba(0, 0, 0, .15);
+  --highlight-radius: 0px;
   border: none;
   outline: none;
   padding: 0;
   flex-shrink: 0;
   width: 54px;
   height: 54px;
+  margin-left: 9px;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-  background: #fff svg('../icons/microphone2_svg.svg', (path: (fill: $icon_mediumgray_color))) no-repeat center;
+  box-shadow: var(--main-box-shadow), 0 0 0 var(--highlight-radius) rgba(0, 0, 0, .15);
+  background: #fff no-repeat center;
   .mobile_view & {
     width: 46px;
     height: 46px;
   }
 }
 
-.messages_form_button-send {
+.messages_form_submit_button {
+  background-image: svg('../icons/microphone2_svg.svg', (path: (fill: $icon_mediumgray_color)));
+}
+.messages_form_submit_button-send {
   background-image: svg('../icons/send_svg.svg', (path: (fill: $icon_blue_color)));
+}
+
+.messages_form_cancel_button {
+  position: relative;
+  z-index: 1;
+  background-image: svg('../icons/delete_svg.svg', (path: (fill: $error_red_color)));
+  &[hidden] {
+    display: none;
+  }
+}
+.messages_form_cancel_button-active {
+  background-color: $error_red_color;
+  background-image: svg('../icons/delete_svg.svg', (path: (fill: white)));
 }
 
 .messages_form_media_menu {

@@ -69,7 +69,7 @@ const LoginController = new class {
         this.setDomContent('subheader', 'Please enter your phone number', false);
         this.dom.form.innerHTML = '';
         const countryInput = this.buildInput('Country');
-        const phoneInput = this.buildInput('Phone Number', 'tel');
+        const phoneInput = this.buildInput('Phone Number', {type:'tel'});
         const countryMenu = this.buildCountryMenu(countryInput, phoneInput);
         this.submitButton = this.buildButton('Next');
         this.countryTextField = new MDCTextField(countryInput);
@@ -349,10 +349,11 @@ const LoginController = new class {
     return 'An error occurred';
   }
 
-  buildInput(label, type = 'text') {
+  buildInput(label, attr = {}) {
+    const inputAttr = Object.entries(attr).map(([k, v]) => `${k}="${v}"`).join(' ');
     const input = Tpl.html`
       <div class="login_input mdc-text-field mdc-text-field--outlined">
-        <input type="${type}" class="mdc-text-field__input">
+        <input ${Tpl.raw`${inputAttr}`} class="mdc-text-field__input">
         <div class="mdc-notched-outline">
           <div class="mdc-notched-outline__leading"></div>
           <div class="mdc-notched-outline__notch">
@@ -367,7 +368,7 @@ const LoginController = new class {
   }
 
   buildCodeInput() {
-    const wrap = this.buildInput('Code');
+    const wrap = this.buildInput('Code', {inputmode: 'numeric'});
     const input = wrap.querySelector('input');
     input.addEventListener('input', () => {
       input.value = input.value.replace(/\D/g, '');
@@ -397,7 +398,7 @@ const LoginController = new class {
   }
 
   buildPasswordInput() {
-    const wrap = this.buildInput('Password', 'password');
+    const wrap = this.buildInput('Password', {type: 'password'});
     const input = $('input', wrap);
     const button = Tpl.html`<span class="login_password_visibility_button"></span>`.buildElement();
     wrap.append(button);
