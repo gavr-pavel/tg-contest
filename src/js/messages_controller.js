@@ -1250,7 +1250,7 @@ const MessagesController = new class {
           <button class="document_icon"></button>
         </div>
         <div class="document_col">
-          <div class="document_filename">${attributes.file_name}</div>
+          <div class="document_filename">${attributes.file_name || 'File'}</div>
           <div class="document_size">${this.formatDocSize(media.document.size)}</div>        
         </div>      
       </div>
@@ -1667,7 +1667,7 @@ const MessagesController = new class {
 
   async initBackground() {
     const container = $('.messages_container');
-    if (!window.caches) {
+    if (!window.caches || !window.OffscreenCanvas) {
       container.prepend(Tpl.html`<div class="messages_bg_image"></div>`.buildElement());
       return;
     }
@@ -1679,7 +1679,7 @@ const MessagesController = new class {
 
     if (cachedResponse) {
       blob = await cachedResponse.blob();
-    } else if (window.OffscreenCanvas){
+    } else if (window.OffscreenCanvas) {
       const response = await fetch('bg.jpg');
       const image = await createImageBitmap(await response.blob());
       const ratio = image.width / image.height;

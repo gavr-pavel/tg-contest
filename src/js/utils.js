@@ -1,5 +1,6 @@
 import {MDCRipple} from '@material/ripple/component';
 import {MDCMenu} from '@material/menu';
+import {I18n} from './i18n';
 
 class Storage {
   static get(key) {
@@ -170,7 +171,11 @@ function getLabeledElements(container) {
 }
 
 function buildLoaderElement(container = null) {
-  const el = Tpl.html`<div class="lds-ring"><div></div><div></div><div></div><div></div></div>`.buildElement();
+  const el = Tpl.html`
+    <svg class="circular-loader" viewBox="25 25 50 50" xmlns="http://www.w3.org/2000/svg">
+      <circle class="loader-path" cx="50" cy="50" r="20" fill="none" stroke-width="3" />
+    </svg>
+  `.buildElement();
   if (container) {
     container.appendChild(el);
   }
@@ -211,8 +216,8 @@ function formatDateWeekday(ts) {
 function formatDateRelative(ts, now) {
   if (now - ts < 3600) {
     const minutes = Math.floor((now - ts) / 60);
-    if (minutes) {
-      return minutes + ' minutes ago';
+    if (minutes > 0) {
+      return I18n.getPlural('date_n_minutes_ago', minutes);
     } else {
       return 'just now';
     }
@@ -237,12 +242,13 @@ function formatTime(ts, {withSeconds = false} = {}) {
   }).format(ts * 1000);
 }
 
-function formatDuration(duration) {
+function formatDuration(duration, fractionDigits = 0) {
+  const fraction = fractionDigits ? duration.toFixed(fractionDigits).substr(-fractionDigits) : '';
   duration = Math.round(duration);
   const hours = Math.floor(duration / 3600);
   const minutes = String(Math.floor(duration / 60) % 60).padStart(hours ? 2 : 1, '0');
   const seconds = String(duration % 60).padStart(2, '0');
-  return (hours ? `${hours}:` : '') + `${minutes}:${seconds}`;
+  return (hours ? `${hours}:` : '') + `${minutes}:${seconds}` + (fraction ? `,${fraction}` : '');
 }
 
 function cutText(text, checkLength, cutLength) {

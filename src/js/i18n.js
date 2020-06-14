@@ -8,6 +8,8 @@ const keys = {
 
   'chats_n_members': ['', '{n} member', '{n} members'],
   'chats_n_followers': ['', '{n} follower', '{n} followers'],
+
+  'date_n_minutes_ago': ['', '{} minute ago', '{} miinutes ago'],
 };
 
 const I18n = new class {

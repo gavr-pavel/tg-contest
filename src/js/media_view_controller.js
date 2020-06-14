@@ -247,6 +247,7 @@ const MediaViewController = new class {
   };
 
   onContentTouchStart = (event) => {
+    event.preventDefault();
     let {pageY: startY} = getEventPageXY(event);
     let progress = 0;
     const onTouchMove = (event) => {

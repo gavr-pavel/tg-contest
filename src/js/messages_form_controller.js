@@ -7,7 +7,7 @@ import {
   attachRipple,
   isTouchDevice,
   loadScript,
-  initAnimation
+  initAnimation, formatDuration
 } from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
@@ -95,12 +95,13 @@ const MessagesFormController = new class {
     this.clear();
   };
 
-  onSubmitMouseDown = () => {
+  onSubmitMouseDown = (event) => {
     const submitButton = this.dom.submit_button;
     const cancelButton = this.dom.cancel_button;
-    if (submitButton.classList.contains('messages_form_submit_button-send')) {
+    if (event.button || submitButton.classList.contains('messages_form_submit_button-send')) {
       return;
     }
+    event.preventDefault();
     submitButton.classList.add('messages_form_submit_button-send');
     cancelButton.hidden = false;
 
@@ -108,16 +109,26 @@ const MessagesFormController = new class {
     document.addEventListener((isTouchDevice() ? 'touchmove' : 'mousemove'), move);
 
     function move(event) {
-      cancelButton.classList.toggle('messages_form_cancel_button-active', event.target === cancelButton);
+      let target = event.target;
+      if (event.type === 'touchmove') {
+        const touch = event.changedTouches[0];
+        target = document.elementFromPoint(touch.clientX, touch.clientY);
+      }
+      cancelButton.classList.toggle('messages_form_cancel_button-active', target === cancelButton);
     }
 
     function stop(event) {
-      console.log('stop', event.target);
-      if (event.target === cancelButton) {
+      let target = event.target;
+      if (event.type === 'touchend') {
+        const touch = event.changedTouches[0];
+        target = document.elementFromPoint(touch.clientX, touch.clientY);
+      }
+      if (!recorder || target === cancelButton) {
         cancelled = true;
       }
       recorder && recorder.stop();
       submitButton.classList.remove('messages_form_submit_button-send');
+      cancelButton.classList.remove('messages_form_cancel_button-active');
       cancelButton.hidden = true;
       document.removeEventListener((isTouchDevice() ? 'touchend' : 'mouseup'), stop);
       document.removeEventListener((isTouchDevice() ? 'touchmove' : 'mousemove'), move);
@@ -146,7 +157,11 @@ const MessagesFormController = new class {
       recorder.start();
     });
 
+    const timer = Tpl.html`<div class="messages_form_voice_timer"></div>`.buildElement();
+    this.dom.input.after(timer);
+
     let animationHandle;
+    let timerIntervalId;
     function startAnimation() {
       const source = recorder.sourceNode;
       const context = source.context;
@@ -164,11 +179,17 @@ const MessagesFormController = new class {
         submitButton.style.setProperty('--highlight-radius', Math.round(50 + avg * 10) + 'px');
         animationHandle = requestAnimationFrame(loop);
       })();
+      timerIntervalId = setInterval(() => {
+        const duration = context.currentTime;
+        timer.innerText = formatDuration(duration, 2);
+      }, 50);
     }
 
     function stopAnimation() {
       cancelAnimationFrame(animationHandle);
       submitButton.style.setProperty('--highlight-radius', 0);
+      clearInterval(timerIntervalId);
+      timer.remove();
     }
   };
 

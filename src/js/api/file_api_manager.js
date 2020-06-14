@@ -201,7 +201,7 @@ const FileApiManager = new class {
       return this.db;
     }
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('telegram_cache', 1);
+      const request = indexedDB.open('telegram_cache', 2);
       request.onerror = (event) => {
         reject(event.target.error);
       };
