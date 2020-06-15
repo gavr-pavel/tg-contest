@@ -56,7 +56,7 @@ const MessagesApiManager = new class {
           }
           this.updateChatMessages(dialog, [message]);
           this.handleDialogOrder(dialog);
-          this.emitter.trigger('chatNewMessage', {dialog, message});
+          this.emitter.trigger('dialogNewMessage', {dialog, message});
         } else {
           this.handleNewDialog(message);
         }
@@ -89,8 +89,8 @@ const MessagesApiManager = new class {
         if (dialog) {
           dialog.unread_count = update.still_unread_count;
           dialog.read_inbox_max_id = update.max_id;
-          console.log('chatUnreadCountUpdate', {dialog}, dialog.read_inbox_max_id, dialog.unread_count);
-          this.emitter.trigger('chatUnreadCountUpdate', {dialog});
+          console.log('dialogUnreadCountUpdate', {dialog}, dialog.read_inbox_max_id, dialog.unread_count);
+          this.emitter.trigger('dialogUnreadCountUpdate', {dialog});
         }
       } break;
       case 'updateUserStatus': {
@@ -111,6 +111,7 @@ const MessagesApiManager = new class {
         if (dialog) {
           dialog.pinned = update.pinned;
           this.handleDialogOrder(dialog);
+          this.emitter.trigger('dialogPinnedUpdate', {dialog});
         }
       } break;
       case 'updateDraftMessage': {
@@ -192,7 +193,7 @@ const MessagesApiManager = new class {
     const dialog = await this.loadPeerDialog(this.getMessageDialogPeer(message));
     if (dialog) {
       this.handleDialogOrder(dialog);
-      this.emitter.trigger('chatNewMessage', {dialog, message});
+      this.emitter.trigger('dialogNewMessage', {dialog, message});
     }
   }
 
@@ -263,7 +264,7 @@ const MessagesApiManager = new class {
   }
 
   async loadDialogs(offset = {}, limit = 20, folderId = 0) {
-    const response = await ApiClient.callMethod('messages.getDialogs', {
+    const {dialogs, messages, chats, users} = await ApiClient.callMethod('messages.getDialogs', {
       folder_id: folderId,
       exclude_pinned: !!folderId,
       offset_date: offset.date || 0,
@@ -271,8 +272,6 @@ const MessagesApiManager = new class {
       offset_peer: this.getInputPeer(offset.peer),
       limit: limit
     });
-
-    const {dialogs, messages, chats, users} = response;
 
     this.updateUsers(users);
     this.updateChats(chats);
@@ -291,9 +290,19 @@ const MessagesApiManager = new class {
 
     this.emitter.trigger('dialogsUpdate', {dialogs: allDialogs, folderId});
 
+    this.loadPinnedDialogs();
+
     this.preloadDialogsMessages(dialogs);
 
+    ApiClient.callMethod('messages.getPinnedDialogs')
+        .then(({dialogs}));
+
     return dialogs;
+  }
+
+  async loadPinnedDialogs() { // fix read_inbox_max_id = 0
+    const {dialogs} = await ApiClient.callMethod('messages.getPinnedDialogs');
+    this.updateDialogs(dialogs);
   }
 
   loadArchivedDialogs(offset = {}, limit = 20) {
@@ -451,6 +460,7 @@ const MessagesApiManager = new class {
       if (chatMessages && chatMessages.length) {
         dialog.top_message = chatMessages[0].id;
       } else {
+        console.log('delete dialog.top_message', {dialog, chatMessages});
         delete dialog.top_message;
       }
       this.emitter.trigger('dialogTopMessageUpdate', {dialog});
@@ -503,7 +513,7 @@ const MessagesApiManager = new class {
       });
     }
     // dialog.unread_count = 0; // todo fix count actual unread messages left
-    // this.emitter.trigger('chatUnreadCountUpdate', {dialog});
+    // this.emitter.trigger('dialogUnreadCountUpdate', {dialog});
   }
 
   saveDraft(peer, message) {

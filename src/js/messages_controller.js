@@ -4,7 +4,7 @@ import {
   formatCountShort, formatCountLong,
   formatDateFull,
   formatDateRelative,
-  formatTime, formatDuration, initAnimation, attachRipple, downloadFile, getEventPageXY,
+  formatTime, formatDuration, initAnimation, attachRipple, downloadFile
 } from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MediaApiManager} from './api/media_api_manager';
@@ -39,7 +39,7 @@ const MessagesController = new class {
     MessagesFormController.init();
 
     MessagesApiManager.emitter.on('chatMessagesUpdate', this.onChatMessagesUpdate);
-    MessagesApiManager.emitter.on('chatNewMessage', this.onNewMessage);
+    MessagesApiManager.emitter.on('dialogNewMessage', this.onNewMessage);
     MessagesApiManager.emitter.on('chatEditMessage', this.onEditMessage);
     MessagesApiManager.emitter.on('chatDeleteMessage', this.onDeleteMessage);
     MessagesApiManager.emitter.on('userStatusUpdate', this.onUserStatusUpdate);
@@ -73,9 +73,11 @@ const MessagesController = new class {
 
     this.container.append(this.loader);
 
+    const topMessage = dialog.top_message ? MessagesApiManager.messages.get(dialog.top_message) : void(0);
+
     if (messageId) {
       this.jumpToMessage(messageId);
-    } else if (dialog.read_inbox_max_id < dialog.top_message) {
+    } else if (dialog.read_inbox_max_id < dialog.top_message && topMessage && !topMessage.out) {
       this.jumpToMessage(dialog.read_inbox_max_id, true);
     } else {
       this.loadHistory();
@@ -576,10 +578,9 @@ const MessagesController = new class {
         frag.prepend(lastDateGroup);
       }
       if (readInboxMaxId && message.id === readInboxMaxId && readInboxMaxId !== this.dialog.top_message) {
-        const unreadEl = Tpl.html`<div class="message-type-service message-type-unread">Unread messages</div>`.buildElement();
-        if (lastDateGroup.children.length === 1) { // only date
-          frag.prepend(unreadEl);
-        } else {
+        const topMessage = MessagesApiManager.messages.get(this.dialog.top_message);
+        if (!topMessage.out) {
+          const unreadEl = Tpl.html`<div class="message-type-service message-type-unread">Unread messages</div>`.buildElement();
           lastDateGroup.firstElementChild.after(unreadEl);
           lastAuthorGroup = null;
         }
@@ -863,7 +864,7 @@ const MessagesController = new class {
     }
   };
 
-  async loadFile(button, document) {
+  loadFile(button, document) {
     if (button.dataset.loading) {
       return;
     }
@@ -902,13 +903,8 @@ const MessagesController = new class {
       progressPath = $('.document_icon_progress_path', button);
     }
 
-    try {
-      return FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
-    } catch(e) {
-      console.error(error);
-    } finally {
-      onDone();
-    }
+    return FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
+        .finally(onDone);
   }
 
   async playAudio(btn, {document: doc, attributes, message}) {
@@ -926,7 +922,7 @@ const MessagesController = new class {
     const audioPlayer = new AudioPlayer(doc, attributes);
     this.audioPlayer = audioPlayer;
 
-    if (doc.mime_type === 'audio/mpeg' && window.MediaSource) {
+    if ((doc.mime_type === 'audio/mpeg' || doc.mime_type === 'audio/mp3') && window.MediaSource) {
       audioPlayer.initStreaming();
     } else {
       const src = await this.loadFile(btn, doc);
@@ -1126,7 +1122,7 @@ const MessagesController = new class {
   formatMessageStatus(message, dialog) {
     if (message.out && message.from_id) {
       const readOutboxMaxId = dialog.read_outbox_max_id;
-      const status = !readOutboxMaxId || message.id <= readOutboxMaxId ? 'read' : 'sent';
+      const status = message.id <= readOutboxMaxId ? 'read' : 'sent';
       return Tpl.html`<div class="message_status message_status-${status}"></div>`;
     }
     return '';
@@ -1212,9 +1208,9 @@ const MessagesController = new class {
 
   formatVoice(document, attributes) {
     return Tpl.html`
-      <div class="document">
+      <div class="document document-voice">
         <div class="document_col">
-          <button class="document_icon document_icon-voice"></button>
+          <button class="document_icon document_icon-audio"></button>
         </div>
         <div class="document_col">
           <div class="document_filename">Voice message</div>

@@ -23,9 +23,10 @@ const ChatsController = new class {
 
     MessagesApiManager.emitter.on('dialogsUpdate', this.onDialogsUpdate);
     MessagesApiManager.emitter.on('dialogOrderUpdate', this.onDialogOrderUpdate);
+    MessagesApiManager.emitter.on('dialogPinnedUpdate', this.onDialogPinnedUpdate);
     MessagesApiManager.emitter.on('dialogTopMessageUpdate', this.onDialogTopMessageUpdate);
-    MessagesApiManager.emitter.on('chatNewMessage', this.onDialogNewMessage);
-    MessagesApiManager.emitter.on('chatUnreadCountUpdate', this.onDialogUnreadCountUpdate);
+    MessagesApiManager.emitter.on('dialogNewMessage', this.onDialogNewMessage);
+    MessagesApiManager.emitter.on('dialogUnreadCountUpdate', this.onDialogUnreadCountUpdate);
     MessagesApiManager.emitter.on('userStatusUpdate', this.onUserStatusUpdate);
 
     this.loadMore();
@@ -144,10 +145,23 @@ const ChatsController = new class {
     }
     const chatId = MessagesApiManager.getPeerId(dialog.peer);
     let el = this.chatElements.get(chatId);
-    if (!el) {
+    if (el) {
+      el.classList.toggle('chats_item_pinned', !!dialog.pinned);
+      this.renderChatPreviewContent(el, dialog);
+    } else {
       el = this.buildChatPreviewElement(dialog);
     }
     this.container.insertBefore(el, this.container.children[index]);
+  };
+
+  onDialogPinnedUpdate = (event) => {
+    const {dialog} = event.detail;
+    const chatId = MessagesApiManager.getPeerId(dialog.peer);
+    const el = this.chatElements.get(chatId);
+    if (el) {
+      el.classList.toggle('chats_item_pinned', !!dialog.pinned);
+      this.renderChatPreviewContent(el, dialog);
+    }
   };
 
   onDialogTopMessageUpdate = (event) => {
