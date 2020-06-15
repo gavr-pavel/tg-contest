@@ -444,6 +444,13 @@ function initMenu(container) {
   return new MDCMenu(container);
 }
 
+function downloadFile(url, filename) {
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+}
+
 export {
   Storage,
   Emitter,
@@ -476,5 +483,6 @@ export {
   initAnimation,
   attachMenuListener,
   attachRipple,
-  initMenu
+  initMenu,
+  downloadFile
 };

@@ -3,22 +3,27 @@ import {FileApiManager} from './api/file_api_manager';
 const START_PART_SIZE = 256 * 1024;
 const LARGE_PART_SIZE = 1024 * 1024;
 
+window.audioStreamingResources = new WeakSet();
+
 class AudioStreamingProcess {
   bufferQueue = [];
   ended = false;
+  stopped = false;
 
   constructor(doc) {
     this.doc = doc;
-    const ms = new MediaSource();
-    ms.addEventListener('sourceopen', () => {
-      this.sourceBuffer = ms.addSourceBuffer('audio/mpeg');
-      this.sourceBuffer.addEventListener('updateend', this.onUpdateEnd);
+    const mediaSource = new MediaSource();
+    mediaSource.addEventListener('sourceopen', () => {
+      if (!this.stopped) {
+        this.sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
+        this.sourceBuffer.addEventListener('updateend', this.onUpdateEnd);
+      }
     });
-    this.ms = ms;
+    this.mediaSource = mediaSource;
 
     const audio = document.createElement('audio');
     audio.addEventListener('timeupdate', this.onTimeUpdate);
-    audio.src = URL.createObjectURL(this.ms);
+    audio.src = URL.createObjectURL(this.mediaSource);
     this.audio = audio;
 
     this.load();
@@ -31,11 +36,14 @@ class AudioStreamingProcess {
         this.appendBuffer(bytes);
       },
       onDurationChange: (duration) => {
-        this.ms.duration = duration;
+        this.mediaSource.duration = duration;
       },
     });
 
     const loadPart = async (offset, index) => {
+      if (this.stopped) {
+        return;
+      }
       if (offset >= this.doc.size) {
         // console.log(`endStream`);
         this.endStream();
@@ -64,6 +72,9 @@ class AudioStreamingProcess {
   }
 
   appendBuffer(buffer) {
+    if (this.stopped) {
+      return;
+    }
     if (this.sourceBuffer.updating) {
       this.bufferQueue.push(buffer);
       return;
@@ -86,14 +97,14 @@ class AudioStreamingProcess {
     if (buffer) {
       this.appendBuffer(buffer);
     } else if (this.ended) {
-      this.ms.endOfStream();
+      this.mediaSource.endOfStream();
     }
   };
 
   endStream() {
     this.ended = true;
     if (!this.sourceBuffer.updating && !this.bufferQueue.length) {
-      this.ms.endOfStream();
+      this.mediaSource.endOfStream();
     }
   }
 
@@ -102,6 +113,12 @@ class AudioStreamingProcess {
       this.resumeLoader();
     }
   };
+
+  stop() {
+    this.stopped = true;
+    this.audio.src = '';
+    this.audio.load();
+  }
 }
 
 class Mp3Reader {

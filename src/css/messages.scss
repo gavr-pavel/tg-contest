@@ -523,66 +523,66 @@
 
 
 
-
-.messages_placeholder {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  padding-top: 165px;
-  background: svg('../icons/chatsplaceholder_svg.svg', (path: (fill: white))) no-repeat top center;
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,.15))
-}
-
-.messages_placeholder_title {
-  color: #fff;
-  font-size: 24px;
-  text-align: center;
-}
-
-.messages_placeholder_actions {
-  display: flex;
-  justify-content: space-between;
-  width: 350px;
-  margin-top: 45px;
-}
-
-.messages_placeholder_action {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: #fff no-repeat center;
-  color: #fff;
-  &:hover {
-    background-color: #5DA3EF;
-  }
-}
-.messages_placeholder_action_label {
-  position: absolute;
-  left: 50%;
-  text-align: center;
-  transform: translateX(-50%);
-  padding-top: 45px;
-  font-size: 14px;
-}
-.messages_placeholder_action-private {
-  background-image: svg('../icons/newprivate_svg.svg', (path: (fill: $icon_mediumgray_color)));
-  &:hover {
-    background-image: svg('../icons/newprivate_svg.svg', (path: (fill: white)));
-  }
-}
-.messages_placeholder_action-group {
-  background-image: svg('../icons/newgroup_svg.svg', (path: (fill: $icon_mediumgray_color)));
-  &:hover {
-    background-image: svg('../icons/newgroup_svg.svg', (path: (fill: white)));
-  }
-}
-.messages_placeholder_action-channel {
-  background-image: svg('../icons/newchannel_svg.svg', (path: (fill: $icon_mediumgray_color)));
-  &:hover {
-    background-image: svg('../icons/newchannel_svg.svg', (path: (fill: white)));
-  }
-}
+//
+//.messages_placeholder {
+//  position: absolute;
+//  left: 50%;
+//  top: 50%;
+//  transform: translate(-50%, -50%);
+//  padding-top: 165px;
+//  background: svg('../icons/chatsplaceholder_svg.svg', (path: (fill: white))) no-repeat top center;
+//  filter: drop-shadow(0 2px 3px rgba(0,0,0,.15))
+//}
+//
+//.messages_placeholder_title {
+//  color: #fff;
+//  font-size: 24px;
+//  text-align: center;
+//}
+//
+//.messages_placeholder_actions {
+//  display: flex;
+//  justify-content: space-between;
+//  width: 350px;
+//  margin-top: 45px;
+//}
+//
+//.messages_placeholder_action {
+//  width: 72px;
+//  height: 72px;
+//  border-radius: 50%;
+//  background: #fff no-repeat center;
+//  color: #fff;
+//  &:hover {
+//    background-color: #5DA3EF;
+//  }
+//}
+//.messages_placeholder_action_label {
+//  position: absolute;
+//  left: 50%;
+//  text-align: center;
+//  transform: translateX(-50%);
+//  padding-top: 45px;
+//  font-size: 14px;
+//}
+//.messages_placeholder_action-private {
+//  background-image: svg('../icons/newprivate_svg.svg', (path: (fill: $icon_mediumgray_color)));
+//  &:hover {
+//    background-image: svg('../icons/newprivate_svg.svg', (path: (fill: white)));
+//  }
+//}
+//.messages_placeholder_action-group {
+//  background-image: svg('../icons/newgroup_svg.svg', (path: (fill: $icon_mediumgray_color)));
+//  &:hover {
+//    background-image: svg('../icons/newgroup_svg.svg', (path: (fill: white)));
+//  }
+//}
+//.messages_placeholder_action-channel {
+//  background-image: svg('../icons/newchannel_svg.svg', (path: (fill: $icon_mediumgray_color)));
+//  &:hover {
+//    background-image: svg('../icons/newchannel_svg.svg', (path: (fill: white)));
+//  }
+//}
 
 .messages_footer {
   //padding: 0 0 20px;

@@ -227,6 +227,12 @@ const ChatsController = new class {
         date: 0,
       };
     }
+
+    if (!this.newChatButton) {
+      this.newChatButton = Tpl.html`<button class="chats_new_chat_button mdc-icon-button"></button>`.buildElement();
+      attachRipple(this.newChatButton);
+    }
+    this.container.appendChild(this.newChatButton);
   }
 
   buildChatPreviewElement(dialog) {

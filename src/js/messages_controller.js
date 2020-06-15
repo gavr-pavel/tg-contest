@@ -4,7 +4,7 @@ import {
   formatCountShort, formatCountLong,
   formatDateFull,
   formatDateRelative,
-  formatTime, formatDuration, initAnimation, attachRipple,
+  formatTime, formatDuration, initAnimation, attachRipple, downloadFile, getEventPageXY,
 } from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MediaApiManager} from './api/media_api_manager';
@@ -30,7 +30,7 @@ const MessagesController = new class {
     this.container.addEventListener('click', this.onGlobalClick);
     this.scrollContainer.addEventListener('scroll', this.onScroll);
 
-    this.initPlaceholder();
+    // this.initPlaceholder();
 
     this.initBackground();
 
@@ -63,7 +63,7 @@ const MessagesController = new class {
 
     $('.main_container').dataset.chat = this.chatId;
 
-    this.placeholder.remove();
+    // this.placeholder.remove();
 
     this.showHeader(dialog);
     this.footer.hidden = !this.canSendMessage(dialog);
@@ -126,19 +126,19 @@ const MessagesController = new class {
     this.scrolling = false;
   }
 
-  initPlaceholder() {
-    this.placeholder = Tpl.html`
-      <div class="messages_placeholder">
-        <div class="messages_placeholder_title">Open chat<br>or create a new one</div>
-        <div class="messages_placeholder_actions">
-          <button class="messages_placeholder_action messages_placeholder_action-private mdc-icon-button"><div class="messages_placeholder_action_label">Private</div></button>
-          <button class="messages_placeholder_action messages_placeholder_action-group mdc-icon-button"><div class="messages_placeholder_action_label">Group</div></button>
-          <button class="messages_placeholder_action messages_placeholder_action-channel mdc-icon-button"><div class="messages_placeholder_action_label">Channel</div></button>  
-        </div>
-      </div>
-    `.buildElement();
-    this.container.append(this.placeholder);
-  }
+  // initPlaceholder() {
+  //   this.placeholder = Tpl.html`
+  //     <div class="messages_placeholder">
+  //       <div class="messages_placeholder_title">Open chat<br>or create a new one</div>
+  //       <div class="messages_placeholder_actions">
+  //         <button class="messages_placeholder_action messages_placeholder_action-private mdc-icon-button"><div class="messages_placeholder_action_label">Private</div></button>
+  //         <button class="messages_placeholder_action messages_placeholder_action-group mdc-icon-button"><div class="messages_placeholder_action_label">Group</div></button>
+  //         <button class="messages_placeholder_action messages_placeholder_action-channel mdc-icon-button"><div class="messages_placeholder_action_label">Channel</div></button>
+  //       </div>
+  //     </div>
+  //   `.buildElement();
+  //   this.container.append(this.placeholder);
+  // }
 
   showHeader(dialog) {
     const peer = dialog.peer;
@@ -193,6 +193,11 @@ const MessagesController = new class {
 
     if (peer._ === 'peerChannel' || peer._ === 'peerChat') {
       this.loadChatHeaderInfo(peer);
+    }
+
+    if (this.headerAudioEl) {
+      const wrap = $('.messages_header_pinned_message_wrap', this.header);
+      wrap.appendChild(this.headerAudioEl);
     }
 
     attachRipple(...$('.messages_header_actions', this.header).children);
@@ -704,15 +709,21 @@ const MessagesController = new class {
       el.classList.add('message-has-thumb');
       this.loadMessageMediaThumb(el, mediaThumbData);
     } else if (message.media && message.media.document) {
-      const attributes = MediaApiManager.getDocumentAttributes(message.media.document);
+      const document = message.media.document;
+      const attributes = MediaApiManager.getDocumentAttributes(document);
       if (attributes.type === 'voice') {
         this.drawVoiceWave(el, attributes.waveform, this.isOutMessage(message));
-        FileApiManager.loadDocument(message.media.document);
+        FileApiManager.loadDocument(document);
         import('./audio_player.js');
       }
       const docBtn = $('.document_icon', el);
       if (docBtn) {
         docBtn.addEventListener('click', this.onFileClick);
+        if (attributes.type === 'audio' || attributes.type === 'voice') {
+          if (this.audioPlayer && this.audioPlayer.doc.id === document.id) {
+            this.audioPlayer.initMessageAudioPlayer(docBtn);
+          }
+        }
       }
     } else if (message.media && message.media.poll) {
       import('./poll_controller.js')
@@ -848,12 +859,7 @@ const MessagesController = new class {
       this.playAudio(button, {document, attributes, message});
     } else {
       this.loadFile(button, document)
-          .then((url) => {
-            const a = window.document.createElement('a');
-            a.href = url;
-            a.download = attributes.file_name;
-            a.click();
-          });
+          .then(url => downloadFile(url, attributes.file_name));
     }
   };
 
@@ -917,108 +923,30 @@ const MessagesController = new class {
     }
 
     const {AudioPlayer} = await import('./audio_player.js');
-    this.audioPlayer = new AudioPlayer(doc);
-    if (doc.mime_type === 'audio/mpeg') {
-      this.audioPlayer.initStreaming();
+    const audioPlayer = new AudioPlayer(doc, attributes);
+    this.audioPlayer = audioPlayer;
+
+    if (doc.mime_type === 'audio/mpeg' && window.MediaSource) {
+      audioPlayer.initStreaming();
     } else {
       const src = await this.loadFile(btn, doc);
-      this.audioPlayer.initSrc(src);
+      audioPlayer.initSrc(src);
     }
 
-    this.initMessageAudioPlayer(btn, this.audioPlayer, doc, attributes);
-    this.initHeaderAudioPlayer(this.audioPlayer, doc, attributes, message);
+    audioPlayer.initMessageAudioPlayer(btn);
+    this.headerAudioEl = audioPlayer.initHeaderAudioPlayer(message);
 
-    this.audioPlayer.listen('ended', () => {
+    audioPlayer.listen('stop', () => {
+      this.headerAudioEl.remove();
+      this.headerAudioEl = null;
+    });
+
+    audioPlayer.listen('ended', () => {
       this.audioPlayer.destroy();
       this.audioPlayer = null;
     });
 
-    this.audioPlayer.play();
-  }
-
-  initMessageAudioPlayer(btn, audioPlayer, doc, attributes) {
-    audioPlayer.listen('play', (event) => {
-      btn.classList.add('document_icon-playing');
-      startProgressAnimation(event.target);
-    });
-    audioPlayer.listen('pause', () => {
-      btn.classList.remove('document_icon-playing');
-      stopProgressAnimation();
-    });
-    audioPlayer.listen('timeupdate', (event) => {
-      const audio = event.target;
-      const duration = isFinite(audio.duration) ? audio.duration : attributes.duration;
-      updateCurrentTime(audio.currentTime, duration);
-    });
-    audioPlayer.listen('ended', (event) => {
-      const audio = event.target;
-      const duration = isFinite(audio.duration) ? audio.duration : attributes.duration;
-      updateProgress(0);
-      updateCurrentTime(0, duration);
-    });
-
-    const documentWrapEl = btn.closest('.document');
-    const durationEl = $('.document_duration', documentWrapEl);
-    let updateProgress;
-    let updateCurrentTime;
-    if (attributes.type === 'voice') {
-      const filledWaveEl = $('.document_voice_wave-filled', documentWrapEl);
-      updateProgress = (progress) => {
-        filledWaveEl.style.width = (progress * 100) + '%';
-      };
-      updateCurrentTime = (currentTime, duration) => {
-        durationEl.innerText = formatDuration(duration - currentTime);
-      };
-    } else {
-      updateProgress = (progress) => {
-        // todo
-      };
-      updateCurrentTime = (currentTime, duration) => {
-        durationEl.innerText = `${formatDuration(currentTime)} / ${formatDuration(duration)}`;
-      };
-    }
-
-    const [startProgressAnimation, stopProgressAnimation] = initAnimation((audio) => {
-      const duration = isFinite(audio.duration) ? audio.duration : attributes.duration;
-      updateProgress(audio.currentTime / duration);
-    });
-  }
-
-  initHeaderAudioPlayer(audioPlayer, doc, attributes, message) {
-    const container = $('.messages_header_audio_wrap', this.header);
-    container.innerHTML = '';
-
-    let title;
-    let performer;
-    if (attributes.type === 'voice') {
-      title = MessagesApiManager.getPeerName(MessagesApiManager.getMessageAuthorPeer(message), false);
-      performer = 'Voice Message'
-    } else {
-      title = attributes.audio_title || attributes.file_name || 'Unknown Track';
-      performer = attributes.audio_performer;
-    }
-
-    const el = Tpl.html`
-      <div class="messages_header_audio mdc-ripple-surface">
-        <div class="messages_header_audio_title">${title}</div>
-        <div class="messages_header_audio_performer">${performer}</div>
-      </div>
-    `.buildElement();
-    attachRipple(el);
-    container.appendChild(el);
-
-    audioPlayer.listen('play', () => {
-      el.classList.add('messages_header_audio-playing');
-    });
-    audioPlayer.listen('pause', () => {
-      el.classList.remove('messages_header_audio-playing');
-    });
-    audioPlayer.listen('ended', () => {
-      el.remove();
-    });
-    el.addEventListener('click', () => {
-      audioPlayer.togglePlay();
-    });
+    audioPlayer.play();
   }
 
   getMessageMediaThumb(message, isEmojiMessage = false) {

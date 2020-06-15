@@ -149,11 +149,21 @@
 
 .messages_header_audio_title {
   font-weight: 500;
+}
+
+.messages_header_audio_performer {
+  color: $secondary_gray_color;
+}
+
+.messages_header_audio_voice_author {
+  font-weight: 500;
   color: $primary_blue_color;
 }
 
 .messages_header_audio_title,
-.messages_header_audio_performer {
+.messages_header_audio_performer,
+.messages_header_audio_voice_author,
+.messages_header_audio_voice_type {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

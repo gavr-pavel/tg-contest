@@ -1,5 +1,5 @@
 import {FileApiManager} from './api/file_api_manager.js';
-import {getLabeledElements, $, Tpl, getEventPageXY} from './utils';
+import {getLabeledElements, $, Tpl, getEventPageXY, downloadFile} from './utils';
 import {MediaApiManager} from './api/media_api_manager';
 
 const MediaViewController = new class {
@@ -223,10 +223,7 @@ const MediaViewController = new class {
 
   download = () => {
     if (this.state.url) {
-      const a = document.createElement('a');
-      a.href = this.state.url;
-      a.download = this.getDownloadFilename(this.state.object);
-      a.click();
+      downloadFile(this.state.url, this.getDownloadFilename(this.state.object));
     }
   };
 

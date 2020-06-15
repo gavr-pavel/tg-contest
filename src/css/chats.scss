@@ -240,3 +240,18 @@
   color: #717579;
   min-height: 17px;
 }
+
+.chats_new_chat_button {
+  position: absolute;
+  z-index: 100;
+  right: 14px;
+  bottom: 14px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: $primary_blue_color svg('../icons/newchat_filled_svg.svg', (path: (fill: white))) no-repeat center;
+  transition: box-shadow .2s;
+  &:hover {
+    box-shadow: 0 10px 15px rgba(0, 0, 0, .3);
+  }
+}

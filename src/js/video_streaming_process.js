@@ -11,6 +11,7 @@ class VideoStreamingProcess {
     this.mediaSource = new MediaSource();
     this.video = document.createElement('video');
     this.video.src = URL.createObjectURL(this.mediaSource);
+    this.video.addEventListener('timeupdate', this.onTimeUpdate);
   }
 
   load() {
@@ -54,18 +55,25 @@ class VideoStreamingProcess {
     // console.log('loaded bytes:', bytes.byteLength);
     const buf = bytes.buffer;
     buf.fileStart = offset;
-    const nextStart = this.mp4box.appendBuffer(buf);
+    let nextStart = this.mp4box.appendBuffer(buf);
+    if (!nextStart && this.gapStart) {
+      nextStart = this.gapStart;
+      this.gapStart = null;
+    }
     // console.log('nextStart', nextStart);
     if (nextStart) {
       // if (nextStart > offset + buf.byteLength) {
       //   this.gapStart = [offset + buf.byteLength, nextStart];
       //   console.log('gap', this.gap);
       // }
-      this.loadPart(nextStart);
-    } else if (this.gapStart) {
-      const nextStart = this.gapStart;
-      this.gapStart = null;
-      this.loadPart(nextStart);
+      if (this.checkLowBuffer()) {
+        this.loadPart(nextStart);
+      } else {
+        this.resumeLoader = () => {
+          this.loadPart(nextStart);
+          this.resumeLoader = null;
+        };
+      }
     } else {
       this.mp4box.flush();
       this.mediaSource.endOfStream();
@@ -117,6 +125,17 @@ class VideoStreamingProcess {
 
   }
 
+  checkLowBuffer() {
+    const video = this.video;
+    const buffered = video.buffered;
+    return !buffered.length || buffered.end(0) < video.currentTime + 3 * 60;
+  }
+
+  onTimeUpdate = () => {
+    if (this.resumeLoader && this.checkLowBuffer()) {
+      this.resumeLoader();
+    }
+  };
 }
 
 export {VideoStreamingProcess};
