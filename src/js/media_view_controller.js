@@ -68,9 +68,9 @@ const MediaViewController = new class {
     const loop = attributes.duration < 30;
 
     if (attributes.supports_streaming && window.MediaSource && document.size > 512 * 1024) {
-      import('./media_streaming_process.js')
-          .then(({MediaStreamingProcess}) => {
-            const process = new MediaStreamingProcess(document, onProgress);
+      import('./video_streaming_process.js')
+          .then(({VideoStreamingProcess}) => {
+            const process = new VideoStreamingProcess(document, onProgress);
             this.state.streamingProcess = process;
             return process.load();
           })

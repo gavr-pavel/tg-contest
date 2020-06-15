@@ -1,9 +1,10 @@
 import {FileApiManager} from './api/file_api_manager';
 import {MP4Box} from './vendor/mp4box';
 
-const PART_SIZE = 256 * 1024;
+const START_PART_SIZE = 256 * 1024;
+const LARGE_PART_SIZE = 1024 * 1024;
 
-class MediaStreamingProcess {
+class VideoStreamingProcess {
   constructor(doc, onProgress) {
     this.doc = doc;
     this.onProgress = onProgress;
@@ -15,7 +16,7 @@ class MediaStreamingProcess {
   load() {
     this.mp4box = new MP4Box(false);
     this.mp4box.onReady = (info) => {
-      console.log('Received File Information', info);
+      // console.log('Received File Information', info);
       if (info.isFragmented) {
         this.mediaSource.duration = info.fragment_duration / info.timescale;
       } else {
@@ -48,7 +49,8 @@ class MediaStreamingProcess {
 
   async loadPart(offset) {
     // console.log('loadPart', offset);
-    const bytes = await FileApiManager.loadDocumentBytes(this.doc, offset, PART_SIZE);
+    const partSize = offset < 3 * 1024 ? START_PART_SIZE : LARGE_PART_SIZE;
+    const bytes = await FileApiManager.loadDocumentBytes(this.doc, offset, partSize);
     // console.log('loaded bytes:', bytes.byteLength);
     const buf = bytes.buffer;
     buf.fileStart = offset;
@@ -61,9 +63,9 @@ class MediaStreamingProcess {
       // }
       this.loadPart(nextStart);
     } else if (this.gapStart) {
-      const start = this.gapStart;
+      const nextStart = this.gapStart;
       this.gapStart = null;
-      this.loadPart(start);
+      this.loadPart(nextStart);
     } else {
       this.mp4box.flush();
       this.mediaSource.endOfStream();
@@ -81,7 +83,7 @@ class MediaStreamingProcess {
       const sourceBuffer = this.mediaSource.addSourceBuffer(mime);
       sourceBuffer.pendingSegments = [];
       sourceBuffer.addEventListener('updateend', this.onSourceBufferUpdateEnd);
-      this.mp4box.setSegmentOptions(track.id, sourceBuffer, {nbSamples: 200});
+      this.mp4box.setSegmentOptions(track.id, sourceBuffer, {nbSamples: 100});
     }
 
     for (const {user, buffer} of  this.mp4box.initializeSegmentation()) {
@@ -117,4 +119,4 @@ class MediaStreamingProcess {
 
 }
 
-export {MediaStreamingProcess};
+export {VideoStreamingProcess};

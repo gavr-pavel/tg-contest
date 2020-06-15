@@ -244,7 +244,7 @@ function formatTime(ts, {withSeconds = false} = {}) {
 
 function formatDuration(duration, fractionDigits = 0) {
   const fraction = fractionDigits ? duration.toFixed(fractionDigits).substr(-fractionDigits) : '';
-  duration = Math.round(duration);
+  duration = Math.floor(duration);
   const hours = Math.floor(duration / 3600);
   const minutes = String(Math.floor(duration / 60) % 60).padStart(hours ? 2 : 1, '0');
   const seconds = String(duration % 60).padStart(2, '0');

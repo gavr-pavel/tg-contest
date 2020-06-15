@@ -132,13 +132,14 @@ pre {
 }
 
 .circular-loader {
+  --loader-size: 56px;
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 46px;
-  height: 46px;
-  margin-left: -23px;
-  margin-top: -23px;
+  width: var(--loader-size);
+  height: var(--loader-size);
+  margin-left: calc(-1 * var(--loader-size) / 2);
+  margin-top: calc(-1 * var(--loader-size) / 2);
   animation: rotate 2s linear infinite;
 }
 

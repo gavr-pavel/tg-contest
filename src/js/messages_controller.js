@@ -835,17 +835,34 @@ const MessagesController = new class {
   onFileClick = (event) => {
     const button = event.currentTarget;
 
-    if (button.dataset.loading) {
-      return;
-    }
-    button.dataset.loading = 1;
-
     const msgId = +button.dataset.messageId || +button.closest('.message').dataset.id;
     const message = MessagesApiManager.messages.get(msgId);
     if (!message) {
       return;
     }
+
     const document = message.media.document;
+    const attributes = MediaApiManager.getDocumentAttributes(document);
+
+    if (attributes.type === 'voice' || attributes.type === 'audio') {
+      this.playAudio(button, {document, attributes, message});
+    } else {
+      this.loadFile(button, document)
+          .then((url) => {
+            const a = window.document.createElement('a');
+            a.href = url;
+            a.download = attributes.file_name;
+            a.click();
+          });
+    }
+  };
+
+  async loadFile(button, document) {
+    if (button.dataset.loading) {
+      return;
+    }
+    button.dataset.loading = 1;
+
     const abortController = new AbortController();
 
     const onAbort = () => {
@@ -860,23 +877,11 @@ const MessagesController = new class {
       }
     };
 
-    const onDone = (url = null) => {
+    const onDone = () => {
       delete button.dataset.loading;
       button.removeEventListener('click', onAbort);
       button.classList.remove('document_icon-loading');
       button.innerHTML = '';
-      if (!url) {
-        return;
-      }
-      const attributes = MediaApiManager.getDocumentAttributes(document);
-      if (attributes.type === 'voice' || attributes.type === 'audio') {
-        this.playAudio(button, url, document, attributes, message);
-      } else {
-        const a = window.document.createElement('a');
-        a.href = url;
-        a.download = attributes.file_name;
-        a.click();
-      }
     };
 
     let progressPath;
@@ -891,15 +896,16 @@ const MessagesController = new class {
       progressPath = $('.document_icon_progress_path', button);
     }
 
-    FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
-        .then(onDone)
-        .catch((error) => {
-          console.error(error);
-          onDone();
-        });
-  };
+    try {
+      return FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
+    } catch(e) {
+      console.error(error);
+    } finally {
+      onDone();
+    }
+  }
 
-  async playAudio(btn, src, doc, attributes, message) {
+  async playAudio(btn, {document: doc, attributes, message}) {
     if (this.audioPlayer) {
       if (this.audioPlayer.doc === doc) {
         this.audioPlayer.togglePlay();
@@ -911,7 +917,13 @@ const MessagesController = new class {
     }
 
     const {AudioPlayer} = await import('./audio_player.js');
-    this.audioPlayer = new AudioPlayer(doc, src);
+    this.audioPlayer = new AudioPlayer(doc);
+    if (doc.mime_type === 'audio/mpeg') {
+      this.audioPlayer.initStreaming();
+    } else {
+      const src = await this.loadFile(btn, doc);
+      this.audioPlayer.initSrc(src);
+    }
 
     this.initMessageAudioPlayer(btn, this.audioPlayer, doc, attributes);
     this.initHeaderAudioPlayer(this.audioPlayer, doc, attributes, message);

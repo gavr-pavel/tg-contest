@@ -298,18 +298,16 @@ const FileApiManager = new class {
       await this.queueWait(1);
       const realOffset = offset - (offset % KB);
       let realLimit = limit + offset - realOffset;
-      realLimit += KB - (realLimit % KB);
+      realLimit = Math.ceil(realLimit / KB) * KB;
       realLimit = Math.min(realLimit, MB - (realOffset % MB));
       const res = await apiConnection.callMethod('upload.getFile', {
         location,
-        // offset,
-        // limit,
         offset: realOffset,
         limit: realLimit,
         precise: true
       });
       const begin = offset - realOffset;
-      return new Uint8Array(res.bytes.subarray(begin));
+      return new Uint8Array(res.bytes.subarray(begin, begin + limit));
     } finally {
       this.queueDone();
       this.connectionDone(apiConnection);
