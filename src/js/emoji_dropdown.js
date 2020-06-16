@@ -716,6 +716,7 @@ const EmojiDropdown = new class {
       button.addEventListener('click', () => {
         if (this.isShown()) {
           this.hide();
+          input.focus();
         } else {
           this.show();
         }

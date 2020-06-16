@@ -7,7 +7,7 @@ import {MediaViewController} from './media_view_controller';
 const MessagesSearchController = new class {
   show(peerId) {
     this.container = $('.right_sidebar');
-    this.container.hidden = false;
+    this.container.parentNode.hidden = false;
 
     if (peerId === this.peerId) {
       return;
@@ -43,7 +43,7 @@ const MessagesSearchController = new class {
   close = () => {
     if (this._open) {
       this._open = false;
-      this.container.hidden = true;
+      this.container.parentNode.hidden = true;
       this.peerId = null;
       document.removeEventListener('keyup', this.onKeyUp);
     }

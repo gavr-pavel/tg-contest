@@ -27,6 +27,9 @@ const App = new class {
 
     document.addEventListener('visibilitychange', this.onDocumentVisibilityChange);
 
+    window.addEventListener('hashchange', this.onLocationChange);
+    setTimeout(this.onLocationChange);
+
     // ApiClient.emitter.on('updateConnectionState', (event) => {
     //   const header = Utils.$('.header');
     //   if (!header) {
@@ -53,6 +56,7 @@ const App = new class {
   }
 
   logOut() {
+    this.stopOnlineInterval();
     ApiClient.callMethod('auth.logOut', {}).then((res) => {
       if (res._ === 'boolTrue') {
         this.logOutDone();
@@ -115,6 +119,33 @@ const App = new class {
   onResize = () => {
     document.body.classList.toggle('mobile_view', window.innerWidth < 1160);
   };
+
+  onLocationChange = () => {
+    if (this.getAuthUserId()) {
+      const loc = location.hash;
+      if (!loc || loc === '#') {
+        MessagesController.exitChat(false);
+        return;
+      }
+      let match;
+      match = loc.match(/^#@(.+)$/);
+      if (match) {
+        MessagesController.setChatByUsername(match[1]);
+        return;
+      }
+      match = loc.match(/^#(user|channel|chat)(\d+)$/);
+      if (match) {
+        MessagesController.setChatByPeerType(match[2], match[1]);
+        return;
+      }
+      debugger;
+    }
+    this.setLocation('');
+  };
+
+  setLocation(loc) {
+    history.pushState(null, '', location.pathname + (loc ? `#${loc}` : ''));
+  }
 
   alert(text) {
     if (this.snackbar) {

@@ -44,7 +44,7 @@
     position: absolute;
     right: 0;
     bottom: 0;
-    background: svg('../icons/bubble_tale.svg', (path: (fill: white))) no-repeat center;
+    background: svg('../icons/bubble_tail_right.svg', (path: (fill: white))) no-repeat center;
     width: 7px;
     height: 17px;
     margin-right: -7px;
@@ -70,6 +70,9 @@
 
 .messages_form_emoji_button-active {
   background: svg('../icons/smile_svg.svg', (path: (fill: $icon_blue_color)));
+  .mobile_view & {
+    background: svg('../icons/keyboard@1x.svg', (path: (fill: $icon_mediumgray_color)));
+  }
 }
 
 .messages_form_media_button {

@@ -15,9 +15,12 @@ import {ChatsController} from "./chats_controller";
 import {MessagesSearchController} from './messages_search_controller';
 import {ApiClient} from './api/api_client';
 import {I18n} from './i18n';
+import {App} from './app';
 
 const MessagesController = new class {
   messageElements = new Map();
+
+  polls = [];
 
   init() {
     this.header = $('.messages_header');
@@ -29,6 +32,7 @@ const MessagesController = new class {
 
     this.container.addEventListener('click', this.onGlobalClick);
     this.scrollContainer.addEventListener('scroll', this.onScroll);
+    window.addEventListener('resize', this.onScroll);
 
     // this.initPlaceholder();
 
@@ -55,7 +59,7 @@ const MessagesController = new class {
       return;
     }
     if (this.dialog) {
-      this.exitChat();
+      this.exitChat(false);
     }
 
     this.dialog = dialog;
@@ -87,6 +91,15 @@ const MessagesController = new class {
     if (chatEl) {
       chatEl.classList.add('chats_item-selected');
     }
+
+    const peerData = MessagesApiManager.getPeerData(dialog.peer);
+    if (peerData.username) {
+      App.setLocation('@' + peerData.username);
+    } else {
+      App.setLocation('');
+      // Can't get peer info without access hash
+      // App.setLocation(peerData._ + peerData.id);
+    }
   }
 
   async setChatByPeerId(peerId, messageId = 0) {
@@ -98,7 +111,26 @@ const MessagesController = new class {
     MessagesController.setChat(dialog, messageId);
   }
 
-  exitChat() {
+  async setChatByUsername(username) {
+    if (username === 'paultired') {
+      return this.setChatByPeerType(1169777524, 'channel');
+    }
+    return;
+    const {peer, chats, users} = await ApiClient.callMethod('contacts.resolveUsername', {username});
+    MessagesApiManager.updateUsers(users);
+    MessagesApiManager.updateChats(chats);
+    MessagesApiManager.updateUsers(users);
+    this.setChatByPeerId(MessagesApiManager.getPeerId(peer));
+  }
+
+  async setChatByPeerType(peerId, peerType) {
+    const peer = MessagesApiManager.getPeerById(+peerId, peerType);
+    const dialog = await MessagesApiManager.loadPeerDialog(peer);
+    console.log(peer, dialog);
+    MessagesController.setChat(dialog);
+  }
+
+  exitChat(changeLoc = true) {
     const chatEl = ChatsController.chatElements.get(this.chatId);
     if (chatEl) {
       chatEl.classList.remove('chats_item-selected');
@@ -116,6 +148,10 @@ const MessagesController = new class {
     this.clearMessages();
 
     delete $('.main_container').dataset.chat;
+
+    if (changeLoc) {
+      App.setLocation('');
+    }
   }
 
   clearMessages() {
@@ -126,6 +162,8 @@ const MessagesController = new class {
     this.loading = false;
     this.noMore = false;
     this.scrolling = false;
+    this.polls.forEach(poll => poll.destroy());
+    this.polls = [];
   }
 
   // initPlaceholder() {
@@ -273,12 +311,16 @@ const MessagesController = new class {
       return;
     }
     this.loading = true;
-    MessagesApiManager.loadChatHistory(this.dialog, this.minMsgId, 30)
+    const dialog = this.dialog;
+    MessagesApiManager.loadChatHistory(dialog, this.minMsgId, 30)
         .then((messages) => {
-          if (!messages.length) {
-            this.noMore = true;
+          if (dialog === this.dialog) {
+            if (!messages.length) {
+              this.noMore = true;
+            }
+            this.prependHistory(messages);
+            this.onScroll(true);
           }
-          this.prependHistory(messages);
         })
         .catch((error) => {
           const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
@@ -291,22 +333,25 @@ const MessagesController = new class {
   }
 
   loadMore = ({down = false} = {}) => {
-    if (this.loading || this.noMore || !this.chatId) {
+    if (this.loading || !down && this.noMore || !this.chatId) {
       return;
     }
     this.loading = true;
+    const dialog = this.dialog;
     const limit = 20;
     const addOffset = down ? -limit : 0;
     const offsetId = down ? this.maxMsgId : this.minMsgId;
-    MessagesApiManager.loadMessages(this.dialog.peer, offsetId, limit, addOffset)
+    MessagesApiManager.loadMessages(dialog.peer, offsetId, limit, addOffset)
         .then((messages) => {
-          if (!messages.length) {
-            this.noMore = true;
-          }
-          if (down) {
-            this.appendHistory(messages);
-          } else {
-            this.prependHistory(messages);
+          if (dialog === this.dialog) {
+            if (!messages.length) {
+              this.noMore = true;
+            }
+            if (down) {
+              this.appendHistory(messages);
+            } else {
+              this.prependHistory(messages);
+            }
           }
         })
         .catch((error) => {
@@ -432,16 +477,20 @@ const MessagesController = new class {
         this.setChatByPeerId(+refChatId);
         event.preventDefault();
       }
+      const entity = target.dataset.entity;
+      if (entity === 'bot_command') {
+        MessagesApiManager.sendMessage(this.dialog.peer, target.innerText);
+      }
     }
   };
 
-  onScroll = () => {
+  onScroll = (force = false) => {
     const scrollContainer = this.scrollContainer;
     const scrollTop = scrollContainer.scrollTop;
     const scrollBottom = scrollContainer.scrollHeight - (scrollTop + scrollContainer.clientHeight);
     const prevScrolling = !!this.scrolling;
     this.scrolling = scrollBottom > 0;
-    if (this.scrolling !== prevScrolling) {
+    if (force || this.scrolling !== prevScrolling) {
       this.scrollContainer.classList.toggle('messages_scroll-scrolling', this.scrolling && !this.footer.hidden);
     }
     if (!this.loading) {
@@ -454,8 +503,13 @@ const MessagesController = new class {
     }
   };
 
-  scrollToBottom() {
-    this.scrollContainer.scrollTop = this.scrollContainer.scrollHeight;
+  scrollToBottom(smooth = false) {
+    if (smooth) {
+      const lastMessageEl = this.messageElements.get(this.maxMsgId);
+      lastMessageEl && lastMessageEl.scrollIntoView({behavior: 'smooth'});
+    } else {
+      this.scrollContainer.scrollTop = this.scrollContainer.scrollHeight;
+    }
   }
 
   prependHistory(messages) {
@@ -517,11 +571,11 @@ const MessagesController = new class {
     this.mergeDateGroups(frag.firstElementChild, this.container.lastElementChild, false);
     this.container.append(frag);
 
-    if (!scrolling) {
-      this.scrollToBottom();
-    }
-
     this.maxMsgId = messages[0].id;
+
+    if (!scrolling) {
+      this.scrollToBottom(true);
+    }
   }
 
   mergeDateGroups(newerGroup, olderGroup, moveToNewer) {
@@ -533,15 +587,18 @@ const MessagesController = new class {
       const olderAuthorGroup = olderGroup.lastElementChild;
       if (newerAuthorGroup.dataset.authorId === olderAuthorGroup.dataset.authorId) {
         if (this.dialog.peer._ !== 'peerChannel' || MessagesApiManager.isMegagroup(this.dialog.peer)) {
+          while (olderAuthorGroup.lastElementChild && !olderAuthorGroup.lastElementChild.classList.contains('message')) {
+            olderAuthorGroup.lastElementChild.remove(); // remove author photo and message tail
+          }
           newerAuthorGroup.firstElementChild.classList.add('message-stick-to-prev');
           olderAuthorGroup.lastElementChild.classList.add('message-stick-to-next');
-        }
-        if (moveToNewer) {
-          newerAuthorGroup.prepend(...olderAuthorGroup.children);
-          olderAuthorGroup.remove();
-        } else {
-          olderAuthorGroup.append(...newerAuthorGroup.children);
-          newerAuthorGroup.remove();
+          if (moveToNewer) {
+            newerAuthorGroup.prepend(...olderAuthorGroup.children);
+            olderAuthorGroup.remove();
+          } else {
+            olderAuthorGroup.append(...newerAuthorGroup.children);
+            newerAuthorGroup.remove();
+          }
         }
       }
       if (moveToNewer) {
@@ -581,15 +638,19 @@ const MessagesController = new class {
         const topMessage = MessagesApiManager.messages.get(this.dialog.top_message);
         if (!topMessage.out) {
           const unreadEl = Tpl.html`<div class="message-type-service message-type-unread">Unread messages</div>`.buildElement();
-          lastDateGroup.firstElementChild.after(unreadEl);
-          lastAuthorGroup = null;
+          if (lastDateGroup.children.length === 1) { // only date
+            lastDateGroup.after(unreadEl);
+          } else {
+            lastDateGroup.firstElementChild.after(unreadEl);
+            lastAuthorGroup = null;
+          }
         }
       }
-      if (!lastAuthorGroup || message._ === 'messageService' || !newerMessage || newerMessage.from_id !== message.from_id) {
+      if (!lastAuthorGroup || message._ === 'messageService' || !newerMessage || !message.from_id || newerMessage.from_id !== message.from_id) {
         const needPhoto = isGroupChat && message._ === 'message' && authorId !== App.getAuthUserId();
         lastAuthorGroup = this.buildMessagesAuthorGroupEl(authorId, needPhoto);
         if (needPhoto) {
-          const photoEl = lastAuthorGroup.firstElementChild;
+          const photoEl = $('.messages_group_author_photo', lastAuthorGroup);
           ChatsController.loadPeerPhoto(photoEl, MessagesApiManager.getMessageAuthorPeer(message));
         }
         lastDateGroup.firstElementChild.after(lastAuthorGroup);
@@ -611,9 +672,10 @@ const MessagesController = new class {
     `.buildElement();
   }
 
-  buildMessagesAuthorGroupEl(authorId, needPhoto = false) {
+  buildMessagesAuthorGroupEl(authorId, needPhoto = false, isOut = false) {
     return Tpl.html`
       <div class="messages_group-author ${needPhoto ? 'messages_group-author-with-photo' : ''}" data-author-id="${authorId}">
+        <div class="messages_group_tail ${authorId === App.getAuthUserId() ? 'messages_group_tail-out' : ''}"></div>
         ${needPhoto ? Tpl.html`<a class="messages_group_author_photo" data-ref-user-id="${authorId}" href="#${this.getUserHref(authorId)}"></a>` : ''}
       </div>
     `.buildElement();
@@ -708,13 +770,16 @@ const MessagesController = new class {
 
     if (mediaThumbData) {
       el.classList.add('message-has-thumb');
+      if (message.message) {
+        el.classList.add('message-has-caption');
+      }
       this.loadMessageMediaThumb(el, mediaThumbData);
     } else if (message.media && message.media.document) {
       const document = message.media.document;
       const attributes = MediaApiManager.getDocumentAttributes(document);
       if (attributes.type === 'voice') {
         this.drawVoiceWave(el, attributes.waveform, this.isOutMessage(message));
-        FileApiManager.loadDocument(document);
+        FileApiManager.loadDocument(document, {cache: true});
         import('./audio_player.js');
       }
       const docBtn = $('.document_icon', el);
@@ -729,7 +794,7 @@ const MessagesController = new class {
     } else if (message.media && message.media.poll) {
       import('./poll_controller.js')
           .then(({PollController}) => {
-            PollController.init($('.poll', el))
+            this.polls.push(new PollController(el, message));
           });
     }
   }
@@ -820,8 +885,7 @@ const MessagesController = new class {
       video.parentNode.appendChild(progressEl);
       const durationEl = $('.message_media_duration', video.parentNode);
       const [startProgressAnimation, stopProgressAnimation] = initAnimation(() => {
-        const progressValue = video.currentTime / video.duration;
-        progressEl.firstElementChild.style.strokeDasharray = `${progressValue * 135}, 135`;
+        progressEl.firstElementChild.style.setProperty('--progress-value', video.currentTime / video.duration);
       });
       const onPlaying = () => startProgressAnimation();
       const onPause = () => stopProgressAnimation();
@@ -1294,7 +1358,6 @@ const MessagesController = new class {
   formatPoll(media) {
     const poll = media.poll;
     const results = media.results;
-    console.log('poll', media);
 
     const pollType = (poll.public_voters ? '' : 'Anonymous ') + (poll.quiz ? 'Quiz' : 'Poll');
     let voted = false;
@@ -1302,64 +1365,84 @@ const MessagesController = new class {
     const pollOptions = Tpl.html``;
     for (let i = 0; i < poll.answers.length; i++) {
       const answer = poll.answers[i];
-      const answerVoters = results.results ? results.results[i] : {voters: 0};
-      const percent = results.total_voters ? Math.round(answerVoters.voters / results.total_voters * 100) : 0;
-      const chosenClass = answerVoters.chosen ? 'poll_option-chosen' : '';
-      const quizClass = poll.quiz ? (answerVoters.correct ? 'poll_option-correct' : 'poll_option-wrong') : '';
+      const answerResult = results.results ? results.results[i] : null;
+      const percent = answerResult && results.total_voters ? Math.round(answerResult.voters / results.total_voters * 100) : 0;
+      const chosenClass = answerResult && answerResult.chosen ? 'poll_option-selected' : '';
+      const quizClass = poll.quiz && answerResult ? (answerResult.correct ? 'poll_option-correct' : 'poll_option-wrong') : '';
       pollOptions.appendHtml`
         <div class="poll_option ${chosenClass} ${quizClass}" data-index="${i}">
           <div class="poll_option_text">${answer.text}</div>
-          <div class="poll_option_percent">${percent}%</div>
-          <div class="poll_option_scale" style="width: ${percent}%"></div>
+          <div class="poll_option_percent ${percent === 100 ? 'poll_option_percent-long' : ''}">${percent}%</div>
+          <div class="poll_option_scale" style="--voters-percent: ${percent}%;"></div>
         </div>
       `;
-      if (answerVoters.chosen) {
+      if (answerResult && answerResult.chosen) {
         voted = true;
       }
     }
 
-    let pollFooter;
-    if (!voted && poll.multiple_choice) {
-      pollFooter = Tpl.html`<button class="poll_vote_button" disabled>Vote</button>`;
+    let footerButton = '';
+    if (poll.multiple_choice) {
+      footerButton = Tpl.html`<button class="poll_vote_button" disabled>Vote</button>`;
     } else if (poll.public_voters) {
-      pollFooter = Tpl.html`<button class="poll_results_button">View Results</button>`;
-    } else {
-      const total = results.total_voters;
-      const text = poll.quiz ? (total ? `${total} answered` : 'Nobody answered yet') : (total ? `${total} voted` : 'No votes');
-      pollFooter = Tpl.html`<div class="poll_voters">${text}</div>`;
+      footerButton = Tpl.html`<button class="poll_results_button">View Results</button>`;
     }
 
+    const pollClasses = this.getClasses({
+      'poll-voted': voted || poll.closed,
+      'poll-closed': poll.closed,
+      'poll-public': poll.public_voters,
+      'poll-multi': poll.multiple_choice,
+    });
+
     return Tpl.html`
-      <div class="poll ${voted ? 'poll-voted' : ''}">
+      <div class="poll ${pollClasses}">
         <div class="poll_question">${poll.question}</div>
-        <div class="poll_type">${pollType}</div>
-        <div class="poll_options">
-          ${pollOptions}
+        <div class="poll_subheader">
+          <div class="poll_type">${pollType}</div>
+          <div class="poll_recent_voters"></div>
+          <div class="poll_quiz_timer"></div>
+          <button class="poll_quiz_solution_button" ${!results.solution ? 'hidden' : ''}></button>
         </div>
-        ${pollFooter}
+        <div class="poll_options">${pollOptions}</div>
+        ${footerButton}
+        <div class="poll_voters">${this.formatPollFooterText(poll, results.total_voters)}</div>
       </div>
     `;
   }
 
-  formatText(message) {
-    const sourceText = message.message;
-    let result = Tpl.html``;
-    if (message.entities) {
-      let offset = 0;
-      for (const entity of message.entities) {
-        result.appendHtml`${sourceText.substring(offset, entity.offset)}`;
-        offset = entity.offset + entity.length;
-        const entityText = sourceText.substr(entity.offset, entity.length);
-        result.appendHtml`${this.processEntity(entityText, entity)}`;
-      }
-      result.appendHtml`${sourceText.substring(offset)}`;
+  formatPollFooterText(poll, totalVoters) {
+    if (poll.quiz) {
+      return I18n.getPlural('poll_n_answered', totalVoters, {n: formatCountLong(totalVoters)});
     } else {
-      result.appendHtml`${sourceText}`;
+      return I18n.getPlural('poll_n_voted', totalVoters, {n: formatCountLong(totalVoters)});
+    }
+  }
+
+  formatText(message) {
+    let result;
+    if (message.entities) {
+      result = this.processTextEntities(message.message, message.entities);
+    } else {
+      result = Tpl.html`${message.message}`;
     }
     if (result.length) {
       result.replaceLineBreaks();
       return Tpl.html`<span class="message_text">${result}</span>`;
     }
+    return result;
+  }
+
+  processTextEntities(text, entities) {
+    const result = Tpl.html``;
+    let offset = 0;
+    for (const entity of entities) {
+      result.appendHtml`${text.substring(offset, entity.offset)}`;
+      offset = entity.offset + entity.length;
+      const entityText = text.substr(entity.offset, entity.length);
+      result.appendHtml`${this.processEntity(entityText, entity)}`;
+    }
+    result.appendHtml`${text.substring(offset)}`;
     return result;
   }
 

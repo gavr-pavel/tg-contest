@@ -265,28 +265,28 @@ $emoji_dropdown_nav_height: 48px;
 
 .emoji_dropdown_top_nav_item-active {
   &.emoji_dropdown_top_nav_item-recent {
-    background-image: svg('../icons/recent_svg_blue.svg', (path: (fill: $icon_blue_color)));
+    background-image: svg('../icons/recent_svg.svg', (path: (fill: $icon_blue_color)));
   }
   &.emoji_dropdown_top_nav_item-smileys {
-    background-image: svg('../icons/smile_svg_blue.svg', (path: (fill: $icon_blue_color)));
+    background-image: svg('../icons/smile_svg.svg', (path: (fill: $icon_blue_color)));
   }
   &.emoji_dropdown_top_nav_item-animals {
-    background-image: svg('../icons/animals_svg_blue.svg', (path: (fill: $icon_blue_color)));
+    background-image: svg('../icons/animals_svg.svg', (path: (fill: $icon_blue_color)));
   }
   &.emoji_dropdown_top_nav_item-food {
-    background-image: svg('../icons/eats_svg_blue.svg', (path: (fill: $icon_blue_color)));
+    background-image: svg('../icons/eats_svg.svg', (path: (fill: $icon_blue_color)));
   }
   &.emoji_dropdown_top_nav_item-travel {
-    background-image: svg('../icons/car_svg_blue.svg', (path: (fill: $icon_blue_color)));
+    background-image: svg('../icons/car_svg.svg', (path: (fill: $icon_blue_color)));
   }
   &.emoji_dropdown_top_nav_item-sports {
-    background-image: svg('../icons/sport_svg_blue.svg', (path: (fill: $icon_blue_color)));
+    background-image: svg('../icons/sport_svg.svg', (path: (fill: $icon_blue_color)));
   }
   &.emoji_dropdown_top_nav_item-objects {
-    background-image: svg('../icons/lamp_svg_blue.svg', (path: (fill: $icon_blue_color)));
+    background-image: svg('../icons/lamp_svg.svg', (path: (fill: $icon_blue_color)));
   }
   &.emoji_dropdown_top_nav_item-flags {
-    background-image: svg('../icons/flag_svg_blue.svg', (path: (fill: $icon_blue_color)));
+    background-image: svg('../icons/flag_svg.svg', (path: (fill: $icon_blue_color)));
   }
 }
 

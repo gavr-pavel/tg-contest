@@ -17,7 +17,7 @@ const ChatInfoController = new class {
 
   show(peerId) {
     this.container = $('.right_sidebar');
-    this.container.hidden = false;
+    this.container.parentNode.hidden = false;
 
     if (peerId === this.peerId) {
       return;
@@ -367,7 +367,7 @@ const ChatInfoController = new class {
       return;
     }
     this._open = false;
-    this.container.hidden = true;
+    this.container.parentNode.hidden = true;
     this.peerId = null;
     document.removeEventListener('keyup', this.onKeyUp);
   };

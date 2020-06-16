@@ -98,6 +98,7 @@ class ApiConnection {
           App.logOutDone();
         }
       }
+      console.trace(result);
       return Promise.reject(result);
     } else if (result._ === 'auth.authorization') {
       this.mtproto.saveApiAuth();

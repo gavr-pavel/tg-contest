@@ -62,12 +62,12 @@ const MessagesApiManager = new class {
         }
       } break;
       case 'updateEditMessage':
-      case 'updateEditChannelMessage':{
+      case 'updateEditChannelMessage': {
         const msgId = update.message.id;
         const message = this.messages.get(msgId);
         if (message) {
           this.messages.set(msgId, update.message);
-          const chatId = this.getPeerId(message.to_id);
+          const chatId = this.getMessageDialogPeerId(message);
           this.updateChatEditedMessage(chatId, message, update.message);
         }
       } break;
@@ -77,7 +77,7 @@ const MessagesApiManager = new class {
           const message = this.messages.get(msgId);
           if (message) {
             this.messages.delete(msgId);
-            const chatId = this.getPeerId(message.to_id);
+            const chatId = this.getMessageDialogPeerId(message);
             this.updateChatDeletedMessage(chatId, message);
           }
         }
@@ -120,6 +120,9 @@ const MessagesApiManager = new class {
         if (dialog) {
           dialog.draft = update.draft;
         }
+      } break;
+      case 'updateMessagePoll': {
+        this.emitter.trigger('messagePollUpdate', update);
       } break;
       default: {
         console.log('Unhandled update', update._, update);
@@ -460,7 +463,7 @@ const MessagesApiManager = new class {
       if (chatMessages && chatMessages.length) {
         dialog.top_message = chatMessages[0].id;
       } else {
-        console.log('delete dialog.top_message', {dialog, chatMessages});
+        console.log('delete dialog.top_message', {dialog, chatMessages, chatId, message});
         delete dialog.top_message;
       }
       this.emitter.trigger('dialogTopMessageUpdate', {dialog});
@@ -651,9 +654,13 @@ const MessagesApiManager = new class {
     }
   }
 
-  getPeerById(peerId) {
+  getPeerById(peerId, type = '') {
     if (this.chats.has(peerId)) {
       return this.getChatPeer(this.chats.get(peerId));
+    } else if (type === 'channel') {
+      return {_: 'peerChannel', channel_id: peerId};
+    } else if (type === 'chat') {
+      return {_: 'peerChat', chat_id: peerId};
     } else {
       return {_: 'peerUser', user_id: peerId};
     }

@@ -349,7 +349,7 @@ const ChatsController = new class {
       const user = MessagesApiManager.users.get(message.from_id);
       const userName = MessagesApiManager.getUserName(user, false);
       result.prependHtml`<span class="chats_item_message_author_label">${userName}:</span> `;
-    } else if (message.out) {
+    } else if (message.out && message.from_id) {
       result.prependHtml`<span class="chats_item_message_author_label">You:</span> `;
     }
     return result;

@@ -10,6 +10,10 @@ const keys = {
   'chats_n_followers': ['', '{n} follower', '{n} followers'],
 
   'date_n_minutes_ago': ['', '{} minute ago', '{} miinutes ago'],
+
+  'poll_n_voted': ['No votes', '{n} voted', '{n} voted'],
+  'poll_n_answered': ['Nobody answered yet', '{n} answered', '{n} answered'],
+  'poll_n_more_voters': ['', 'Show {} more voter', 'Show {} more voters'],
 };
 
 const I18n = new class {

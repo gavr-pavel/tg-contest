@@ -15,7 +15,7 @@
   top: 0;
   right: 0;
   bottom: 0;
-  background: url(bg.jpg) center;
+  background: url('./bg.jpg') center;
   background-size: cover;
   filter: blur(10px);
 }
@@ -38,10 +38,10 @@
   justify-content: flex-end;
   max-width: 740px;
   margin: 0 auto;
-  padding: 16px 20px 25px;
+  padding: 50px 20px 5px;
   box-sizing: border-box;
   .mobile_view & {
-    padding: 8px;
+    padding: 50px 12px 5px;
   }
 }
 
@@ -58,6 +58,37 @@
   flex-direction: column;
   width: 100%;
   box-sizing: border-box;
+}
+
+
+.messages_group-author {
+  position: relative;
+}
+
+.messages_group_tail {
+  display: none;
+  position: absolute;
+  bottom: 5px;
+  width: 7px;
+  height: 17px;
+  margin-left: -7px;
+  background: svg('../icons/bubble_tail_left.svg', (path: (fill: white))) no-repeat center;
+  &:last-of-type { // last <a> is author photo
+    display: block;
+  }
+  .message-type-service + &,
+  .message-type-sticker + &,
+  .message-type-emoji + &,
+  .message-has-thumb:not(.message-has-caption) + & {
+    display: none;
+  }
+}
+
+.messages_group_tail-out {
+  left: auto;
+  right: 0;
+  margin-right: -7px;
+  background: svg('../icons/bubble_tail_right.svg', (path: (fill: #F1FEE1))) no-repeat center;
 }
 
 .messages_group-author-with-photo {
@@ -104,12 +135,23 @@
     top: 0;
     width: 100%;
     height: 100%;
-    border-radius: 5px;
     background: rgba(84, 162, 175, 0.3);
     pointer-events: none;
     opacity: 0;
     visibility: hidden;
     transition: opacity 3s, visibility 3s;
+  }
+}
+.message-has-thumb:not(.message-has-caption) {
+  border-bottom-left-radius: 10px;
+}
+
+.message-wiggle {
+  animation: wiggle .2s;
+  @keyframes wiggle {
+    25% { transform: rotate(2deg); }
+    50% { transform: rotate(-2deg); }
+    75% { transform: rotate(2deg); }
   }
 }
 
@@ -128,6 +170,9 @@
     color: #65AB5A;
   }
 }
+.message-has-thumb:not(.message-has-caption) {
+  border-bottom-right-radius: 10px;
+}
 
 .message-stick-to-next {
   margin-bottom: -1px;
@@ -139,7 +184,7 @@
   }
 }
 
-.message-stick-to-prev {
+.message-stick-to-prev:not(:first-child) {
   &:not(.message-out) {
     border-top-left-radius: 5px;
   }
@@ -296,11 +341,12 @@
   pointer-events: none;
 }
 .message_media_thumb_round_progress_circle {
+  --progress-value: 0;
   fill: none;
   stroke: rgba(255, 255, 255, 0.4);
   stroke-width: 0.8;
   stroke-linecap: round;
-  stroke-dasharray: 0, 135;
+  stroke-dasharray: calc(var(--progress-value) * 135), 135;
 }
 
 .message_media_caption {
@@ -445,7 +491,7 @@
     left: 100%;
     background: #fff;
     padding: 5px 10px;
-    border: 1px solid #DADCE0;
+    border: 1px solid $border_gray_color;
     border-radius: 10px;
     max-width: 200px;
   }

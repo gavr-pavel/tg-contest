@@ -25,6 +25,8 @@ $primary_green_color: #65AB5A;
 $secondary_gray_color: #717579;
 $error_red_color: #D24C47;
 
+$border_gray_color: #DADCE0;
+
 $icon_blue_color: $primary_blue_color;
 $icon_gray_color: $secondary_gray_color;
 $icon_mediumgray_color: #8E969B;
@@ -40,6 +42,7 @@ $icon_lightgray_color: #ACB2B6;
 @import "messages_form";
 @import "document";
 @import "poll";
+@import "poll_results";
 @import "media_view";
 @import "emoji_dropdown";
 
@@ -104,7 +107,7 @@ pre {
   display: grid;
   grid-template: auto / auto 1fr auto;
   margin: 0 auto;
-  box-shadow: 0 0 0 1px #DADCE0;
+  box-shadow: 0 0 0 1px $border_gray_color;
 }
 
 .mobile_view {
@@ -178,7 +181,7 @@ pre {
   height: 47px;
   line-height: 47px;
   font-size: 15px;
-  border-bottom: 1px solid #DADCE0;
+  border-bottom: 1px solid $border_gray_color;
 }
 
 .nav_tabs_item {
@@ -238,4 +241,10 @@ pre {
   height: 100%;
   background: svg('../icons/avatar_deletedaccount_svg.svg', (path: (fill: white))) no-repeat center;
   background-size: cover;
+}
+
+._cut_text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

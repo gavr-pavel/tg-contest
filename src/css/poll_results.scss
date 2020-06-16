@@ -1,0 +1,69 @@
+.poll_results_sidebar {
+  overflow: auto;
+}
+
+.poll_results_header {
+  margin: 20px 25px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.poll_results_option {
+  padding: 20px 0;
+  border-top: 1px solid $border_gray_color;
+  .mobile_view & {
+    padding: 15px 0;
+  }
+}
+
+.poll_results_option_header {
+  margin: 0 24px;
+  color: #717579;
+  font-weight: 500;
+  font-size: 15px;
+  display: flex;
+  .mobile_view & {
+    margin: 0 18px 9px;
+  }
+}
+
+.poll_results_option_title {
+  margin-right: 20px;
+}
+
+.poll_results_option_percent {
+  margin-left: auto;
+}
+
+.poll_results_option_voters:not(:empty) {
+  margin-top: 9px;
+}
+
+.poll_results_option_votes_item {
+  display: flex;
+  align-items: center;
+  padding: 9px 20px;
+  .mobile_view & {
+    padding: 9px 12px;
+  }
+}
+
+.poll_results_option_votes_item_photo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 23px;
+}
+
+.poll_results_option_votes_item_name {
+  font-size: 16px;
+}
+
+.poll_results_option_show_more {
+  padding: 18px 20px 18px 75px;
+  margin-bottom: -9px;
+  background: svg('../icons/down_svg.svg', (path: (fill: $icon_gray_color))) no-repeat 24px center;
+  font-size: 16px;
+  cursor: pointer;
+}
