@@ -120,11 +120,20 @@
 }
 
 .media_view_caption_text {
-  padding: 10px;
+  --line-height: 18px;
+  --max-lines: 5;
+  line-height: var(--line-height);
+  max-height: calc(var(--line-height) * var(--max-lines));
+  padding: 10px 10px 0;
   max-width: 720px;
   text-align: center;
   color: #fff;
   opacity: 0.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--max-lines);
   &:hover {
     opacity: 1;
   }

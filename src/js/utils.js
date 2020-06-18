@@ -404,7 +404,7 @@ function initAnimation(callback) {
 function attachMenuListener(el, callback) {
   if (isTouchDevice()) {
     let timeoutId;
-    el.addEventListener('touchstart', () => {
+    el.addEventListener('touchstart', (event) => {
       const onTouchEnd = (event) => {
         if (timeoutId) {
           clearTimeout(timeoutId);
@@ -418,13 +418,13 @@ function attachMenuListener(el, callback) {
       el.addEventListener('touchmove', onTouchEnd);
       timeoutId = setTimeout(() => {
         timeoutId = null;
-        callback();
+        callback(event);
       }, 300);
     });
   } else {
     el.addEventListener('contextmenu', (event) => {
       event.preventDefault();
-      callback();
+      callback(event);
     });
   }
 }

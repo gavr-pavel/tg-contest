@@ -83,7 +83,7 @@ class ApiConnection {
   }
 
   async callMethod(method, params = {}, force = false) {
-    if (!this.connectionReady && ! force) {
+    if (!this.connectionReady && !force) {
       await this.connectionDefered.promise;
     }
     // console.log('[API] calling method', {method, params});

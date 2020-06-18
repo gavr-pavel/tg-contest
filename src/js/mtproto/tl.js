@@ -343,16 +343,15 @@ class TLSerialization {
   setObjectFlags(object, constructorData) {
     for (const param of constructorData.params) {
       const type = param.type;
-      if (type.indexOf('?') !== -1) {
+      if (type === '#') {
+        object[param.name] = 0;
+      } else if (type.indexOf('?') !== -1) {
         const condType = type.split('?');
-        const [field, bit] = condType[0].split('.');
-        if (object[param.name] === void(0)) {
+        const [flagsField, flagsBit] = condType[0].split('.');
+        if (object[param.name] === void(0) || condType[1] === 'true' && !object[param.name]) {
           continue;
         }
-        if (condType[1] === 'true' && !object[param.name]) {
-          continue;
-        }
-        object[field] = (object[field] || 0) | (1 << bit);
+        object[flagsField] |= (1 << flagsBit);
       }
     }
   }

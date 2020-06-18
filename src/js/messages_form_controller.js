@@ -20,7 +20,9 @@ const MessagesFormController = new class {
       <div class="messages_form_input_wrap">
         <textarea class="messages_form_input" placeholder="Message" data-js-label="input"></textarea>
         <button class="messages_form_emoji_button" data-js-label="emoji_button"></button>
-        <button class="messages_form_media_button" data-js-label="media_button"></button>
+        <div class="mdc-menu-surface--anchor">
+          <button class="messages_form_media_button" data-js-label="media_button"></button>
+        </div>
       </div>
       <button class="messages_form_cancel_button mdc-icon-button" data-js-label="cancel_button" hidden></button>
       <button class="messages_form_submit_button mdc-icon-button" data-js-label="submit_button"></button>

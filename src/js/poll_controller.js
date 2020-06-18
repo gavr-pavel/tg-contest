@@ -1,11 +1,8 @@
-import {$, $$, formatCountLong, formatDuration, initAnimation, Tpl} from './utils';
+import {$, $$, formatDuration, initAnimation, Tpl} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {ChatsController} from './chats_controller';
 import {PollResultsController} from './poll_results_controller';
-import {I18n} from './i18n';
 import {ApiClient} from './api/api_client';
-
-const DEBUG = true;
 
 class PollController {
   constructor(messageEl, message) {
@@ -37,11 +34,6 @@ class PollController {
     }
 
     MessagesApiManager.emitter.on('messagePollUpdate', this.onPollUpdate);
-
-    if (DEBUG) {
-      messageEl.pollController = this;
-      window.PollsWeekSet.add(this);
-    }
   }
 
   onOptionClick = (event) => {
@@ -251,7 +243,5 @@ class PollController {
     MessagesApiManager.emitter.off('messagePollUpdate', this.onPollUpdate);
   }
 }
-
-window.PollsWeekSet = new WeakSet();
 
 export {PollController};

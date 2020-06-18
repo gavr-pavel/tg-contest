@@ -1,4 +1,4 @@
-import {$, Tpl, buildLoaderElement, attachRipple} from './utils';
+import {$, Tpl, buildLoaderElement, attachRipple, attachMenuListener} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 
 const ArchivedChatsController = new class {
@@ -27,7 +27,10 @@ const ArchivedChatsController = new class {
 
     if (MessagesApiManager.archivedDialogs) {
       this.renderChats(MessagesApiManager.archivedDialogs);
-      this.saveOffset(MessagesApiManager.archivedDialogs.slice(-1)[0]);
+      const lastItem = MessagesApiManager.archivedDialogs.slice(-1)[0];
+      if (!lastItem.pinned) {
+        this.saveOffset(lastItem);
+      }
     }
     this.loadMore();
   }
@@ -78,32 +81,30 @@ const ArchivedChatsController = new class {
     const frag = document.createDocumentFragment();
     for (const dialog of dialogs) {
       const peerId = MessagesApiManager.getPeerId(dialog.peer);
-      if (this.chatElements.has(peerId)) {
-        continue;
-      }
-      const el = this.buildChatPreviewElement(dialog);
+      const el = ChatsController.chatElements.get(peerId) || ChatsController.buildChatPreviewElement(dialog);
       frag.append(el);
     }
     this.scrollContainer.append(frag);
   }
 
-  buildChatPreviewElement(dialog) {
-    const peerId = MessagesApiManager.getPeerId(dialog.peer);
-    const el = Tpl.html`
-      <div class="chats_item" data-peer-id="${peerId}">
-        <div class="chats_item_content mdc-ripple-surface">
-          <div class="chats_item_photo"></div>
-          <div class="chats_item_text"></div>        
-        </div>
-      </div>
-    `.buildElement();
-    ChatsController.renderChatPreviewContent(el, dialog);
-    ChatsController.loadChatPhoto(el, dialog);
-    el.addEventListener('click', ChatsController.onChatClick);
-    attachRipple(el.firstElementChild);
-    this.chatElements.set(peerId, el);
-    return el;
-  }
+  // buildChatPreviewElement(dialog) {
+  //   const peerId = MessagesApiManager.getPeerId(dialog.peer);
+  //   const el = Tpl.html`
+  //     <div class="chats_item" data-peer-id="${peerId}">
+  //       <div class="chats_item_content mdc-ripple-surface">
+  //         <div class="chats_item_photo"></div>
+  //         <div class="chats_item_text"></div>
+  //       </div>
+  //     </div>
+  //   `.buildElement();
+  //   ChatsController.renderChatPreviewContent(el, dialog);
+  //   ChatsController.loadChatPhoto(el, dialog);
+  //   el.addEventListener('click', ChatsController.onChatClick);
+  //   attachRipple(el.firstElementChild);
+  //   attachMenuListener(el, ChatsController.onChatMenu);
+  //   ChatsController.chatElements.set(peerId, el);
+  //   return el;
+  // }
 };
 
 window.ArchivedChatsController = ArchivedChatsController;

@@ -112,10 +112,6 @@ const MessagesController = new class {
   }
 
   async setChatByUsername(username) {
-    if (username === 'paultired') {
-      return this.setChatByPeerType(1169777524, 'channel');
-    }
-    return;
     const {peer, chats, users} = await ApiClient.callMethod('contacts.resolveUsername', {username});
     MessagesApiManager.updateUsers(users);
     MessagesApiManager.updateChats(chats);
@@ -226,7 +222,7 @@ const MessagesController = new class {
             });
       }
     });
-    attachRipple(peerEl);
+    // attachRipple(peerEl);
 
     const photoEl = $('.messages_header_peer_photo', this.header);
     ChatsController.loadPeerPhoto(photoEl, dialog.peer);
@@ -393,10 +389,10 @@ const MessagesController = new class {
     }
 
     if (unread) {
-      // const unreadEl = Tpl.html`<div class="message-type-service message-type-unread">Unread messages</div>`.buildElement();
-      // el.after(unreadEl);
       const unreadEl = $('.message-type-unread', this.container);
-      unreadEl && unreadEl.scrollIntoView({block: 'center'});
+      if (unreadEl) {
+        this.scrollContainer.scrollTop = unreadEl.offsetTop - 120;
+      }
     } else {
       const messageRect = el.getBoundingClientRect();
       const containerRect = this.scrollContainer.getBoundingClientRect();
@@ -537,8 +533,12 @@ const MessagesController = new class {
 
     if (this.scrolling) {
       this.scrollContainer.style.overflow = 'hidden';
-      this.scrollContainer.scrollTop = prevScrollTop + (this.scrollContainer.scrollHeight - prevScrollHeight);
-      this.scrollContainer.style.overflow = '';
+      const newScrollTop = prevScrollTop + (this.scrollContainer.scrollHeight - prevScrollHeight);
+      // this.scrollContainer.scrollTop = newScrollTop;
+      requestAnimationFrame(() => {
+        this.scrollContainer.scrollTop = newScrollTop;
+        this.scrollContainer.style.overflow = '';
+      });
     } else {
       if (this.scrollContainer.scrollHeight <= this.scrollContainer.offsetHeight) {
         setTimeout(this.loadMore, 0);
@@ -1489,7 +1489,7 @@ const MessagesController = new class {
     let thumbWidth;
     let thumbHeight;
     if (mediaThumbData) {
-      let maxW = 300;
+      let maxW = Math.min(300, window.screen.width - 100);
       let maxH = 200;
       if (mediaThumbData.type === 'sticker') {
         maxW = mediaThumbData.emoji ? 100 : 150;
@@ -1499,8 +1499,8 @@ const MessagesController = new class {
       const videoSize = mediaThumbData.video_sizes && mediaThumbData.video_sizes[0];
       if (photoSize || videoSize) {
         [thumbWidth, thumbHeight] = this.getThumbWidthHeight((photoSize || videoSize), maxW, maxH);
-        if (captionText && captionText.length > 100 && thumbWidth < 300) {
-          thumbWidth = 300;
+        if (captionText && captionText.length > 50 && thumbWidth < maxW) {
+          thumbWidth = maxW ;
         }
         let durationString = '';
         if (mediaThumbData.type === 'video' || mediaThumbData.type === 'round' || mediaThumbData.type === 'gif') {

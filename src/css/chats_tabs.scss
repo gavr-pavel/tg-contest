@@ -1,0 +1,15 @@
+.chats_tabs {
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.chats_tabs_list.nav_tabs_container {
+  justify-content: start;
+  padding: 0 10px;
+}
+
+.chats_tabs_item.nav_tabs_item {
+  width: auto;
+  padding: 0 6px;
+}

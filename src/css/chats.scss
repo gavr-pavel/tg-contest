@@ -94,6 +94,10 @@
   position: relative;
   touch-action: manipulation;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  &[hidden] {
+    display: none;
+  }
 }
 
 .chats_item_content,
@@ -122,17 +126,16 @@
   background: #F4F4F5;
 }
 
-.chats_item_pinned + .chats_item:not(.chats_item_pinned) {
+.chats_item-pinned:not([hidden]) + .chats_item:not(.chats_item-pinned) {
   margin-top: 13px;
-}
-
-.chats_item_pinned + .chats_item:not(.chats_item_pinned)::before {
-  content: '';
-  position: absolute;
-  left: -10px;
-  right: -10px;
-  top: -7px;
-  border-top: 1px solid $border_gray_color;
+  &::before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    right: -10px;
+    top: -7px;
+    border-top: 1px solid $border_gray_color;
+  }
 }
 
 .chats_item_photo,
@@ -254,4 +257,43 @@
   &:hover {
     box-shadow: 0 10px 15px rgba(0, 0, 0, .3);
   }
+}
+
+//.chats_dialog_menu {
+//  position: absolute;
+//  left: auto !important;
+//  right: 45px !important;
+//  top: 0 !important;
+//  bottom: auto !important;
+//}
+
+.chats_dialog_menu_item  {
+  padding-left: 73px;
+  padding-right: 30px;
+  background: no-repeat 16px center;
+}
+.chats_dialog_menu_item-pin {
+  background-image: svg('../icons/pin_svg.svg', (path: (fill: $secondary_gray_color)));
+}
+.chats_dialog_menu_item-mute {
+  background-image: svg('../icons/mute_svg.svg', (path: (fill: $secondary_gray_color)));
+}
+.chats_dialog_menu_item-unmute {
+  background-image: svg('../icons/unmute_svg.svg', (path: (fill: $secondary_gray_color)));
+}
+.chats_dialog_menu_item-pin {
+  background-image: svg('../icons/pin_svg.svg', (path: (fill: $secondary_gray_color)));
+}
+.chats_dialog_menu_item-unpin {
+  background-image: svg('../icons/unpin_svg.svg', (path: (fill: $secondary_gray_color)));
+}
+.chats_dialog_menu_item-archive {
+  background-image: svg('../icons/archive_svg.svg', (path: (fill: $secondary_gray_color)));
+}
+.chats_dialog_menu_item-unarchive {
+  background-image: svg('../icons/archive_svg.svg', (path: (fill: $secondary_gray_color)));
+}
+.chats_dialog_menu_item-delete {
+  background-image: svg('../icons/delete_svg.svg', (path: (fill: $error_red_color)));
+  color: $error_red_color;
 }
