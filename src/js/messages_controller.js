@@ -4,7 +4,7 @@ import {
   formatCountShort, formatCountLong,
   formatDateFull,
   formatDateRelative,
-  formatTime, formatDuration, initAnimation, attachRipple, downloadFile
+  formatTime, formatDuration, initAnimation, attachRipple, downloadFile, $$
 } from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MediaApiManager} from './api/media_api_manager';
@@ -12,10 +12,10 @@ import {MediaViewController} from './media_view_controller';
 import {getEmojiMatches} from './emoji_config';
 import {MessagesFormController} from './messages_form_controller';
 import {ChatsController} from "./chats_controller";
-import {MessagesSearchController} from './messages_search_controller';
 import {ApiClient} from './api/api_client';
 import {I18n} from './i18n';
 import {App} from './app';
+import {MessagesSearchController} from './messages_search_controller';
 
 const MessagesController = new class {
   messageElements = new Map();
@@ -47,6 +47,7 @@ const MessagesController = new class {
     MessagesApiManager.emitter.on('chatEditMessage', this.onEditMessage);
     MessagesApiManager.emitter.on('chatDeleteMessage', this.onDeleteMessage);
     MessagesApiManager.emitter.on('userStatusUpdate', this.onUserStatusUpdate);
+    MessagesApiManager.emitter.on('dialogOutboxReadUpdate', this.onOutboxReadUpdate);
   }
 
   setChat(dialog, messageId = 0) {
@@ -135,7 +136,7 @@ const MessagesController = new class {
     MessagesFormController.clear();
     MediaViewController.abort();
     this.ChatInfoController && this.ChatInfoController.close();
-    MessagesSearchController.close();
+    this.MessagesSearchController && this.MessagesSearchController.close();
 
     this.header.hidden = true;
     this.footer.hidden = true;
@@ -211,7 +212,7 @@ const MessagesController = new class {
 
     const peerEl = $('.messages_header_peer');
     peerEl.addEventListener('click', () => {
-      MessagesSearchController.close();
+      this.MessagesSearchController && MessagesSearchController.close();
       if (this.ChatInfoController && this.ChatInfoController.isOpen()) {
         this.ChatInfoController.close();
       } else {
@@ -240,7 +241,14 @@ const MessagesController = new class {
 
     $('.messages_header_action_search', this.header).addEventListener('click', () => {
       this.ChatInfoController && this.ChatInfoController.close();
-      MessagesSearchController.show(this.chatId);
+      if (this.MessagesSearchController && this.MessagesSearchController.isOpen()) {
+        this.MessagesSearchController.close();
+      } else {
+        import('./messages_search_controller')
+            .then(({MessagesSearchController}) => {
+              MessagesSearchController.show(this.chatId);
+            });
+      }
     });
 
     $('.messages_header_back', this.header).addEventListener('click', () => {
@@ -366,6 +374,7 @@ const MessagesController = new class {
       return;
     }
     this.clearMessages();
+    this.container.appendChild(this.loader);
     this.loading = true;
     MessagesApiManager.loadMessages(this.dialog.peer, messageId, 20, -10)
         .then((messages) => {
@@ -373,6 +382,7 @@ const MessagesController = new class {
           this.scrollToMessage(messageId, unread);
         })
         .catch((error) => {
+          debugger;
           const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
           App.alert(errorText);
         })
@@ -431,7 +441,9 @@ const MessagesController = new class {
     const {dialog, message} = event.detail;
     if (dialog === this.dialog) {
       // todo remove pending message
-      this.appendHistory([message]);
+      // if (this.maxMsgId === 0) {
+        this.appendHistory([message]);
+      // }
     }
   };
 
@@ -464,6 +476,19 @@ const MessagesController = new class {
       statusEl.classList.toggle('messages_header_peer_status-online', user.status._ === 'userStatusOnline');
     }
   };
+
+  onOutboxReadUpdate = (event) => {
+    const {dialog} = event.detail;
+    if (dialog === this.dialog) {
+      this.messageElements.forEach((el) => {
+        const msgId = +el.dataset.id;
+        if (msgId <= dialog.read_outbox_max_id && el.classList.contains('message-out')) {
+          const statusEl = $('.message_status', el);
+          statusEl && statusEl.classList.add('message_status-read');
+        }
+      });
+    }
+  }
 
   onGlobalClick = (event) => {
     let target = event.target;
@@ -534,10 +559,10 @@ const MessagesController = new class {
     if (this.scrolling) {
       this.scrollContainer.style.overflow = 'hidden';
       const newScrollTop = prevScrollTop + (this.scrollContainer.scrollHeight - prevScrollHeight);
-      // this.scrollContainer.scrollTop = newScrollTop;
+      this.scrollContainer.scrollTop = newScrollTop;
+      this.scrollContainer.style.overflow = '';
       requestAnimationFrame(() => {
         this.scrollContainer.scrollTop = newScrollTop;
-        this.scrollContainer.style.overflow = '';
       });
     } else {
       if (this.scrollContainer.scrollHeight <= this.scrollContainer.offsetHeight) {
@@ -547,9 +572,8 @@ const MessagesController = new class {
       }
     }
 
-    if (this.dialog.unread_count) {
-      MessagesApiManager.readHistory(this.dialog, this.maxMsgId);
-    }
+    this.markReadMessages(messages);
+    this.checkMessagesCleanup(false);
   }
 
   appendHistory(messages) {
@@ -573,8 +597,89 @@ const MessagesController = new class {
 
     this.maxMsgId = messages[0].id;
 
-    if (!scrolling) {
+    if (!scrolling && this.maxMsgId === this.dialog.top_message) {
       this.scrollToBottom(true);
+    }
+
+    this.markReadMessages(messages);
+    this.checkMessagesCleanup(true);
+  }
+
+  markReadMessages(renderedMessages) {
+    const dialog = this.dialog;
+    if (dialog.unread_count && this.maxMsgId > dialog.read_inbox_max_id) {
+      const readCount = renderedMessages.filter(message => message.id > dialog.read_inbox_max_id).length;
+      MessagesApiManager.readHistory(dialog, this.maxMsgId, readCount);
+    }
+  }
+
+  checkMessagesCleanup(down) {
+    const MAX_SIZE = 100;
+    const elementsMap = this.messageElements;
+    if (elementsMap.size < MAX_SIZE) {
+      return;
+    }
+    const elementsList = $$('.message', this.container);
+    const elementsCount = elementsList.length;
+    const affectedAuthorGroups = new Set();
+    const affectedDateGroups = new Set();
+
+    const prevScrollTop = this.scrollContainer.scrollTop;
+    const prevScrollHeight = this.scrollContainer.scrollHeight;
+
+    if (down) {
+      for (let i = 0; i < elementsCount; i++) {
+        const el = elementsList[i];
+        if (i < elementsCount - MAX_SIZE) {
+          removeMessage(el);
+        } else {
+          this.minMsgId = +el.dataset.id;
+          break;
+        }
+      }
+    } else {
+      for (let i = elementsList.length - 1; i > 0; i--) {
+        const el = elementsList[i];
+        if (i >= MAX_SIZE) {
+          removeMessage(el);
+        } else {
+          this.maxMsgId = +el.dataset.id;
+          break;
+        }
+      }
+    }
+
+    affectedAuthorGroups.forEach((group) => checkAuthorGroup(group));
+    affectedDateGroups.forEach((group) => checkDateGroup(group));
+
+    if (down) {
+      const newScrollTop = prevScrollTop + (this.scrollContainer.scrollHeight - prevScrollHeight);
+      this.scrollContainer.scrollTop = newScrollTop;
+    }
+
+    function removeMessage(el) {
+      affectedAuthorGroups.add(el.parentNode);
+      el.remove();
+      elementsMap.delete(+el.dataset.id);
+    }
+
+    function checkAuthorGroup(authorGroup) {
+      for (const el of authorGroup.children) {
+        if (el.classList.contains('message')) {
+          return;
+        }
+      }
+      affectedDateGroups.add(authorGroup.parentNode);
+      authorGroup.remove();
+    }
+
+    function checkDateGroup(dateGroup) {
+      for (const el of dateGroup.children) {
+        if (el.classList.contains('messages_group-author')) {
+          return;
+        }
+      }
+      dateGroup.remove();
     }
   }
 
@@ -1035,10 +1140,10 @@ const MessagesController = new class {
       case 'messageMediaWebPage': {
         if (media.webpage.type !== 'photo' && media.webpage.document) {
           const document = media.webpage.document;
+          const attributes = MediaApiManager.getDocumentAttributes(document);
           if (media.webpage.type === 'video' || media.webpage.type === 'gif') {
-            return {type: media.webpage.type, object: document, sizes: document.thumbs};
+            return {type: media.webpage.type, object: document, sizes: document.thumbs, attributes};
           } else {
-            const attributes = MediaApiManager.getDocumentAttributes(document);
             if (attributes.type === 'video' || attributes.type === 'gif') {
               return {type: attributes.type, object: document, sizes: document.thumbs, attributes};
             }
@@ -1504,7 +1609,11 @@ const MessagesController = new class {
         }
         let durationString = '';
         if (mediaThumbData.type === 'video' || mediaThumbData.type === 'round' || mediaThumbData.type === 'gif') {
-          durationString = mediaThumbData.type === 'gif' ? 'GIF' : formatDuration(mediaThumbData.attributes.duration);
+          if (mediaThumbData.attributes) {
+            durationString = mediaThumbData.type === 'gif' ? 'GIF' : formatDuration(mediaThumbData.attributes.duration);
+          } else {
+            debugger;
+          }
         }
         result.appendHtml`
         <div class="message_media_thumb message_media_thumb-${mediaThumbData.type}" style="width:${thumbWidth}px;height:${thumbHeight}px;">

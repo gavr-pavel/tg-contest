@@ -1,4 +1,4 @@
-(window.webpackJsonp=window.webpackJsonp||[]).push([[8],{39:function(t,e,s){"use strict";s.r(e);var o=s(0),i=s(1),l=s(11),n=s(9);function r(t,e,s){return e in t?Object.defineProperty(t,e,{value:s,enumerable:!0,configurable:!0,writable:!0}):t[e]=s,t}const a=new class{constructor(){r(this,"renderOptions",(t,e,s)=>{const l=document.createDocumentFragment();for(let r=0;r<t.length;r++){const{count:a,users:c,votes:d,next_offset:p}=t[r];i.a.updateUsers(c);const h=o.e.html`
+(window.webpackJsonp=window.webpackJsonp||[]).push([[8],{31:function(t,e,s){"use strict";s.r(e);var o=s(0),i=s(1),l=s(11),n=s(9);function r(t,e,s){return e in t?Object.defineProperty(t,e,{value:s,enumerable:!0,configurable:!0,writable:!0}):t[e]=s,t}const a=new class{constructor(){r(this,"renderOptions",(t,e,s)=>{const l=document.createDocumentFragment();for(let r=0;r<t.length;r++){const{count:a,users:c,votes:d,next_offset:p}=t[r];i.a.updateUsers(c);const h=o.e.html`
         <div class="poll_results_option" data-index="${r}">
           <div class="poll_results_option_header _cut_text">
             <div class="poll_results_option_title _cut_text">${e.answers[r].text}</div>

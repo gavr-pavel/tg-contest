@@ -393,7 +393,7 @@ const ChatsController = new class {
       this.updateChatStatus(el, user.status);
     }
     el.addEventListener('click', this.onChatClick);
-    // el.addEventListener('pointerup', this.onChatClick);
+    el.hidden = !this.checkDialogFilter(dialog, this.filter);
     if (!isTouchDevice()) {
       attachRipple(el.firstElementChild);
     }

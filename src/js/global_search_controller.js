@@ -70,7 +70,7 @@ const GlobalSearchController = new class {
 
   onScroll = () => {
     const container = this.container;
-    if (!this.loading && !this.noMore && container.scrollTop + container.offsetHeight > container.scrollHeight - 500) {
+    if (!this.loading && !this.noMore && this.nextRate && container.scrollTop + container.offsetHeight > container.scrollHeight - 500) {
       this.loadMore();
     }
   };

@@ -3,6 +3,7 @@ import {MessagesApiManager} from './api/messages_api_manager';
 import {ChatsController} from './chats_controller';
 import {I18n} from './i18n';
 import {MediaViewController} from './media_view_controller';
+import {MessagesController} from './messages_controller';
 
 const MessagesSearchController = new class {
   show(peerId) {
@@ -34,10 +35,15 @@ const MessagesSearchController = new class {
     }, {once: true});
 
     this.listWrap = $('.messages_search_results_list', this.container);
+    this.listWrap.onscroll = this.onScroll;
 
     document.addEventListener('keyup', this.onKeyUp);
 
     this._open = true;
+  }
+
+  isOpen() {
+    return Boolean(this._open);
   }
 
   close = () => {
@@ -57,6 +63,8 @@ const MessagesSearchController = new class {
 
   onInput = () => {
     const q = this.input.value.trim();
+    this.lastQuery = q;
+    this.offsetId = 0;
     if (q) {
       this.loadResults(q);
     } else {
@@ -64,12 +72,12 @@ const MessagesSearchController = new class {
     }
   };
 
-  async loadResults(text) {
+  async loadResults(text, offsetId = 0) {
     const res = await ApiClient.callMethod('messages.search', {
       peer: MessagesApiManager.getInputPeerById(this.peerId),
       q: text,
       filter: {_: 'inputMessagesFilterEmpty'},
-      offset_id: 0,
+      offset_id: offsetId,
       limit: 30,
     });
 
@@ -79,9 +87,16 @@ const MessagesSearchController = new class {
 
     const count = res.count || res.messages.length;
 
-    this.listWrap.innerHTML = '';
-    this.renderResultsHeader(count);
+    if (!offsetId) {
+      this.listWrap.innerHTML = '';
+      this.renderResultsHeader(count);
+    }
     this.renderResults(res.messages);
+    if (res.messages.length) {
+      this.offsetId = res.messages.slice(-1)[0].id;
+    } else {
+      this.offsetId = 0;
+    }
   }
 
   renderResultsHeader(count) {
@@ -100,7 +115,7 @@ const MessagesSearchController = new class {
       const date = ChatsController.formatMessageDate(message);
       const messagePreview = ChatsController.getMessagePreview(message);
       const el = Tpl.html`
-        <div class="messages_search_results_item">
+        <div class="messages_search_results_item" data-id="${message.id}">
           <div class="messages_search_results_item_content mdc-ripple-surface">
             <div class="messages_search_results_item_photo"></div>
             <div class="messages_search_results_item_text">
@@ -116,17 +131,41 @@ const MessagesSearchController = new class {
         </div>
       `.buildElement();
       this.loadMessagePeerPhoto(el, peer);
+      el.addEventListener('click', this.onMessageClick);
       frag.append(el);
     }
 
-    const listWrap = $('.messages_search_results_list', this.container);
-    listWrap.append(frag);
+    this.listWrap.append(frag);
   }
 
   loadMessagePeerPhoto(messageEl, peer) {
     const photoEl = $('.messages_search_results_item_photo', messageEl);
     ChatsController.loadPeerPhoto(photoEl, peer);
   }
+
+  onScroll = () => {
+    const container = this.listWrap;
+    if (!this.loading && !this.noMore && this.offsetId && container.scrollTop + container.offsetHeight > container.scrollHeight - 500) {
+      this.loadMore();
+    }
+  }
+
+  loadMore() {
+    if (this.loading) {
+      return;
+    }
+    this.loading = true;
+    this.loadResults(this.lastQuery, this.offsetId)
+        .finally(() => {
+          this.loading = false;
+        });
+  }
+
+  onMessageClick = (event) => {
+    const el = event.currentTarget;
+    const msgId = +el.dataset.id;
+    MessagesController.jumpToMessage(msgId);
+  };
 };
 
 window.MessagesSearchController = MessagesSearchController;

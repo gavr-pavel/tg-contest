@@ -93,6 +93,14 @@ const MessagesApiManager = new class {
           this.emitter.trigger('dialogUnreadCountUpdate', {dialog});
         }
       } break;
+      case 'updateReadHistoryOutbox': {
+        const peerId = this.getPeerId(update.peer);
+        const dialog = this.peerDialogs.get(peerId);
+        if (dialog) {
+          dialog.read_outbox_max_id = update.max_id;
+          this.emitter.trigger('dialogOutboxReadUpdate', {dialog});
+        }
+      } break;
       case 'updateUserStatus': {
         const user = this.users.get(update.user_id);
         if (user) {
@@ -418,8 +426,13 @@ const MessagesApiManager = new class {
   updateDialogs(dialogs) {
     for (const dialog of dialogs) {
       const peerId = this.getPeerId(dialog.peer);
-      this.peerDialogs.set(peerId, dialog);
-      this.replaceDialog(dialog);
+      const dialogOldVersion = this.peerDialogs.get(dialog);
+      if (dialogOldVersion) {
+        Object.keys(dialogOldVersion).forEach(key => delete dialogOldVersion[key]);
+        Object.assign(dialogOldVersion, dialog);
+      } else {
+        this.peerDialogs.set(peerId, dialog);
+      }
     }
   }
 
@@ -535,7 +548,7 @@ const MessagesApiManager = new class {
     }
   }
 
-  async readHistory(dialog, maxId) {
+  async readHistory(dialog, maxId, readCount) {
     if (dialog.peer.channel_id) {
       await ApiClient.callMethod('channels.readHistory', {
         channel: this.getInputPeer(dialog.peer),
@@ -547,8 +560,9 @@ const MessagesApiManager = new class {
         max_id: maxId
       });
     }
-    // dialog.unread_count = 0; // todo fix count actual unread messages left
-    // this.emitter.trigger('dialogUnreadCountUpdate', {dialog});
+    dialog.unread_count = Math.max(0, dialog.unread_count - readCount);
+    dialog.read_inbox_max_id = maxId;
+    this.emitter.trigger('dialogUnreadCountUpdate', {dialog});
   }
 
   saveDraft(peer, message) {
@@ -564,9 +578,7 @@ const MessagesApiManager = new class {
 
   getDialogIndex(dialog, folderId = 0) {
     const list = folderId === 1 ? this.archivedDialogs : this.dialogs;
-    return list.findIndex((item) => {
-      return item.peer._ === dialog.peer._ && this.getPeerId(item.peer) === this.getPeerId(dialog.peer);
-    });
+    return list.findIndex((item) => this.cmpDialogs(item, dialog));
   }
 
   replaceDialog(dialog) {
@@ -576,6 +588,10 @@ const MessagesApiManager = new class {
       const list = folderId === 1 ? this.archivedDialogs : this.dialogs;
       list.splice(index, 1, dialog);
     }
+  }
+
+  cmpDialogs(a, b) {
+    return a.peer._ === b.peer._ && this.getPeerId(a.peer) === this.getPeerId(b.peer);
   }
 
   getMessageAuthorPeer(message) {
