@@ -170,6 +170,9 @@
   display: flex;
   margin: 12px;
   overflow: hidden;
+  .mobile_view & {
+    margin: 12px 4px;
+  }
 }
 
 .chat_info_shared_docs_item {
@@ -367,6 +370,9 @@
 
 .chat_info_shared_audio_item {
   margin: 10px;
+  .mobile_view & {
+    margin: 10px 4px;
+  }
   .document_filename {
     white-space: nowrap;
     overflow: hidden;

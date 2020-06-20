@@ -242,7 +242,6 @@ const MessagesFormController = new class {
     const abortController = new AbortController();
 
     const totalBytes = Array.from(files).reduce((sum, f) => sum + f.size, 0);
-    console.log('totalBytes', totalBytes);
     let totalUploadedBytes = 0;
 
     const pendingMessageTitle = files.length > 1 ? `Uploading 1 file of ${files.length}` : files[0].name;

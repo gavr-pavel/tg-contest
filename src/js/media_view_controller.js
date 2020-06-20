@@ -5,8 +5,6 @@ import {MediaApiManager} from './api/media_api_manager';
 import '../css/media_view.scss';
 
 const MediaViewController = new class {
-  preload = new Map();
-
   constructor() {
     this.container = Tpl.html`
       <div class="media_view" hidden>
@@ -42,7 +40,7 @@ const MediaViewController = new class {
     document.body.appendChild(this.container);
   }
 
-  showPhoto(photo, thumb, message) {
+  choosePhotoSize(sizes) {
     const types = ['x'];
     if (window.innerWidth >= 800) {
       types.unshift('y');
@@ -50,7 +48,11 @@ const MediaViewController = new class {
     if (window.innerWidth >= 812800) {
       types.unshift('w');
     }
-    const photoSize = MediaApiManager.choosePhotoSize(photo.sizes, ...types) || photo.sizes.splice(-1)[0];
+    return MediaApiManager.choosePhotoSize(sizes, ...types) || sizes.splice(-1)[0];
+  }
+
+  showPhoto(photo, thumb, message) {
+    const photoSize = this.choosePhotoSize(photo.sizes);
 
     const state = this.initLoading(photo, thumb, message, photoSize.size);
     const abortController = this.state.abortController;
@@ -235,6 +237,12 @@ const MediaViewController = new class {
     this.dom.nav_left.hidden = curIndex <= 0;
     this.dom.nav_right.hidden = curIndex >= messages.length - 1;
 
+    try {
+      this.preloadNext(curIndex + 1);
+    } catch (e) {
+      console.log(e);
+    }
+
     return messages;
   }
 
@@ -261,6 +269,12 @@ const MediaViewController = new class {
     this.dom.nav_left.hidden = nextIndex <= 0;
     this.dom.nav_right.hidden = nextIndex >= playlist.length - 1;
 
+    try {
+      this.preloadNext(nextIndex + direction);
+    } catch (e) {
+      console.log(e);
+    }
+
     if (mediaData) {
       this.destroyContent();
       if (mediaData.type === 'photo') {
@@ -269,6 +283,26 @@ const MediaViewController = new class {
         MediaViewController.showVideo(mediaData.object, null, message);
       } else if (mediaData.type === 'gif') {
         MediaViewController.showGif(mediaData.object, null, message);
+      }
+    }
+  }
+
+  preloadNext(index) {
+    const playlist = this.state.playlist;
+    if (!playlist) {
+      return;
+    }
+    if (index >= 0 && index < playlist.length) {
+      const mediaData = MessagesController.getMessageMediaThumb(playlist[index]);
+      if (mediaData) {
+        if (mediaData.type === 'photo') {
+          const photo = mediaData.object;
+          const photoSize = this.choosePhotoSize(photo.sizes);
+          FileApiManager.loadPhoto(photo, photoSize.type);
+        } else if (mediaData.type === 'gif') {
+          const document = mediaData.object;
+          FileApiManager.loadDocument(document);
+        }
       }
     }
   }

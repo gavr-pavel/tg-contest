@@ -163,7 +163,7 @@ const MessagesApiManager = new class {
         }
       } break;
       default: {
-        console.log('Unhandled update', update._, update);
+        // console.log('Unhandled update', update._, update);
       }
     }
   }

@@ -96,7 +96,6 @@ class PollController {
 
   initQuizTimer() {
     const poll = this.poll;
-    console.log('poll with timer', poll);
     let closeDate;
     let closePeriod;
     if (poll.close_date) {
