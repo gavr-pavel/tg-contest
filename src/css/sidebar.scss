@@ -1,5 +1,6 @@
 .sidebar_header {
   display: flex;
+  flex-shrink: 0;
   padding: 8px;
   background: #fff;
   position: sticky;
@@ -34,6 +35,7 @@
 .sidebar_extra_menu_button {
   background: svg('../icons/more_svg.svg', (path: (fill: $icon_gray_color))) no-repeat center;
   flex-shrink: 0;
+  margin-right: 5px;
 }
 
 .sidebar_back_button[hidden],

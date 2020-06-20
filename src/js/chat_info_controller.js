@@ -1,11 +1,13 @@
-import {$, attachRipple, formatFileSize, getLabeledElements, Tpl} from './utils';
+import {$, attachRipple, downloadFile, formatDuration, formatFileSize, getLabeledElements, Tpl} from './utils';
 import {MDCCheckbox} from '@material/checkbox';
 import {MessagesApiManager} from "./api/messages_api_manager";
 import {ApiClient} from "./api/api_client";
 import {MediaApiManager} from "./api/media_api_manager";
 import {MessagesController} from "./messages_controller";
 import {ChatsController} from "./chats_controller";
-import {MediaViewController} from "./media_view_controller";
+import {App} from './app';
+
+import '../css/right_sidebar.scss';
 
 const ChatInfoController = new class {
   sharedSteps = {
@@ -17,7 +19,9 @@ const ChatInfoController = new class {
 
   show(peerId) {
     this.container = $('.right_sidebar');
-    this.container.parentNode.hidden = false;
+    this.container.hidden = false;
+    this._open = true;
+    App.onRightSidebarOpen();
 
     if (peerId === this.peerId) {
       return;
@@ -57,42 +61,44 @@ const ChatInfoController = new class {
     }
 
     this.container.innerHTML = Tpl.html`
-      <div class="right_sidebar_scroll_wrap">
-        <div class="sidebar_header">
-          <button type="button" class="sidebar_close_button mdc-icon-button"></button>
-          <div class="sidebar_header_title">Info</div>
-          <button type="button" class="sidebar_extra_menu_button mdc-icon-button"></button>
-        </div>
+      <div class="sidebar_header">
+        <button type="button" class="sidebar_close_button mdc-icon-button"></button>
+        <div class="sidebar_header_title">Info</div>
+        <button type="button" class="sidebar_extra_menu_button mdc-icon-button"></button>
+      </div>
+      <div class="chat_info_scroll_wrap">
         <div class="sidebar_user_info">
           <div class="sidebar_user_photo"></div>
           <div class="sidebar_user_name">${peerName}</div>
           <div class="sidebar_user_desc">${peerDesc}</div>
         </div>
         <div class="chat_info_desc"></div>
-        <div class="nav_tabs_container chat_info_shared_media_nav">
-          <div class="nav_tabs_item chat_info_shared_media_nav_item" data-js-label="nav_media">
-            <div class="nav_tabs_item_label">Media</div>
+        <div class="chat_info_shared_media_container">
+          <div class="nav_tabs_container chat_info_shared_media_nav">
+            <div class="nav_tabs_item chat_info_shared_media_nav_item" data-js-label="nav_media">
+              <div class="nav_tabs_item_label">Media</div>
+            </div>
+            <div class="nav_tabs_item chat_info_shared_media_nav_item" data-js-label="nav_docs">
+              <div class="nav_tabs_item_label">Docs</div>
+            </div>
+            <div class="nav_tabs_item chat_info_shared_media_nav_item" data-js-label="nav_links">
+              <div class="nav_tabs_item_label">Links</div>
+            </div>
+            <div class="nav_tabs_item chat_info_shared_media_nav_item" data-js-label="nav_audio">
+              <div class="nav_tabs_item_label">Audio</div>
+            </div>
           </div>
-          <div class="nav_tabs_item chat_info_shared_media_nav_item" data-js-label="nav_docs">
-            <div class="nav_tabs_item_label">Docs</div>
+          <div class="chat_info_shared_wrap">
+            <div class="chat_info_shared chat_info_shared_media"></div>
+            <div class="chat_info_shared chat_info_shared_docs" hidden></div>
+            <div class="chat_info_shared chat_info_shared_links" hidden></div>
+            <div class="chat_info_shared chat_info_shared_audio" hidden></div>
           </div>
-          <div class="nav_tabs_item chat_info_shared_media_nav_item" data-js-label="nav_links">
-            <div class="nav_tabs_item_label">Links</div>
-          </div>
-          <div class="nav_tabs_item chat_info_shared_media_nav_item" data-js-label="nav_audio">
-            <div class="nav_tabs_item_label">Audio</div>
-          </div>
-        </div>
-        <div class="chat_info_shared_wrap">
-          <div class="chat_info_shared chat_info_shared_media"></div>
-          <div class="chat_info_shared chat_info_shared_docs" hidden></div>
-          <div class="chat_info_shared chat_info_shared_links" hidden></div>
-          <div class="chat_info_shared chat_info_shared_audio" hidden></div>
         </div>
       </div>
     `;
 
-    this.scrollContainer = $('.right_sidebar_scroll_wrap', this.container);
+    this.scrollContainer = $('.chat_info_scroll_wrap', this.container);
 
     this.renderPeerPhoto(peer);
     this.bindListeners();
@@ -100,8 +106,6 @@ const ChatInfoController = new class {
     this.loadPeerFullInfo(peer).then((peerFull) => {
       this.renderDesc(peerData, peerFull);
     });
-
-    this._open = true;
   };
 
   bindListeners() {
@@ -117,8 +121,8 @@ const ChatInfoController = new class {
     this.scrollContainer.addEventListener('scroll', this.onScroll);
 
     this.sharedTabsDom = getLabeledElements(this.container);
-    for (let tabKey in this.sharedTabsDom) {
-      this.sharedTabsDom[tabKey].addEventListener('click', this.onSharedTabClick);
+    for (const tab of Object.values(this.sharedTabsDom)) {
+      tab.addEventListener('click', this.onSharedTabClick);
     }
     this.setSharedSection('media');
   }
@@ -199,6 +203,7 @@ const ChatInfoController = new class {
     // console.time(`loading shared ${type}`);
     let res;
     try {
+      this.sharedLoading.loading[type] = true;
       res = await ApiClient.callMethod('messages.search', {
         peer: MessagesApiManager.getInputPeerById(this.peerId),
         filter: MessagesApiManager.getInputMessagesFilter(type),
@@ -213,9 +218,17 @@ const ChatInfoController = new class {
     if (res.count < this.sharedSteps[type] || res.messages.length < this.sharedSteps[type]) {
       this.sharedLoading.noMore[type] = true;
       if (!res.messages.length) {
+        if (!this.sharedLoading.offsetMsgId[type]) {
+          const wrap = $('.chat_info_shared_' + type);
+          wrap.classList.add('chat_info_shared-empty');
+          wrap.innerHTML = Tpl.html`<div class="chat_info_shared_empty">No messages with ${type} yet</div>`;
+        }
         return;
       }
     }
+
+    MessagesApiManager.updateUsers(res.users);
+    MessagesApiManager.updateUsers(res.chats);
 
     const messages = res.messages;
     this.sharedLoading.offsetMsgId[type] = messages[messages.length - 1].id;
@@ -228,6 +241,8 @@ const ChatInfoController = new class {
         return this.renderSharedDocs(messages);
       case 'links':
         return this.renderSharedLinks(messages);
+      case 'audio':
+        return this.renderSharedAudio(messages);
     }
   }
 
@@ -237,6 +252,12 @@ const ChatInfoController = new class {
       const thumbEl = Tpl.html`
         <div class="chat_info_shared_media_item" data-message-id="${message.id}"></div>
       `.buildElement();
+      if (message.media.document) {
+        const attributes = MediaApiManager.getDocumentAttributes(message.media.document);
+        if (isFinite(attributes.duration)) {
+          thumbEl.innerHTML = Tpl.html`<div class="chat_info_shared_media_item_duration">${formatDuration(attributes.duration)}</div>`;
+        }
+      }
       thumbEl.addEventListener('click', MessagesController.onThumbClick);
       frag.append(thumbEl);
       this.loadMediaThumb(message, thumbEl);
@@ -249,22 +270,22 @@ const ChatInfoController = new class {
     for (const message of messages) {
       const document = message.media.document;
       const attrs = MediaApiManager.getDocumentAttributes(document);
-      const fileName = attrs.file_name;
+      const fileName = attrs.file_name || 'File';
       const type = this.getFileExtension(document.mime_type);
       const iconClass = this.getFileIconClass(type);
       const size = formatFileSize(document.size);
       const dateTime = MessagesController.formatMessageDateTime(message.date);
 
       const docEl = Tpl.html`
-        <div class="chat_info_shared_docs_item" data-message-id="${message.id}">
-          <div class="chat_info_shared_docs_item_icon${iconClass}">${type}</div>
+        <div class="chat_info_shared_docs_item">
+          <div class="chat_info_shared_docs_item_icon${iconClass}" data-message-id="${message.id}">${type}</div>
           <div class="chat_info_shared_docs_item_info">
             <div class="chat_info_shared_docs_item_name">${fileName}</div>
             <div class="chat_info_shared_docs_item_desc">${size} &middot; ${dateTime}</div>
           </div>
         </div>
       `.buildElement();
-      docEl.addEventListener('click', MessagesController.onFileClick);
+      $('.chat_info_shared_docs_item_icon', docEl).addEventListener('click', this.onFileClick);
       frag.append(docEl);
       if (attrs.type === 'image') {
         this.loadDocThumb(message.media.document, $('.chat_info_shared_docs_item_icon', docEl));
@@ -314,16 +335,42 @@ const ChatInfoController = new class {
     $('.chat_info_shared_links').append(frag);
   }
 
+  renderSharedAudio(messages) {
+    const frag = document.createDocumentFragment();
+    for (const message of messages) {
+      const document = message.media.document;
+      const attributes = MediaApiManager.getDocumentAttributes(document);
+      const el = Tpl.html`
+        <div class="chat_info_shared_audio_item">${MessagesController.formatAudio(document, attributes, message.id)}</div>
+      `.buildElement();
+      const button = $('.document_icon', el);
+      button.addEventListener('click', MessagesController.onFileClick);
+      if (MessagesController.audioPlayer && MessagesController.audioPlayer.doc.id === document.id) {
+        MessagesController.audioPlayer.initMessageAudioPlayer(button);
+      }
+      frag.appendChild(el);
+    }
+
+    $('.chat_info_shared_audio').append(frag);
+  }
+
   async loadMediaThumb(message, thumbEl) {
     const thumb = MessagesController.getMessageMediaThumb(message);
-    const photoSize = MediaApiManager.choosePhotoSize(thumb.sizes, 'm');
-    const url = await FileApiManager.loadPhoto(thumb.object, photoSize.type);
-
-    thumbEl.style.backgroundImage = `url(${url})`;
+    let url = '';
+    if (thumb.type === 'photo') {
+      const photoSize = MediaApiManager.choosePhotoSize(thumb.sizes, 'x', 'm');
+      url = await FileApiManager.loadPhoto(thumb.object, photoSize.type);
+    } else if (thumb.type === 'video') {
+      const size = MediaApiManager.choosePhotoSize(thumb.sizes, 'x', 'm');
+      url = await FileApiManager.loadDocumentThumb(thumb.object, size.type);
+    }
+    if (url) {
+      thumbEl.style.backgroundImage = `url(${url})`;
+    }
   }
 
   async loadDocThumb(document, thumbEl) {
-    const photoSize = MediaApiManager.choosePhotoSize(document.thumbs, 'm');
+    const photoSize = MediaApiManager.choosePhotoSize(document.thumbs, 'x', 'm');
     const url = await FileApiManager.loadDocumentThumb(document, photoSize.type);
 
     thumbEl.classList.add('chat_info_shared_docs_item_icon-thumb');
@@ -331,7 +378,7 @@ const ChatInfoController = new class {
   }
 
   async loadLinkThumb(thumb, thumbEl) {
-    const photoSize = MediaApiManager.choosePhotoSize(thumb.sizes, 'm');
+    const photoSize = MediaApiManager.choosePhotoSize(thumb.sizes, 'x', 'm');
     const url = await FileApiManager.loadPhoto(thumb.object, photoSize.type);
 
     thumbEl.style.backgroundImage = `url(${url})`;
@@ -345,6 +392,11 @@ const ChatInfoController = new class {
     }
     if (sectionPrev) {
       this.sharedTabsDom[`nav_${sectionPrev}`].classList.remove('nav_tabs_item-active');
+    }
+
+    const sharedContainer = $('.chat_info_shared_media_container', this.container);
+    if (this.scrollContainer.scrollTop > sharedContainer.offsetTop - 47) {
+      sharedContainer.scrollIntoView({block: 'start'});
     }
 
     if (sectionPrev) {
@@ -367,24 +419,28 @@ const ChatInfoController = new class {
       return;
     }
     this._open = false;
-    this.container.parentNode.hidden = true;
+    this.container.hidden =true;
+    App.onRightSidebarClose()
     this.peerId = null;
     document.removeEventListener('keyup', this.onKeyUp);
   };
 
   onKeyUp = (event) => {
-    if (event.keyCode === 27 && !MediaViewController.isOpen()) {
+    if (window.MediaViewController && MediaViewController.isOpen()) {
+      return;
+    }
+    if (event.keyCode === 27) {
       this.close();
     }
   };
 
   onScroll = () => {
-    const scrollContainer = this.scrollContainer;
-    const needMore = scrollContainer.scrollTop + scrollContainer.offsetHeight > scrollContainer.scrollHeight - 150;
-
-    if (!this.sharedLoading.loading[this.sharedSection] && !this.sharedLoading.noMore[this.sharedSection] && needMore) {
-      this.sharedLoading.loading[this.sharedSection] = true;
-      this.loadMoreShared();
+    if (this.isOpen() && !this.sharedLoading.loading[this.sharedSection] && !this.sharedLoading.noMore[this.sharedSection]) {
+      const scrollContainer = this.scrollContainer;
+      const needMore = scrollContainer.scrollTop + scrollContainer.offsetHeight > scrollContainer.scrollHeight - 500;
+      if (needMore) {
+        this.loadMoreShared();
+      }
     }
   };
 
@@ -505,6 +561,65 @@ const ChatInfoController = new class {
       }
     }
     return '';
+  }
+
+  onFileClick(event) {
+    const button = event.currentTarget;
+    if (button.dataset.loading) {
+      return;
+    }
+    button.dataset.loading = 1;
+
+    const msgId = +button.dataset.messageId;
+    const message = MessagesApiManager.messages.get(msgId);
+    if (!message) {
+      return;
+    }
+
+    const document = message.media.document;
+
+    const abortController = new AbortController();
+
+    const onAbort = () => {
+      abortController.abort();
+      onDone();
+    };
+
+    const onProgress = (loaded) => {
+      if (progressPath) {
+        progressPath.style.setProperty('--progress-value', loaded / document.size);
+      }
+    };
+
+    const onDone = () => {
+      delete button.dataset.loading;
+      button.removeEventListener('click', onAbort);
+      button.classList.remove('chat_info_shared_docs_item_icon-loading');
+      progressSvg.remove();
+    };
+
+    button.addEventListener('click', onAbort);
+    button.classList.add('chat_info_shared_docs_item_icon-loading');
+
+    const progressSvg = Tpl.html`
+      <svg class="document_icon_progress_svg" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+        <path class="document_icon_progress_path" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+      </svg>
+    `.buildElement();
+    const progressPath = progressSvg.firstElementChild;
+    button.appendChild(progressSvg);
+
+    FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
+        .then((url) => {
+          const attributes = MediaApiManager.getDocumentAttributes(document);
+          downloadFile(url, attributes.file_name);
+        })
+        .catch((e) => {
+          if (e.name !== 'AbortError') {
+            console.log(e);
+          }
+        })
+        .finally(onDone);
   }
 };
 

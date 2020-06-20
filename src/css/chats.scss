@@ -253,19 +253,20 @@
   height: 54px;
   border-radius: 50%;
   background: $primary_blue_color svg('../icons/newchat_filled_svg.svg', (path: (fill: white))) no-repeat center;
-  transition: box-shadow .2s;
+  visibility: hidden;
+  transform: translateY(100px);
+  transition-property: box-shadow, transform, visibility;
+  transition-duration: .2s;
+  transition-timing-function: cubic-bezier(0.31, 0.24, 0.58, 1.31);
   &:hover {
     box-shadow: 0 10px 15px rgba(0, 0, 0, .3);
   }
+  .chats_sidebar:hover &,
+  .mobile_view & {
+    visibility: visible;
+    transform: none;
+  }
 }
-
-//.chats_dialog_menu {
-//  position: absolute;
-//  left: auto !important;
-//  right: 45px !important;
-//  top: 0 !important;
-//  bottom: auto !important;
-//}
 
 .chats_dialog_menu_item  {
   padding-left: 73px;

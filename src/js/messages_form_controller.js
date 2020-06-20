@@ -7,7 +7,7 @@ import {
   attachRipple,
   isTouchDevice,
   loadScript,
-  initAnimation, formatDuration
+  formatDuration
 } from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
@@ -20,9 +20,7 @@ const MessagesFormController = new class {
       <div class="messages_form_input_wrap">
         <textarea class="messages_form_input" placeholder="Message" data-js-label="input"></textarea>
         <button class="messages_form_emoji_button" data-js-label="emoji_button"></button>
-        <div class="mdc-menu-surface--anchor">
-          <button class="messages_form_media_button" data-js-label="media_button"></button>
-        </div>
+        <button class="messages_form_media_button" data-js-label="media_button"></button>
       </div>
       <button class="messages_form_cancel_button mdc-icon-button" data-js-label="cancel_button" hidden></button>
       <button class="messages_form_submit_button mdc-icon-button" data-js-label="submit_button"></button>
@@ -238,12 +236,17 @@ const MessagesFormController = new class {
     MessagesApiManager.sendMedia(MessagesController.dialog.peer, inputMedia);
   }
 
-  async onFileSend(file, sendAsMedia = false) {
+  async onMediaSend(files, sendAsPhoto = false, caption = '') {
     const peer = MessagesController.dialog.peer;
 
     const abortController = new AbortController();
 
-    const progressEl = this.buildFileUploadProgressElement(file.name, file.size);
+    const totalBytes = Array.from(files).reduce((sum, f) => sum + f.size, 0);
+    console.log('totalBytes', totalBytes);
+    let totalUploadedBytes = 0;
+
+    const pendingMessageTitle = files.length > 1 ? `Uploading 1 file of ${files.length}` : files[0].name;
+    const progressEl = this.buildFileUploadProgressElement(pendingMessageTitle, totalBytes);
     const pendingMessageEl = MessagesController.appendPendingMessage(progressEl);
 
     $('.document_icon', progressEl).addEventListener('click', () => {
@@ -252,29 +255,48 @@ const MessagesFormController = new class {
     });
 
     const onProgress = (uploaded) => {
-      const percent = Math.round(uploaded / file.size * 100);
-      $('.document_size_percent', progressEl).innerText = `${percent}%`;
-      $('.document_icon_progress_path', progressEl).style.strokeDasharray = `${percent}, 100`;
+      const percent = (totalUploadedBytes + uploaded) / totalBytes;
+      $('.document_size_percent', progressEl).innerText = `${Math.round(percent * 100)}%`;
+      $('.document_icon_progress_path', progressEl).style.setProperty('--progress-value', percent);
     };
 
-    const inputFile = await FileApiManager.uploadFile(file, file.name, {onProgress, signal: abortController.signal});
-    let inputMedia;
-    if (sendAsMedia && file.type.startsWith('image/')) {
-      inputMedia = {_: 'inputMediaUploadedPhoto', file: inputFile};
-    } else {
-      inputMedia = {
-        _: 'inputMediaUploadedDocument',
-        file: inputFile,
-        mime_type: file.type,
-        attributes: [
-          {_: 'documentAttributeFilename', file_name: file.name}
-        ]
-      };
+    const mediaList = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (i) {
+        $('.document_filename', pendingMessageEl).innerText = `Uploading ${i+1} file of ${files.length}`;
+      }
+
+      const inputFile = await FileApiManager.uploadFile(file, file.name, {onProgress, signal: abortController.signal});
+      let inputMedia;
+      if (sendAsPhoto && file.type.startsWith('image/')) {
+        const {photo} = await MessagesApiManager.uploadMedia(peer, {_: 'inputMediaUploadedPhoto', file: inputFile});
+        mediaList.push({_: 'inputMediaPhoto', id: {_: 'inputPhoto', id: photo.id, access_hash: photo.access_hash, file_reference: photo.file_reference}});
+      } else {
+        const inputMedia ={
+          _: 'inputMediaUploadedDocument',
+          file: inputFile,
+          mime_type: file.type,
+          attributes: [
+            {_: 'documentAttributeFilename', file_name: file.name}
+          ]
+        };
+        MessagesApiManager.sendMedia(peer, inputMedia, caption);
+      }
+      totalUploadedBytes += file.size;
     }
 
     try {
-      await MessagesApiManager.sendMedia(peer, inputMedia);
+      if (mediaList.length > 1) {
+        await MessagesApiManager.sendMultiMedia(peer, mediaList, caption);
+      } else if (mediaList.length) {
+        await MessagesApiManager.sendMedia(peer, mediaList[0], caption);
+      }
     } catch (e) {
+      debugger;
+      const errorText = 'An error occurred' + (e.error_message ? ': ' + e.error_message : '');
+      App.alert(errorText);
       console.error(e);
     }
 

@@ -116,6 +116,7 @@ class AudioStreamingProcess {
 
   stop() {
     this.stopped = true;
+    URL.revokeObjectURL(this.audio.src);
     this.audio.src = '';
     this.audio.load();
   }

@@ -1,28 +1,36 @@
 import {
-  $, $$, Tpl,
+  $, Tpl,
   buildLoaderElement,
   formatCountShort,
   formatDateFull, formatDateWeekday,
-  formatTime, isTouchDevice, attachMenuListener, attachRipple, initMenu, getEventPageXY
+  formatTime, isTouchDevice, attachMenuListener, attachRipple, initMenu, getEventPageXY, wait, buildMenu
 } from './utils';
 import {App} from './app';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
 import {GlobalSearchController} from './global_search_controller';
 import {DialogsApiManager} from './api/dialogs_api_manager';
+import {FileApiManager} from './api/file_api_manager';
 
 const ChatsController = new class {
   chatElements = new Map();
+  elementsOrder = [];
 
   init() {
-    this.container = $('.chats_sidebar');
-    this.container.addEventListener('scroll', this.onScroll);
+    this.scrollContainer = $('.chats_sidebar');
+    this.scrollContainer.addEventListener('scroll', this.onScroll);
+
+    this.listContainer = Tpl.html`<div class="chats_list"></div>`.buildElement();
+    this.scrollContainer.appendChild(this.listContainer);
 
     this.initHeader();
 
-    this.loader = buildLoaderElement(this.container);
+    this.loader = buildLoaderElement(this.listContainer);
 
-    MessagesApiManager.emitter.on('dialogsUpdate', this.onDialogsUpdate);
+    this.newChatButton = Tpl.html`<button class="chats_new_chat_button mdc-icon-button"></button>`.buildElement();
+    attachRipple(this.newChatButton);
+    this.scrollContainer.appendChild(this.newChatButton);
+
     MessagesApiManager.emitter.on('dialogOrderUpdate', this.onDialogOrderUpdate);
     MessagesApiManager.emitter.on('dialogPinnedUpdate', this.onDialogPreviewUpdate);
     MessagesApiManager.emitter.on('dialogTopMessageUpdate', this.onDialogPreviewUpdate);
@@ -33,7 +41,30 @@ const ChatsController = new class {
     MessagesApiManager.emitter.on('userStatusUpdate', this.onUserStatusUpdate);
 
     this.initTabs();
-    this.loadMore();
+
+    this.loadMore()
+        .then((dialogs) => {
+          MessagesApiManager.preloadDialogsMessages(dialogs);
+          MessagesApiManager.loadPinnedDialogs();
+          MessagesApiManager.loadArchivedDialogs();
+          this.preloadMoreDialogs();
+        });
+  }
+
+  async preloadMoreDialogs() {
+    for (let i = 0; i < 5; i++) {
+      const dialogs = await this.loadMore(20, false);
+      if (!dialogs || !dialogs.length) {
+        break;
+      }
+      for (const dialog of dialogs) {
+        const peerId = MessagesApiManager.getPeerId(dialog.peer);
+        if (!this.chatElements.has(peerId)) {
+          this.buildChatPreviewElement(dialog);
+        }
+      }
+      await wait(1000);
+    }
   }
 
   initHeader() {
@@ -83,6 +114,14 @@ const ChatsController = new class {
       }
     });
 
+    if (isTouchDevice()) {
+      document.addEventListener('touchstart', (event) => {
+        if (mdcMenu.open && !menuContainer.contains(event.target)) {
+          mdcMenu.open = false;
+        }
+      });
+    }
+
     const contactsButtonEl = $('.chats_header_menu_item-contacts', menuContainer);
     contactsButtonEl.addEventListener('click', () => {
       import('./contacts_controller.js')
@@ -101,7 +140,6 @@ const ChatsController = new class {
     archivedButtonEl.addEventListener('click', () => {
       import('./archived_chats_controller.js')
           .then(({ArchivedChatsController}) => {
-            this.ArchivedChatsController = ArchivedChatsController;
             ArchivedChatsController.show();
           });
     });
@@ -164,17 +202,23 @@ const ChatsController = new class {
   setFilter(filterId) {
     const filter = this.filters.find(f => f.id === filterId);
     this.currentFilter = filter;
-    const allDialogs = MessagesApiManager.dialogs;
-    for (const dialog of allDialogs) {
-      const peerId = MessagesApiManager.getPeerId(dialog.peer);
-      const el = this.chatElements.get(peerId);
-      if (el) {
-        el.hidden = !this.checkDialogFilter(dialog, filter);
+    this.listContainer.innerHTML = '';
+    let renderedCount = 0;
+    const frag = document.createDocumentFragment();
+    for (const el of this.elementsOrder) {
+      const peerId = +el.dataset.peerId;
+      const dialog = MessagesApiManager.getDialog(peerId);
+      const visible = this.checkDialogFilter(dialog, filter);
+      el.hidden = !visible;
+      if (visible && renderedCount < 20) {
+        frag.appendChild(el);
+        renderedCount++;
       }
     }
-    this.container.scrollTop = 0;
-    if (this.container.scrollHeight <= this.container.offsetHeight) {
-      this.loadMore();
+    this.listContainer.appendChild(frag);
+    this.scrollContainer.scrollTop = 0;
+    if (this.scrollContainer.scrollHeight <= this.scrollContainer.offsetHeight) {
+      this.showMore();
     }
   }
 
@@ -237,13 +281,6 @@ const ChatsController = new class {
     return false;
   }
 
-  onDialogsUpdate = (event) => {
-    const {dialogs, folderId} = event.detail;
-    if (!folderId) {
-      this.renderChats(dialogs);
-    }
-  };
-
   onDialogNewMessage = (event) => {
     const {dialog, message} = event.detail;
     if (message._ === 'messageService') {
@@ -260,24 +297,35 @@ const ChatsController = new class {
 
   onDialogOrderUpdate = (event) => {
     const {dialog, index, folderId} = event.detail;
-    if (folderId && !this.ArchivedChatsController) {
+    if (folderId) {
       return;
     }
     const chatId = MessagesApiManager.getPeerId(dialog.peer);
     let el = this.chatElements.get(chatId);
     if (el) {
-      el.remove();
+      el.hidden = !this.checkDialogFilter(dialog, this.currentFilter);
+      this.detachElement(el);
       el.classList.toggle('chats_item-pinned', !!dialog.pinned);
       this.renderChatPreviewContent(el, dialog);
     } else {
       el = this.buildChatPreviewElement(dialog);
     }
-    const container = folderId === 1 ? this.ArchivedChatsController.scrollContainer : this.container;
-    const nextEl = container.children[index];
-    if (nextEl) {
-      nextEl.before(el);
-    } else {
-      container.appendChild(el);
+    if (!folderId) {
+      this.elementsOrder.splice(index, 0, el);
+    }
+    if (!el.hidden) {
+      for (let i = index + 1; ; i++) {
+        if (i >= this.elementsOrder.length) {
+          this.listContainer.appendChild(el);
+          break;
+        } else {
+          const nextEl = this.elementsOrder[i];
+          if (!nextEl.hidden) {
+            nextEl.before(el);
+            break;
+          }
+        }
+      }
     }
   };
 
@@ -288,6 +336,10 @@ const ChatsController = new class {
     if (el) {
       el.classList.toggle('chats_item-pinned', !!dialog.pinned);
       this.renderChatPreviewContent(el, dialog);
+      el.hidden = !this.checkDialogFilter(dialog, this.currentFilter);
+      if (el.hidden) {
+        el.remove();
+      }
     }
   };
 
@@ -295,7 +347,7 @@ const ChatsController = new class {
     const {dialog, oldFolderId} = event.detail;
     const chatId = MessagesApiManager.getPeerId(dialog.peer);
     const el = this.chatElements.get(chatId);
-    el.remove();
+    el.remove(); // order update comes next
   };
 
   onUserStatusUpdate = (event) => {
@@ -307,27 +359,57 @@ const ChatsController = new class {
   };
 
   onScroll = () => {
-    const container = this.container;
-    if (!this.loading && !this.noMore && container.scrollTop + container.offsetHeight > container.scrollHeight - 500) {
-      this.loadMore();
+    const container = this.scrollContainer;
+    if (container.scrollTop + container.offsetHeight > container.scrollHeight - 500) {
+      this.showMore();
     }
   };
 
-  loadMore() {
+  showMore() {
+    const lastEl = this.listContainer.lastElementChild;
+    let renderedCount = 0;
+    if (lastEl) {
+      const index = this.elementsOrder.indexOf(lastEl);
+      const frag = document.createDocumentFragment();
+      for (let i = index; renderedCount < 20 && i < this.elementsOrder.length; i++) {
+        const el = this.elementsOrder[i];
+        if (!el.hidden) {
+          frag.appendChild(el);
+          renderedCount++;
+        }
+      }
+      this.listContainer.appendChild(frag);
+    }
+    if (renderedCount < 20 && !this.noMore) {
+      this.loadMore();
+    }
+  }
+
+  loadMore(limit = 20, render = true) {
+    if (this.loading || this.noMore) {
+      return;
+    }
     this.loading = true;
-    MessagesApiManager.loadDialogs(this.offset, 20)
+    return MessagesApiManager.loadDialogs(this.offset, limit)
         .then((dialogs) => {
           if (!dialogs.length) {
             this.noMore = true;
+          } else {
+            render && this.renderChats(dialogs, render);
+            const lastDialog = dialogs[dialogs.length - 1];
+            this.saveOffset(lastDialog)
           }
+          return dialogs;
         })
         .catch((error) => {
+          console.log(error);
           const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
           App.alert(errorText);
           if (error.error_code === 420) {
             const timeout = +error.error_message.match(/^FLOOD_WAIT_(\d+)$/);
-            setTimeout(() => this.loadMore(), timeout * 1000);
             console.log('chats load more timeout', timeout, error);
+            return wait(timeout * 1000)
+                .then(() => this.loadMore(limit, render));
           }
         })
         .finally(() => {
@@ -335,21 +417,7 @@ const ChatsController = new class {
         });
   }
 
-  renderChats(dialogs) {
-    this.loader.remove();
-
-    const frag = document.createDocumentFragment();
-    for (const dialog of dialogs) {
-      const peerId = MessagesApiManager.getPeerId(dialog.peer);
-      if (this.chatElements.has(peerId)) {
-        continue;
-      }
-      const el = this.buildChatPreviewElement(dialog);
-      frag.append(el);
-    }
-    this.container.append(frag);
-
-    const lastDialog = dialogs[dialogs.length - 1];
+  saveOffset(lastDialog) {
     if (lastDialog) {
       const lastDialogMessage = MessagesApiManager.messages.get(lastDialog.top_message);
       this.offset = {
@@ -364,16 +432,27 @@ const ChatsController = new class {
         date: 0,
       };
     }
+  }
 
-    if (this.container.scrollHeight <= this.container.offsetHeight) {
-      this.loadMore();
-    }
+  renderChats(dialogs) {
+    this.loader.remove();
 
-    if (!this.newChatButton) {
-      this.newChatButton = Tpl.html`<button class="chats_new_chat_button mdc-icon-button"></button>`.buildElement();
-      attachRipple(this.newChatButton);
+    const frag = document.createDocumentFragment();
+    for (const dialog of dialogs) {
+      const peerId = MessagesApiManager.getPeerId(dialog.peer);
+      if (dialog.folder_id || this.chatElements.has(peerId)) {
+        continue;
+      }
+      const el = this.buildChatPreviewElement(dialog);
+      if (!el.hidden) {
+        frag.append(el);
+      }
     }
-    this.container.appendChild(this.newChatButton);
+    this.listContainer.append(frag);
+
+    if (this.scrollContainer.scrollHeight <= this.scrollContainer.offsetHeight) {
+      setTimeout(() => this.showMore());
+    }
   }
 
   buildChatPreviewElement(dialog) {
@@ -392,13 +471,16 @@ const ChatsController = new class {
       const user = MessagesApiManager.getPeerData(dialog.peer);
       this.updateChatStatus(el, user.status);
     }
-    el.addEventListener('click', this.onChatClick);
-    el.hidden = !this.checkDialogFilter(dialog, this.filter);
+    el.addEventListener(isTouchDevice() ? 'click' : 'mousedown', this.onChatClick);
+    el.hidden = !this.checkDialogFilter(dialog, this.currentFilter);
     if (!isTouchDevice()) {
       attachRipple(el.firstElementChild);
     }
     attachMenuListener(el, this.onChatMenu);
     this.chatElements.set(peerId, el);
+    if (!dialog.folder_id) {
+      this.elementsOrder.push(el);
+    }
     return el;
   }
 
@@ -418,6 +500,14 @@ const ChatsController = new class {
         ${badge}
       </div>
     `;
+  }
+
+  detachElement(el) {
+    el.remove();
+    const index = this.elementsOrder.indexOf(el);
+    if (index > -1) {
+      this.elementsOrder.splice(index, 1);
+    }
   }
 
   formatDate(dialog) {
@@ -557,43 +647,24 @@ const ChatsController = new class {
     if (!target) {
       return;
     }
-    const dialog = MessagesApiManager.getDialog(+target.dataset.peerId);
+    const peerId = +target.dataset.peerId;
+    const dialog = MessagesApiManager.getDialog(peerId);
+
     const actions = [
       dialog.pinned ? ['unpin', 'Unpin'] : ['pin', 'Pin'],
       dialog.notify_settings.mute_until ? ['unmute', 'Unmute'] : ['mute', 'Mute'],
-      dialog.folder_id === 1 ? ['unarchive', 'Unarchive'] : ['archive', 'Archive'],
-      ['delete', 'Delete'],
     ];
-    const el = Tpl.html`
-      <div class="chats_dialog_menu mdc-menu mdc-menu-surface">
-        <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical">
-          ${ actions.map(([actionType, text]) => Tpl.html`
-            <li class="mdc-list-item chats_dialog_menu_item chats_dialog_menu_item-${actionType}" data-action="${actionType}" role="menuitem">
-              <span class="mdc-list-item__text">${text}</span>
-            </li>
-          `) }
-        </ul>
-      </div>
-    `.buildElement();
+    if (peerId !== App.getAuthUserId()) {
+      actions.push(dialog.folder_id === 1 ? ['unarchive', 'Unarchive'] : ['archive', 'Archive']);
+    }
+    actions.push(['delete', 'Delete']);
+    const menu = buildMenu(actions, {
+      container: target,
+      menuClass: 'chats_dialog_menu',
+      itemClass: 'chats_dialog_menu_item',
+      itemCallback: (action) => this.onChatMenuAction(dialog, action),
+    });
 
-    const onItemClick = (event) => {
-      event.stopPropagation();
-      const action = event.currentTarget.dataset.action;
-      this.onChatMenuAction(dialog, action);
-      closeMenu();
-    };
-
-    const closeMenu = () => {
-      menu.open = false;
-      setTimeout(() => {
-        el.remove();
-      }, 500);
-    };
-
-    Array.from($$('.chats_dialog_menu_item', el))
-        .forEach(item => item.addEventListener('click', onItemClick))
-
-    const menu = initMenu(el);
     if (isTouchDevice()) {
       const {pageX} = getEventPageXY(event);
       menu.setAbsolutePosition(pageX, 0)
@@ -603,17 +674,6 @@ const ChatsController = new class {
       menu.setAnchorMargin({right: 200, bottom: 0});
     }
     menu.open = true;
-
-    const onTouch = (event) => {
-      if (!el.contains(event.target)) {
-        closeMenu();
-      }
-      document.removeEventListener(touchEventType, onTouch);
-    };
-    const touchEventType = isTouchDevice() ? 'touchstart' : 'mousedown';
-    document.addEventListener(touchEventType, onTouch);
-
-    target.appendChild(el);
   };
 
   onChatMenuAction(dialog, action) {

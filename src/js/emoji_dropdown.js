@@ -2,7 +2,7 @@ import {getLabeledElements, $, $$, Storage, Tpl, isTouchDevice, debounce, buildL
 import {EmojiConfig} from './emoji_config';
 import {ApiClient} from './api/api_client';
 import {MessagesFormController} from './messages_form_controller';
-import {iconStrings} from '@material/textfield/index';
+import '../css/emoji_dropdown.scss';
 
 const EmojiDropdown = new class {
   stickerSets = new Map();
@@ -31,6 +31,7 @@ const EmojiDropdown = new class {
           <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-emoji" data-js-label="nav_emoji"></div>
           <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-stickers" data-js-label="nav_stickers"></div>
           <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-gifs" data-js-label="nav_gifs"></div>
+          <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-delete" data-js-label="nav_delete"></div>
         </div>
         <div class="emoji_dropdown_search_container" data-js-label="search_container" hidden>
           <div class="emoji_dropdown_search_header">
@@ -143,6 +144,7 @@ const EmojiDropdown = new class {
     container.addEventListener('scroll', this.onStickersScroll);
     container.addEventListener('click', this.onStickerClick);
     container.addEventListener('mouseover', this.onStickerOver);
+    container.addEventListener('touchstart', this.onStickerTouchStart);
 
     const topNavContainer = $('.emoji_dropdown_top_nav', this.dom.section_stickers);
     topNavContainer.append(topNavFrag);
@@ -254,7 +256,7 @@ const EmojiDropdown = new class {
       const attributes = MediaApiManager.getDocumentAttributes(document);
       const w = Math.min(150, attributes.w * (100 / attributes.h));
       const el = Tpl.html`<div class="emoji_dropdown_list_item" data-id="${document.id}" style="width: ${w}px;"></div>`.buildElement();
-      const inlineThumbUrl = MediaApiManager.getPhotoStrippedSize(document.thumbs);
+      const inlineThumbUrl = MediaApiManager.getStrippedPhoto(document.thumbs);
       let inlineThumb;
       if (inlineThumbUrl) {
         el.innerHTML = Tpl.html`<div class="emoji_dropdown_gif_inline_preview" style="background-image: url('${inlineThumbUrl}')"></div>`;
@@ -263,19 +265,25 @@ const EmojiDropdown = new class {
       const thumb = MediaApiManager.choosePhotoSize(document.thumbs, 's');
       if (thumb) {
         FileApiManager.loadDocumentThumb(document, 's', {cache: 1})
-            .then(url => {
+            .then((url) => {
               el.style.backgroundImage = `url('${url}')`;
               inlineThumb && inlineThumb.remove();
             });
-      } else if (document.video_thumbs && document.video_thumbs.length) {
+      } /*else if (document.video_thumbs && document.video_thumbs.length) {
         const size = document.video_thumbs[0].type;
         FileApiManager.loadDocumentThumb(document, size, {cache: 1})
-            .then(url => el.innerHTML = Tpl.html`<video class="emoji_dropdown_gif_video" src="${url}" muted loop></video>`);
-      } else {
+            .then((url) => {
+              el.innerHTML = Tpl.html`<video class="emoji_dropdown_gif_video" src="${url}" muted loop playsinline></video>`;
+              isTouchDevice() && window.document.addEventListener('touchstart', el.firstElementChild.load(), {once: true});
+            });
+      }*/ else {
         FileApiManager.loadDocument(document, {cache: 1})
-            .then(url => el.innerHTML = Tpl.html`<video class="emoji_dropdown_gif_video" src="${url}" muted loop></video>`);
+            .then((url) => {
+              el.innerHTML = Tpl.html`<video class="emoji_dropdown_gif_video" src="${url}" muted loop playsinline></video>`;
+              isTouchDevice() && window.document.addEventListener('touchstart', el.firstElementChild.load(), {once: true});
+            });
       }
-      el.addEventListener('mouseover', this.onGifOver);
+      el.addEventListener(isTouchDevice() ? 'touchstart' : 'mouseover', this.onGifOver);
       el.addEventListener('click', this.onGifClick);
       frag.appendChild(el);
     }
@@ -302,6 +310,8 @@ const EmojiDropdown = new class {
     this.dom[`nav_${this.section}`].classList.add('emoji_dropdown_bottom_nav_item-active');
 
     this.dom['nav_search'].hidden = !(section === 'stickers' || section === 'gifs');
+
+    this.dom['nav_delete'].hidden = section !== 'emoji' || !(this.input && this.input.value);
 
     const index = ['emoji', 'stickers', 'gifs'].indexOf(section);
     const position = -index * (100 / 3);
@@ -439,17 +449,41 @@ const EmojiDropdown = new class {
               <div class="emoji_dropdown_search_sticker_set_title">${set.title}</div>
               <div class="emoji_dropdown_search_sticker_set_count">${set.count} stickers</div>
             </div>
-            <button class="emoji_dropdown_search_sticker_set_add_button ${isAdded ? 'emoji_dropdown_search_sticker_set_add_button-added' : ''}">${isAdded ? 'Added' : 'Add'}</button>
+            <button class="emoji_dropdown_search_sticker_set_add_button ${isAdded ? 'emoji_dropdown_search_sticker_set_add_button-added' : ''}" data-set-id="${set.id}">${isAdded ? 'Added' : 'Add'}</button>
           </div>
           <div class="emoji_dropdown_search_sticker_set_preview" data-set-id="${set.id}"></div>
         </div>
       `.buildElement();
       frag.appendChild(setContainer);
       const previewContainer = $('.emoji_dropdown_search_sticker_set_preview', setContainer);
+      const addButton = $('.emoji_dropdown_search_sticker_set_add_button', setContainer);
+      addButton.addEventListener('click', this.onStickerSetAdd);
       this.loadFoundStickersPreview(set, previewContainer, signal);
     }
     container.appendChild(frag);
   }
+
+  onStickerSetAdd = (event) => {
+    const button = event.currentTarget;
+    const setId = button.dataset.setId;
+    const fullSet = this.stickerSets.get(setId);
+    const set = fullSet.set;
+    const inputStickerSetId = {_: 'inputStickerSetID', id: set.id, access_hash: set.access_hash};
+    if (button.classList.toggle('emoji_dropdown_search_sticker_set_add_button-added')) {
+      ApiClient.callMethod('messages.installStickerSet', {stickerset: inputStickerSetId});
+      button.innerText = 'Added';
+      const el = Tpl.html`<div class="emoji_dropdown_list" data-set-id="${set.id}"></div>`.buildElement();
+      const topButton = Tpl.html`<div class="emoji_dropdown_top_nav_item" data-set-id="${set.id}"></div>`.buildElement();
+      this.initStickerSet(set, el, topButton);
+      $('.emoji_dropdown_top_nav', this.dom.section_stickers).children[1].after(topButton);
+      $('.emoji_dropdown_section_content', this.dom.section_stickers).children[1].after(el);
+    } else {
+      ApiClient.callMethod('messages.uninstallStickerSet', {stickerset: inputStickerSetId});
+      button.innerText = 'Add';
+      $(`.emoji_dropdown_list[data-set-id="${set.id}"]`, this.dom.section_stickers).remove();
+      $(`.emoji_dropdown_top_nav_item[data-set-id="${set.id}"]`, this.dom.section_stickers).remove();
+    }
+  };
 
   async loadFoundStickersPreview(set, container, signal) {
     const fullSet = await this.loadStickerSet(set);
@@ -497,6 +531,12 @@ const EmojiDropdown = new class {
       const section = target.dataset.jsLabel.replace(/^nav_/, '');
       if (section === 'search') {
         this.initSearch(this.section);
+      } else if (section === 'delete') {
+        this.input.focus();
+        document.execCommand('delete', false);
+        if (isTouchDevice()) {
+          this.input.blur();
+        }
       } else {
         this.setSection(section);
       }
@@ -504,8 +544,13 @@ const EmojiDropdown = new class {
   };
 
   onEmojiClick = (event) => {
+    const target = event.target;
     if (event.target.classList.contains('emoji_dropdown_list_item')) {
-      document.execCommand('insertText', false, event.target.innerText);
+      this.input.focus();
+      document.execCommand('insertText', false, target.innerText);
+      if (isTouchDevice()) {
+        this.input.blur();
+      }
     }
   };
 
@@ -555,7 +600,9 @@ const EmojiDropdown = new class {
     for (const list of listsToLoad) {
       if (isFinite(list.dataset.setId)) {
         const fullSet = this.stickerSets.get(list.dataset.setId);
-        this.loadStickersList(list, fullSet.documents);
+        if (fullSet) {
+          this.loadStickersList(list, fullSet.documents);
+        }
       }
     }
   };
@@ -589,14 +636,45 @@ const EmojiDropdown = new class {
     }
   };
 
+  onStickerTouchStart = (event) => {
+    const target = event.target;
+    if (!target.classList.contains('emoji_dropdown_list_item')) {
+      return;
+    }
+    this.onStickerOver(event);
+    const preview = () => {
+      const replaceEl = Tpl.html`<div class="emoji_dropdown_list_item"></div>`.buildElement();
+      target.replaceWith(replaceEl);
+      target.classList.add('emoji_dropdown_list_item-preview');
+      this.container.appendChild(target);
+      document.addEventListener('touchend', () => {
+        target.classList.remove('emoji_dropdown_list_item-preview');
+        replaceEl.replaceWith(target);
+      }, {once: true});
+    };
+    const touchEnd = () => {
+      clearTimeout(previewTimeout);
+      document.removeEventListener('touchmove', touchEnd);
+      document.removeEventListener('touchend', touchEnd);
+    };
+    let previewTimeout = setTimeout(preview, 300);
+    document.addEventListener('touchmove', touchEnd);
+    document.addEventListener('touchend', touchEnd);
+  }
+
   async playAnimatedSticker(container, stickerImg, document) {
     let out = false;
     let stickerTgs;
-
-    container.addEventListener('mouseout', () => {
+    const onOut = () => {
       out = true;
       stop();
-    }, {once: true});
+    };
+
+    if (isTouchDevice()) {
+      container.addEventListener('touchend', onOut, {once: true});
+    } else {
+      container.addEventListener('mouseout', onOut, {once: true});
+    }
 
     const url = await FileApiManager.loadDocument(document, {cache: 1, priority: 10});
     if (!out) {
@@ -658,7 +736,7 @@ const EmojiDropdown = new class {
       video = container.firstElementChild;
       keepVideo = true;
     }
-    container.addEventListener('mouseout', () => {
+    const onOut = () => {
       out = true;
       if (video) {
         video.pause();
@@ -668,14 +746,19 @@ const EmojiDropdown = new class {
           video.remove();
         }
       }
-    }, {once: true});
+    };
+    if (isTouchDevice()) {
+      window.document.addEventListener('touchend', onOut, {once: true});
+    } else {
+      container.addEventListener('mouseout', onOut, {once: true});
+    }
 
     if (video) {
       video.play();
     } else {
       const url = await FileApiManager.loadDocument(document, {cache: 1, priority: 10});
       if (!out) {
-        video = Tpl.html`<video class="emoji_dropdown_gif_video" src="${url}" muted autoplay loop></video>`.buildElement();
+        video = Tpl.html`<video class="emoji_dropdown_gif_video" src="${url}" muted autoplay loop playsinline></video>`.buildElement();
         container.appendChild(video);
       }
     }
@@ -728,6 +811,10 @@ const EmojiDropdown = new class {
       this.container.addEventListener('mouseenter', this.onMouseEnter);
       this.container.addEventListener('mouseleave', this.onMouseLeave);
     }
+
+    input.addEventListener('input', () => {
+      this.dom.nav_delete.hidden = !input.value || this.section !== 'emoji';
+    });
   }
 
   onButtonClick = () => {

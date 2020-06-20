@@ -1,5 +1,6 @@
 const path = require('path');
-const inliner = require('sass-inline-svg');
+const SvgInliner = require('sass-inline-svg');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 module.exports = {
   mode: 'development',
@@ -20,6 +21,11 @@ module.exports = {
     liveReload: false,
     port: 9111
   },
+  plugins: [
+    new MiniCssExtractPlugin({
+      filename: '[name].css',
+    }),
+  ],
   module: {
     rules: [
       {
@@ -43,11 +49,20 @@ module.exports = {
         test: /\.s?css$/,
         use: [
           {
-            loader: 'file-loader',
+            loader: MiniCssExtractPlugin.loader,
             options: {
-              name: '[name].css',
+              esModule: true,
             },
           },
+          {
+            loader: 'css-loader'
+          },
+          // {
+          //   loader: 'file-loader',
+          //   options: {
+          //     name: '[name].css',
+          //   },
+          // },
           {
             loader: 'postcss-loader'
           },
@@ -57,11 +72,15 @@ module.exports = {
               implementation: require('node-sass'),
               sassOptions: {
                 includePaths: ['./node_modules'],
-                functions: {svg: inliner('./src/css', {encodingFormat: 'uri'})}
+                functions: {svg: SvgInliner('./src/css', {encodingFormat: 'uri'})}
               }
             },
           }
         ],
+      },
+      {
+        test: /\.(png|jpg|gif|ico)$/,
+        loader: 'file-loader'
       }
     ]
   }

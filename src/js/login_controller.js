@@ -92,6 +92,7 @@ const LoginController = new class {
         this.submitButton = this.buildButton('Next');
         this.codeTextField = new MDCTextField(input);
         this.dom.form.append(input, this.submitButton);
+        $('input', input).focus();
         this.mdcComponents.push(this.codeTextField);
       } break;
 
@@ -140,6 +141,7 @@ const LoginController = new class {
         const code = this.codeTextField.value;
         if (code.length >= this.authParams.codeLength) {
           this.submitButton.hidden = false;
+          this.submitConfirmationCode();
         }
       } break;
 
@@ -560,7 +562,13 @@ const LoginController = new class {
     input.click();
     input.addEventListener('change', () => {
       this.profilePhotoFile = input.files[0];
+      const url = URL.createObjectURL(this.profilePhotoFile);
+      const photoEl = $('.login_upload_photo');
+      photoEl.style.backgroundImage = `url(${url})`;
+      photoEl.style.backgroundSize = 'cover';
+      this.profiilePhotoInput = null;
     });
+    this.profiilePhotoInput = input; // prevent gc
   };
 
   // showProfilePhotoCropBox(file) {

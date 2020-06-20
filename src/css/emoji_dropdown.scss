@@ -1,3 +1,5 @@
+@import "vars";
+
 $emoji_dropdown_desktop_size: 420px;
 $emoji_dropdown_mobile_height: 280px;
 $emoji_dropdown_nav_height: 48px;
@@ -57,7 +59,6 @@ $emoji_dropdown_nav_height: 48px;
   }
   &[hidden] {
     display: block;
-    transform: translateX(-100%);
     visibility: hidden;
   }
 }
@@ -65,6 +66,9 @@ $emoji_dropdown_nav_height: 48px;
   position: absolute;
   left: 0;
   background-image: svg('../icons/search_svg.svg', (path: (fill: $icon_mediumgray_color)));
+  &[hiidden] {
+    transform: translateX(-100%);
+  }
 }
 .emoji_dropdown_bottom_nav_item-emoji {
   background-image: svg('../icons/smile_svg.svg', (path: (fill: $icon_mediumgray_color)));
@@ -74,6 +78,14 @@ $emoji_dropdown_nav_height: 48px;
 }
 .emoji_dropdown_bottom_nav_item-gifs {
   background-image: svg('../icons/gifs@1x.svg', (path: (fill: $icon_mediumgray_color)));
+}
+.emoji_dropdown_bottom_nav_item-delete {
+  position: absolute;
+  right: 0;
+  background-image: svg('../icons/deleteleft@1x.svg', (path: (fill: $icon_mediumgray_color)));
+  &[hiidden] {
+    transform: translateX(100%);
+  }
 }
 .emoji_dropdown_bottom_nav_item-active {
   &.emoji_dropdown_bottom_nav_item-search {
@@ -100,11 +112,12 @@ $emoji_dropdown_nav_height: 48px;
 .emoji_dropdown_section {
   width: calc(100% / 3);
   height: 100%;
+  position: relative;
 }
 
 .emoji_dropdown_section_content {
   height: 100%;
-  overflow: scroll;
+  overflow: auto;
   .emoji_dropdown_section-emoji &,
   .emoji_dropdown_section-stickers & {
     height: calc(100% - #{$emoji_dropdown_nav_height});
@@ -134,9 +147,9 @@ $emoji_dropdown_nav_height: 48px;
   height: 42px;
   cursor: pointer;
   border-radius: 5px;
-}
-.emoji_dropdown_section-emoji .emoji_dropdown_list_item:hover {
-  background-color: #F1F3F4;
+  &:hover {
+    background-color: #F1F3F4;
+  }
 }
 
 .emoji_dropdown_sticker_img {
@@ -183,10 +196,20 @@ $emoji_dropdown_nav_height: 48px;
   background: no-repeat center;
   background-size: cover;
   border-radius: 5px;
+  &:hover {
+    background-color: #F4F4F5;
+  }
 }
 
-.emoji_dropdown_section-stickers .emoji_dropdown_list_item:hover {
-  background-color: #F4F4F5;
+.emoji_dropdown_list_item-preview {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20%;
+  background: rgba(0, 0, 0, .8);
 }
 
 .emoji_dropdown_top_nav {

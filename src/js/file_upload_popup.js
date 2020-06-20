@@ -1,6 +1,7 @@
-import {$, attachRipple, Tpl} from './utils';
+import {$, attachRipple, formatFileSize, isTouchDevice, Tpl} from './utils';
 import {I18n} from './i18n';
 import {MessagesFormController} from './messages_form_controller';
+import {MDCTextField} from '@material/textfield/index';
 
 const FileUploadPopup = new class {
 
@@ -14,9 +15,9 @@ const FileUploadPopup = new class {
           <li class="mdc-list-item messages_form_media_menu_item messages_form_media_menu_item-file" data-type="file" role="menuitem">
             <span class="mdc-list-item__text">Document</span>
           </li>
-          <li class="mdc-list-item messages_form_media_menu_item messages_form_media_menu_item-poll" data-type="poll" role="menuitem">
+          <!--li class="mdc-list-item messages_form_media_menu_item messages_form_media_menu_item-poll" data-type="poll" role="menuitem">
             <span class="mdc-list-item__text">Poll</span>
-          </li>
+          </li-->
         </ul>
       </div>
     `.buildElement();
@@ -43,16 +44,29 @@ const FileUploadPopup = new class {
       };
       this.fileInput = input; // protection from GC in safari
     }
+    this.hideMenu();
   };
 
   bind(button) {
     button.parentNode.append(this.menu);
 
-    button.addEventListener('mousedown', this.onMenuButtonClick);
-    button.addEventListener('mouseenter', this.onMenuMouseEnter);
-    button.addEventListener('mouseleave', this.onMenuMouseLeave);
-    this.menu.addEventListener('mouseenter', this.onMenuMouseEnter);
-    this.menu.addEventListener('mouseleave', this.onMenuMouseLeave);
+    if (isTouchDevice()) {
+      button.addEventListener('touchstart', (event) => {
+        event.preventDefault();
+        if (!this.isMenuOpen()) {
+          event.stopPropagation();
+          this.showMenu();
+        } else {
+          this.hideMenu();
+        }
+      });
+    } else {
+      button.addEventListener('mousedown', this.onMenuButtonClick);
+      button.addEventListener('mouseenter', this.onMenuMouseEnter);
+      button.addEventListener('mouseleave', this.onMenuMouseLeave);
+      this.menu.addEventListener('mouseenter', this.onMenuMouseEnter);
+      this.menu.addEventListener('mouseleave', this.onMenuMouseLeave);
+    }
 
     this.menuButton = button;
   }
@@ -105,41 +119,99 @@ const FileUploadPopup = new class {
     if (!files.length) {
       return;
     }
-    if (files.length > 1) {
-      // todo show popup instead
-      for (const file of files) {
-        MessagesFormController.onFileSend(file, sendAsMedia);
-      }
+    if (sendAsMedia) {
+      this.showPhotosUploadPopup(files);
     } else {
-      MessagesFormController.onFileSend(files[0], sendAsMedia);
+      this.showFilesUploadPopup(files);
     }
+  }
+
+  showPhotosUploadPopup(files) {
+    const wrapClassModifier = (files.length > 3 ? 'many' : 'n' + files.length);
+    const wrap = Tpl.html`<div class="messages_upload_popup_media messages_upload_popup_media-${wrapClassModifier}"></div>`.buildElement();
+    let photoCount = 0;
+    let videoCount = 0;
+    for (const file of files) {
+      let el;
+      if (file.type.startsWith('video/')) {
+        videoCount++;
+        el = Tpl.html`<video src="${URL.createObjectURL(file)}" class="messages_upload_popup_media_item"></video>`.buildElement();
+      } else {
+        photoCount++
+        el = Tpl.html`<img src="${URL.createObjectURL(file)}" class="messages_upload_popup_media_item">`.buildElement();
+      }
+      wrap.appendChild(el);
+    }
+
+    let title;
+    if (photoCount && !videoCount) {
+      title = I18n.getPlural('messages_send_n_photos', files.length);
+    } else if (videoCount && !photoCount) {
+      title = I18n.getPlural('messages_send_n_videos', files.length);
+    } else {
+      title = I18n.getPlural('messages_send_n_files', files.length);
+    }
+    this.buildPopup(title, wrap, files, true);
   }
 
   /**
    * @param {FileList} files
    */
   showFilesUploadPopup(files) {
-    let itemsHtml = '';
+    const content = Tpl.html``;
     for (const file of files) {
       const fileExt = file.name.split('.').pop() || '';
-      itemsHtml += Tpl.html`
+      content.appendHtml`
         <div class="messages_upload_popup_files_item">
-          <div class="messages_upload_popup_files_item_thumb"></div>
-          <div class="messages_upload_popup_files_item_name">${file.name}</div>
-          <div class="messages_upload_popup_files_item_size">${file.size}</div>
+          <div class="messages_upload_popup_files_item_thumb">${fileExt}</div>
+          <div class="messages_upload_popup_files_item_description">
+            <div class="messages_upload_popup_files_item_name _cut_text">${file.name}</div>
+            <div class="messages_upload_popup_files_item_size">${formatFileSize(file.size)}</div>
+          </div>
         </div>
       `;
     }
+    const title = I18n.getPlural('messages_send_n_files', files.length);
+    this.buildPopup(title, content.buildFragment(), files);
+  }
 
-    const popup = Tpl.html`
-      <div class="messages_upload_popup">
-        <div class="messages_upload_popup_header">${ I18n.getPlural('messages_send_n_files', files.length) }</div>
-        <button class="messages_upload_popup_send_button">Send</button>
-        <button class="messages_upload_popup_close_button"></button>
-        ${itemsHtml}
-        <input class="messages_upload_popup_caption_input">
+  buildPopup(title, content, files, sendAsPhoto = false) {
+    const layer = Tpl.html`
+      <div class="messages_upload_popup_layer">
+        <div class="messages_upload_popup">
+          <div class="messages_upload_popup_header">
+            <button class="mdc-icon-button messages_upload_popup_close_button"></button>
+            <div class="messages_upload_popup_title">${title}</div>
+            <button class="mdc-button mdc-button--unelevated messages_upload_popup_send_button">Send</button>        
+          </div>
+          <div class="messages_upload_popup_content"></div>
+          <div class="mdc-text-field mdc-text-field--outlined messages_upload_popup_caption_text_field">
+            <input type="text" class="mdc-text-field__input messages_upload_popup_caption_input">
+            <div class="mdc-notched-outline">
+              <div class="mdc-notched-outline__leading"></div>
+              <div class="mdc-notched-outline__notch">
+                <label class="mdc-floating-label">Caption</label>
+              </div>
+              <div class="mdc-notched-outline__trailing"></div>
+            </div>
+          </div>
+        </div>
       </div>
     `.buildElement();
+
+    $('.messages_upload_popup_content', layer).appendChild(content);
+    $('.messages_upload_popup_close_button', layer).addEventListener('click', () => {
+      layer.remove();
+    });
+    $('.messages_upload_popup_send_button', layer).addEventListener('click', () => {
+      const caption = $('.messages_upload_popup_caption_input', layer).value.trim();
+      MessagesFormController.onMediaSend(files, sendAsPhoto, caption);
+      layer.remove();
+    });
+
+    const container = $('.messages_container');
+    container.appendChild(layer);
+    new MDCTextField($('.mdc-text-field', layer));
   }
 };
 

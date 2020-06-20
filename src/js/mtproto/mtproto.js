@@ -473,14 +473,14 @@ class MTProto {
         // todo
         break;
       case 'bad_server_salt':
-        console.warn('[MTProto] bad_server_salt', object);
+        console.log('[MTProto] bad_server_salt', object);
         this.updateServerSalt(object.new_server_salt);
         const sentMessage = this.sentMessages.get(object.bad_msg_id);
         if (sentMessage) {
-          console.warn('[MTProto] bad_server_salt. Have message to resend');
+          console.log('[MTProto] bad_server_salt. Have message to resend');
           this.sendRequest(sentMessage);
         } else {
-          console.warn('[MTProto] bad_server_salt. No message to resend');
+          console.log('[MTProto] bad_server_salt. No message to resend');
           const sentMessages = Array.from(this.sentMessages.values());
           if (sentMessages.length) {
             this.sendRequest(sentMessages);

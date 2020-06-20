@@ -150,6 +150,7 @@ const MessagesApiManager = new class {
           if (dialog) {
             const oldFolderId = dialog.folder_id;
             dialog.folder_id = folderId;
+            delete dialog.pinned;
             this.emitter.trigger('dialogFolderChange', {dialog, oldFolderId});
             for (const list of [this.dialogs, this.archivedDialogs]) {
               const index = list.indexOf(dialog);
@@ -245,6 +246,7 @@ const MessagesApiManager = new class {
     for (const item of order) {
       let dialog = this.peerDialogs.get(this.getPeerId(item.peer));
       if (!dialog) {
+        debugger;
         dialog = await this.loadPeerDialog(item.peer);
       }
       dialog.pinned = true;
@@ -274,8 +276,8 @@ const MessagesApiManager = new class {
     });
   }
 
-  handleDialogOrder(dialog) {
-    if (dialog.pinned) {
+  handleDialogOrder(dialog, force = false) {
+    if (dialog.pinned && !force) {
       return;
     }
 
@@ -287,7 +289,7 @@ const MessagesApiManager = new class {
     const folderId = dialog.folder_id;
     const dialogs = folderId === 1 ? this.archivedDialogs : this.dialogs;
 
-    const curIndex = this.getDialogIndex(dialog);
+    const curIndex = this.getDialogIndex(dialog, dialogs);
     if (curIndex > -1) {
       dialogs.splice(curIndex, 1);
     }
@@ -329,14 +331,6 @@ const MessagesApiManager = new class {
         this.dialogs.push(dialog);
       }
     }
-
-    const allDialogs = folderId ? this.archivedDialogs : this.dialogs;
-
-    this.emitter.trigger('dialogsUpdate', {dialogs: allDialogs, folderId});
-
-    this.loadPinnedDialogs();
-
-    this.preloadDialogsMessages(dialogs);
 
     return dialogs;
   }
@@ -404,7 +398,7 @@ const MessagesApiManager = new class {
     this.dialogsPreloaded = true;
     for (const dialog of dialogs) {
       if (!this.chatMessages.has(this.getPeerId(dialog.peer))) {
-        await this.loadChatHistory(dialog, 0, 10);
+        await this.loadChatHistory(dialog, 0, 20);
         await wait(500);
       }
     }
@@ -420,16 +414,16 @@ const MessagesApiManager = new class {
     this.updateMessages(res.messages);
     this.updateDialogs(res.dialogs);
 
-    return res.dialogs[0];
+    return this.peerDialogs.get(this.getPeerId(peer));
   }
 
   updateDialogs(dialogs) {
     for (const dialog of dialogs) {
       const peerId = this.getPeerId(dialog.peer);
-      const dialogOldVersion = this.peerDialogs.get(dialog);
-      if (dialogOldVersion) {
-        Object.keys(dialogOldVersion).forEach(key => delete dialogOldVersion[key]);
-        Object.assign(dialogOldVersion, dialog);
+      const dialogRef = this.peerDialogs.get(peerId);
+      if (dialogRef) {
+        Object.keys(dialogRef).forEach(key => delete dialogRef[key]);
+        Object.assign(dialogRef, dialog);
       } else {
         this.peerDialogs.set(peerId, dialog);
       }
@@ -548,6 +542,35 @@ const MessagesApiManager = new class {
     }
   }
 
+  async sendMultiMedia(peer, mediaList, caption = '') {
+    const multiMedia = mediaList.map((inputMedia) => {
+      return {_: 'inputSingleMedia', media: inputMedia, random_id: randomLong(), message: caption};
+    });
+
+    try {
+      const updates = await ApiClient.callMethod('messages.sendMultiMedia', {
+        multi_media: multiMedia,
+        peer: this.getInputPeer(peer)
+      });
+      console.log(updates);
+      if (updates._ === 'updateShortSentMessage') {
+        this.handleUpdateShortSentMessage(updates, peer, text, randomId);
+      } else {
+        this.onUpdates(updates);
+      }
+    } catch (e) {
+      debugger;
+      throw e;
+    }
+  }
+
+  uploadMedia(peer, inputMedia) {
+    return ApiClient.callMethod('messages.uploadMedia', {
+      media: inputMedia,
+      peer: this.getInputPeer(peer),
+    });
+  }
+
   async readHistory(dialog, maxId, readCount) {
     if (dialog.peer.channel_id) {
       await ApiClient.callMethod('channels.readHistory', {
@@ -576,19 +599,19 @@ const MessagesApiManager = new class {
     return this.peerDialogs.get(peerId);
   }
 
-  getDialogIndex(dialog, folderId = 0) {
-    const list = folderId === 1 ? this.archivedDialogs : this.dialogs;
-    return list.findIndex((item) => this.cmpDialogs(item, dialog));
+  getDialogIndex(dialog, list) {
+    return list.indexOf(dialog);
+    // return list.findIndex((item) => this.cmpDialogs(item, dialog));
   }
 
-  replaceDialog(dialog) {
-    const folderId = dialog.folder_id;
-    const index = this.getDialogIndex(dialog, folderId);
-    if (index > -1) {
-      const list = folderId === 1 ? this.archivedDialogs : this.dialogs;
-      list.splice(index, 1, dialog);
-    }
-  }
+  // replaceDialog(dialog) {
+  //   const folderId = dialog.folder_id;
+  //   const index = this.getDialogIndex(dialog, folderId);
+  //   if (index > -1) {
+  //     const list = folderId === 1 ? this.archivedDialogs : this.dialogs;
+  //     list.splice(index, 1, dialog);
+  //   }
+  // }
 
   cmpDialogs(a, b) {
     return a.peer._ === b.peer._ && this.getPeerId(a.peer) === this.getPeerId(b.peer);
@@ -695,7 +718,7 @@ const MessagesApiManager = new class {
   getInputMessagesFilter(type) {
     switch (type) {
       case 'media':
-        return {_: 'inputMessagesFilterPhotos'};
+        return {_: 'inputMessagesFilterPhotoVideo'};
       case 'docs':
         return {_: 'inputMessagesFilterDocument'};
       case 'links':

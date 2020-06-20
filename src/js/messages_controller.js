@@ -4,11 +4,10 @@ import {
   formatCountShort, formatCountLong,
   formatDateFull,
   formatDateRelative,
-  formatTime, formatDuration, initAnimation, attachRipple, downloadFile, $$
+  formatTime, formatDuration, initAnimation, attachRipple, downloadFile, $$, getDeferred, isIosSafari
 } from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MediaApiManager} from './api/media_api_manager';
-import {MediaViewController} from './media_view_controller';
 import {getEmojiMatches} from './emoji_config';
 import {MessagesFormController} from './messages_form_controller';
 import {ChatsController} from "./chats_controller";
@@ -28,7 +27,7 @@ const MessagesController = new class {
     this.scrollContainer = $('.messages_scroll');
     this.container = $('.messages_list');
 
-    this.loader = buildLoaderElement();
+    this.loader = buildLoaderElement(null, 'white');
 
     this.container.addEventListener('click', this.onGlobalClick);
     this.scrollContainer.addEventListener('scroll', this.onScroll);
@@ -101,6 +100,8 @@ const MessagesController = new class {
       // Can't get peer info without access hash
       // App.setLocation(peerData._ + peerData.id);
     }
+
+    import('./media_view_controller');
   }
 
   async setChatByPeerId(peerId, messageId = 0) {
@@ -123,7 +124,6 @@ const MessagesController = new class {
   async setChatByPeerType(peerId, peerType) {
     const peer = MessagesApiManager.getPeerById(+peerId, peerType);
     const dialog = await MessagesApiManager.loadPeerDialog(peer);
-    console.log(peer, dialog);
     MessagesController.setChat(dialog);
   }
 
@@ -134,9 +134,9 @@ const MessagesController = new class {
     }
 
     MessagesFormController.clear();
-    MediaViewController.abort();
-    this.ChatInfoController && this.ChatInfoController.close();
-    this.MessagesSearchController && this.MessagesSearchController.close();
+    window.MediaViewController && MediaViewController.abort();
+    window.ChatInfoController && ChatInfoController.close();
+    window.MessagesSearchController && MessagesSearchController.close();
 
     this.header.hidden = true;
     this.footer.hidden = true;
@@ -233,7 +233,7 @@ const MessagesController = new class {
     }
 
     if (this.headerAudioEl) {
-      const wrap = $('.messages_header_pinned_message_wrap', this.header);
+      const wrap = $('.messages_header_audio_wrap', this.header);
       wrap.appendChild(this.headerAudioEl);
     }
 
@@ -347,15 +347,18 @@ const MessagesController = new class {
     const offsetId = down ? this.maxMsgId : this.minMsgId;
     MessagesApiManager.loadMessages(dialog.peer, offsetId, limit, addOffset)
         .then((messages) => {
-          if (dialog === this.dialog) {
-            if (!messages.length) {
-              this.noMore = true;
-            }
-            if (down) {
-              this.appendHistory(messages);
-            } else {
-              this.prependHistory(messages);
-            }
+          if (dialog !== this.dialog) {
+            return;
+          }
+          if (!messages.length) {
+            this.noMore = true;
+          } else if (down) {
+            this.appendHistory(messages);
+          } else if (isIosSafari()) {
+            return this.waitScrollStop()
+                .then((overscroll) => this.prependHistory(messages, overscroll))
+          } else {
+            this.prependHistory(messages);
           }
         })
         .catch((error) => {
@@ -367,6 +370,31 @@ const MessagesController = new class {
           this.loading = false;
         });
   };
+
+  waitScrollStop() {
+    const deferred = getDeferred();
+    let timeoutId;
+    const later = (overscroll = 0) => {
+      this.scrollContainer.removeEventListener('scroll', onScroll);
+      this.scrollContainer.removeEventListener('touchstart', onTouchStart);
+      deferred.resolve(overscroll);
+    };
+    const onScroll = () => {
+      clearTimeout(timeoutId);
+      if (this.scrollContainer.scrollTop > 0) {
+        timeoutId = setTimeout(later, 75);
+      } else {
+        later(this.scrollContainer.scrollTop);
+      }
+    };
+    const onTouchStart = () => {
+      clearTimeout(timeoutId);
+      later()
+    };
+    this.scrollContainer.addEventListener('scroll', onScroll);
+    this.scrollContainer.addEventListener('touchstart', onTouchStart);
+    return deferred.promise;
+  }
 
   jumpToMessage(messageId, unread = false) {
     if (this.messageElements.has(messageId)) {
@@ -495,7 +523,8 @@ const MessagesController = new class {
     if (target.tagName === 'A' || (target = target.closest('a'))) {
       const refChatId = target.dataset.refUserId || target.dataset.refChatId;
       if (refChatId) {
-        this.setChatByPeerId(+refChatId);
+        const messageId = +target.dataset.refMessageId || 0
+        this.setChatByPeerId(+refChatId, messageId);
         event.preventDefault();
       }
       const entity = target.dataset.entity;
@@ -533,7 +562,7 @@ const MessagesController = new class {
     }
   }
 
-  prependHistory(messages) {
+  prependHistory(messages, overscroll = 0) {
     this.loader.remove();
     if (this.minMsgId) {
       messages = messages.filter(message => message.id < this.minMsgId);
@@ -557,8 +586,8 @@ const MessagesController = new class {
     this.maxMsgId = this.maxMsgId || messages[0].id;
 
     if (this.scrolling) {
-      this.scrollContainer.style.overflow = 'hidden';
-      const newScrollTop = prevScrollTop + (this.scrollContainer.scrollHeight - prevScrollHeight);
+      this.scrollContainer.style.overflow = 'hidden'; // ios safari 💩
+      const newScrollTop = prevScrollTop + (this.scrollContainer.scrollHeight - prevScrollHeight) + overscroll;
       this.scrollContainer.scrollTop = newScrollTop;
       this.scrollContainer.style.overflow = '';
       requestAnimationFrame(() => {
@@ -858,12 +887,14 @@ const MessagesController = new class {
       </div>
     `;
 
-    if (isStickerMessage) {
-      el.classList.add('message-type-sticker');
-    } else if (isRoundMessage) {
-      el.classList.add('message-type-round');
-    } else if (isEmojiMessage) {
-      el.classList.add('message-type-emoji');
+    if (!message.fwd_from) {
+      if (isStickerMessage) {
+        el.classList.add('message-type-sticker');
+      } else if (isRoundMessage) {
+        el.classList.add('message-type-round');
+      } else if (isEmojiMessage) {
+        el.classList.add('message-type-emoji');
+      }
     }
 
     if (message.reply_to_msg_id) {
@@ -962,13 +993,16 @@ const MessagesController = new class {
       // animated emoji
       return;
     }
-    if (thumbData.type === 'photo') {
-      MediaViewController.showPhoto(thumbData.object, thumb, message);
-    } else if (thumbData.type === 'video') {
-      MediaViewController.showVideo(thumbData.object, thumb, message);
-    } else if (thumbData.type === 'gif') {
-      MediaViewController.showGif(thumbData.object, thumb, message);
-    }
+    import('./media_view_controller')
+        .then(({MediaViewController}) => {
+          if (thumbData.type === 'photo') {
+            MediaViewController.showPhoto(thumbData.object, thumb, message);
+          } else if (thumbData.type === 'video') {
+            MediaViewController.showVideo(thumbData.object, thumb, message);
+          } else if (thumbData.type === 'gif') {
+            MediaViewController.showGif(thumbData.object, thumb, message);
+          }
+        });
   };
 
   onRoundClick = (event) => {
@@ -1016,7 +1050,7 @@ const MessagesController = new class {
   onFileClick = (event) => {
     const button = event.currentTarget;
 
-    const msgId = +button.dataset.messageId || +button.closest('.message').dataset.id;
+    const msgId = +button.dataset.messageId /* shared media */ || +button.closest('.message').dataset.id;
     const message = MessagesApiManager.messages.get(msgId);
     if (!message) {
       return;
@@ -1047,9 +1081,8 @@ const MessagesController = new class {
     };
 
     const onProgress = (loaded) => {
-      const percent = Math.round(loaded / document.size * 100);
       if (progressPath) {
-        progressPath.style.strokeDasharray = `${percent}, 100`;
+        progressPath.style.setProperty('--progress-value', loaded / document.size);
       }
     };
 
@@ -1061,7 +1094,7 @@ const MessagesController = new class {
     };
 
     let progressPath;
-    if (button.classList.contains('document_icon')) {
+    if (button.classList.contains('document_icon') || button.classList.contains('chat_info_shared_docs_item_icon')) {
       button.classList.add('document_icon-loading');
       button.innerHTML = `
         <svg class="document_icon_progress_svg" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
@@ -1078,7 +1111,7 @@ const MessagesController = new class {
 
   async playAudio(btn, {document: doc, attributes, message}) {
     if (this.audioPlayer) {
-      if (this.audioPlayer.doc === doc) {
+      if (this.audioPlayer.doc.id === doc.id) {
         this.audioPlayer.togglePlay();
         return;
       } else {
@@ -1099,16 +1132,23 @@ const MessagesController = new class {
     }
 
     audioPlayer.initMessageAudioPlayer(btn);
+    if (btn.dataset.messageId) { // shared media
+      const messageEl = $(`.message[data-id="${message.id}"]`);
+      if (messageEl) {
+        audioPlayer.initMessageAudioPlayer($('.document_icon-audio', messageEl));
+      }
+    }
+
     this.headerAudioEl = audioPlayer.initHeaderAudioPlayer(message);
 
     audioPlayer.listen('stop', () => {
+      this.audioPlayer = null;
       this.headerAudioEl.remove();
       this.headerAudioEl = null;
     });
 
     audioPlayer.listen('ended', () => {
       this.audioPlayer.destroy();
-      this.audioPlayer = null;
     });
 
     audioPlayer.play();
@@ -1134,6 +1174,9 @@ const MessagesController = new class {
         const document = media.document;
         const attributes = MediaApiManager.getDocumentAttributes(document);
         if (['video', 'gif', 'sticker', 'round'].includes(attributes.type)) {
+          // if (document.thumbs && document.thumbs.length === 1 && document.thumbs[0].type === 'i') {
+          //   return;
+          // }
           return {type: attributes.type, object: document, sizes: document.thumbs, video_sizes: document.video_thumbs, attributes};
         }
       } break;
@@ -1181,12 +1224,12 @@ const MessagesController = new class {
       const photoSize = MediaApiManager.choosePhotoSize(sizes, 'm');
       if (photoSize && MediaApiManager.isCachedPhotoSize(photoSize)) {
         const mimeType = mediaThumbData.object.mime_type;
-        const url = await MediaApiManager.getCachedPhotoSize(photoSize, mimeType);
+        const url = await MediaApiManager.getCachedPhoto(photoSize, mimeType);
         inlineThumb = Tpl.html`<img class="message_media_thumb_image" src="${url}">`.buildElement();
       }
-      const inlineSize = MediaApiManager.choosePhotoSize(sizes, 'i');
+      const inlineSize = MediaApiManager.getInlinePhotoSize(sizes);
       if (inlineSize) {
-        const url = MediaApiManager.getPhotoStrippedSize(sizes);
+        const url = MediaApiManager.getStrippedPhoto(sizes);
         inlineThumb = Tpl.html`<img class="message_media_thumb_image message_media_thumb_image-blurred" src="${url}">`.buildElement();
       }
       if (inlineThumb) {
@@ -1209,20 +1252,27 @@ const MessagesController = new class {
         FileApiManager.loadDocument(mediaThumbData.object),
         FileApiManager.loadDocumentThumb(mediaThumbData.object, photoSize.type)
       ]);
-      const thumb = Tpl.html`<video src="${videoUrl}" poster="${thumbUrl}" playsinline muted autoplay loop class="message_media_thumb_round_video"></video>`.buildElement();
+      const thumb = Tpl.html`<video src="${videoUrl}#0.1" poster="${thumbUrl}" playsinline muted autoplay loop class="message_media_thumb_round_video"></video>`.buildElement();
       thumbContainer.prepend(thumb);
       thumbContainer.addEventListener('click', this.onRoundClick);
+    } else if (mediaThumbData.type === 'gif') {
+      const url = await FileApiManager.loadDocument(mediaThumbData.object, {cache: true});
+      const thumb = Tpl.html`<video class="message_media_thumb_image" src="${url}" preload="metadata"></video>`.buildElement();
+      thumbContainer.prepend(thumb);
+      if (isIosSafari()) {
+        document.body.addEventListener('touchstart', () => thumb.load(), {once: true});
+      }
     } else if (mediaThumbData.video_sizes) {
       const videoSize = mediaThumbData.video_sizes[0];
       const url = await FileApiManager.loadDocumentThumb(mediaThumbData.object, videoSize.type);
-      const thumb = Tpl.html`<video class="message_media_thumb_image" src="${url}" muted autoplay loop></video>`.buildElement();
+      const thumb = Tpl.html`<video class="message_media_thumb_image" src="${url}#t=0.1" preload="auto"></video>`.buildElement();
       thumbContainer.prepend(thumb);
     } else {
-      const photoSize = MediaApiManager.choosePhotoSize(sizes, 'x');
+      const photoSize = MediaApiManager.choosePhotoSize(sizes, 'x', 'm');
       let url;
       if (MediaApiManager.isCachedPhotoSize(photoSize)) {
         const mimeType = mediaThumbData.object.mime_type;
-        url = await MediaApiManager.getCachedPhotoSize(photoSize, mimeType);
+        url = await MediaApiManager.getCachedPhoto(photoSize, mimeType);
       } else if (mediaThumbData.object._ === 'document') {
         url = await FileApiManager.loadDocumentThumb(mediaThumbData.object, photoSize.type);
       } else {
@@ -1254,7 +1304,7 @@ const MessagesController = new class {
       <div class="message_forwarded_header">Forwarded message</div>
       <div class="message_forwarded_content">
         <div class="message_forwarded_author">
-          <a ${authorRefAttr}="${authorRefValue}">${authorName}</a>
+          <a ${authorRefAttr}="${authorRefValue}" data-ref-message-id="${fwdHeader.channel_post || 0}">${authorName}</a>
         </div>
         ${messageContent}
       </div>
@@ -1336,12 +1386,6 @@ const MessagesController = new class {
 
     const attributes = MediaApiManager.getDocumentAttributes(media.document);
     switch (attributes.type) {
-      case 'video':
-        return '[video]';
-      case 'gif':
-        return '[gif]';
-      case 'sticker':
-        return '[sticker]';
       case 'voice':
         return this.formatVoice(media.document, attributes);
       case 'audio':
@@ -1426,11 +1470,11 @@ const MessagesController = new class {
     }
   }
 
-  formatAudio(document, attributes) {
+  formatAudio(document, attributes, messageId) {
     return Tpl.html`
       <div class="document">
         <div class="document_col">
-          <button class="document_icon document_icon-audio"></button>
+          <button class="document_icon document_icon-audio" data-message-id="${messageId}"></button>
         </div>
         <div class="document_col">
           <div class="document_filename">${attributes.audio_title || attributes.file_name || 'Unknown Track'}</div>
@@ -1600,10 +1644,14 @@ const MessagesController = new class {
         maxW = mediaThumbData.emoji ? 100 : 150;
         maxH = mediaThumbData.emoji ? 100 : 150;
       }
-      const photoSize = MediaApiManager.choosePhotoSize(mediaThumbData.sizes);
-      const videoSize = mediaThumbData.video_sizes && mediaThumbData.video_sizes[0];
-      if (photoSize || videoSize) {
-        [thumbWidth, thumbHeight] = this.getThumbWidthHeight((photoSize || videoSize), maxW, maxH);
+      const photoSize = MediaApiManager.choosePhotoSize(mediaThumbData.sizes, 'm');
+      const videoSize = null; //mediaThumbData.video_sizes && mediaThumbData.video_sizes[0];
+      if (photoSize || mediaThumbData.type === 'gif') {
+        if (photoSize) {
+          [thumbWidth, thumbHeight] = this.getThumbWidthHeight((photoSize || videoSize), maxW, maxH);
+        } else {
+          [thumbWidth, thumbHeight] = [mediaThumbData.attributes.w, mediaThumbData.attributes.h];
+        }
         if (captionText && captionText.length > 50 && thumbWidth < maxW) {
           thumbWidth = maxW ;
         }

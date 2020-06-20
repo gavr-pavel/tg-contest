@@ -56,22 +56,22 @@
   border: none;
   outline: none;
   padding: 0;
-  width: 24px;
-  height: 24px;
-  left: 15px;
-  bottom: 15px;
+  width: 40px;
+  height: 40px;
+  left: 7px;
+  bottom: 7px;
   cursor: pointer;
-  background: svg('../icons/smile_svg.svg', (path: (fill: $icon_mediumgray_color)));
+  background: svg('../icons/smile_svg.svg', (path: (fill: $icon_mediumgray_color))) no-repeat center;
   .mobile_view & {
-    bottom: 11px;
+    bottom: 3px;
   }
   touch-action: manipulation;
 }
 
 .messages_form_emoji_button-active {
-  background: svg('../icons/smile_svg.svg', (path: (fill: $icon_blue_color)));
+  background: svg('../icons/smile_svg.svg', (path: (fill: $icon_blue_color)))  no-repeat center;
   .mobile_view & {
-    background: svg('../icons/keyboard@1x.svg', (path: (fill: $icon_mediumgray_color)));
+    background: svg('../icons/keyboard@1x.svg', (path: (fill: $icon_mediumgray_color)))  no-repeat center;
   }
 }
 
@@ -80,14 +80,14 @@
   border: none;
   outline: none;
   padding: 0;
-  width: 24px;
-  height: 24px;
-  right: 15px;
-  bottom: 15px;
+  width: 40px;
+  height: 40px;
+  right: 7px;
+  bottom: 7px;
   cursor: pointer;
-  background: svg('../icons/attach_svg.svg', (path: (fill: $icon_mediumgray_color)));
+  background: svg('../icons/attach_svg.svg', (path: (fill: $icon_mediumgray_color))) no-repeat center;
   .mobile_view & {
-    bottom: 11px;
+    bottom: 3px;
   }
   .messages_form_voice_timer ~ & {
     display: none;
@@ -102,7 +102,7 @@
 }
 
 .messages_form_media_button-active {
-  background: svg('../icons/attach_svg.svg', (path: (fill: $icon_blue_color)));
+  background: svg('../icons/attach_svg.svg', (path: (fill: $icon_blue_color))) no-repeat center;
 }
 
 .messages_form_voice_timer {

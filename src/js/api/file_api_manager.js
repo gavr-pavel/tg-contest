@@ -108,7 +108,9 @@ const FileApiManager = new class {
         const loadStart = Date.now();
         for (let offset = 0, loaded = 0; ; offset += PART_SIZE) {
           if (signal && signal.aborted) {
-            throw new Error('File download aborted');
+            const err = new Error('File download aborted');
+            err.name = 'AbortError';
+            throw err;
           }
           const res = await apiConnection.callMethod('upload.getFile', {
             location,
@@ -150,7 +152,9 @@ const FileApiManager = new class {
 
     const url = FileApiManager.getBlobUrl(blob);
 
-    this.blobUrls.set(dbFileName, url);
+    if (cache || blob.size < MB) {
+      this.blobUrls.set(dbFileName, url);
+    }
 
     return url;
   }
@@ -257,6 +261,7 @@ const FileApiManager = new class {
       file_reference: photo.file_reference,
       thumb_size: sizeType
     };
+    options.mimeType = 'image/jpeg';
     return this.loadFile(location, photo.dc_id, options);
   }
 

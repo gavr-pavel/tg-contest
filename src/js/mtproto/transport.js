@@ -19,7 +19,7 @@ class WebSocketTransport extends Transport {
   }
 
   getUrl(dcId) {
-    return `wss://${this.getHost(dcId)}.web.telegram.org/apiws`;
+    return `wss://${this.getHost(dcId)}.web.telegram.org/apiws` + (location.search === '?test' ? '_test' : '');
   }
 
   initSocket() {

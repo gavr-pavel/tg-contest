@@ -23,9 +23,9 @@ const ArchivedChatsController = new class {
     backButtonEl.addEventListener('click', this.onBack);
     backButtonEl.hidden = false;
 
-    MessagesApiManager.emitter.on('dialogsUpdate', this.onDialogsUpdate);
+    MessagesApiManager.emitter.on('onDialogOrderUpdate', this.onDialogOrderUpdate);
 
-    if (MessagesApiManager.archivedDialogs) {
+    if (MessagesApiManager.archivedDialogs.length) {
       this.renderChats(MessagesApiManager.archivedDialogs);
       const lastItem = MessagesApiManager.archivedDialogs.slice(-1)[0];
       if (!lastItem.pinned) {
@@ -41,13 +41,6 @@ const ArchivedChatsController = new class {
     const backButtonEl = event.currentTarget;
     backButtonEl.removeEventListener('click', this.onBack);
     backButtonEl.hidden = true;
-  };
-
-  onDialogsUpdate = (event) => {
-    const {dialogs, folderId} = event.detail;
-    if (folderId === 1) {
-      this.renderChats(dialogs);
-    }
   };
 
   loadMore() {
@@ -86,6 +79,28 @@ const ArchivedChatsController = new class {
     }
     this.scrollContainer.append(frag);
   }
+
+  onDialogOrderUpdate = (event) => {
+    const {dialog, index, folderId} = event.detail;
+    if (folderId !== 1) {
+      return;
+    }
+    const chatId = MessagesApiManager.getPeerId(dialog.peer);
+    let el = this.chatElements.get(chatId);
+    if (el) {
+      el.classList.toggle('chats_item-pinned', !!dialog.pinned);
+      ChatsController.renderChatPreviewContent(el, dialog);
+    } else {
+      el = ChatsController.buildChatPreviewElement(dialog);
+    }
+    const container = this.scrollContainer;
+    const nextEl = container.children[index];
+    if (nextEl) {
+      nextEl.before(el);
+    } else {
+      container.appendChild(el);
+    }
+  };
 
   // buildChatPreviewElement(dialog) {
   //   const peerId = MessagesApiManager.getPeerId(dialog.peer);

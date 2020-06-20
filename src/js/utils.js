@@ -170,10 +170,10 @@ function getLabeledElements(container) {
   return result;
 }
 
-function buildLoaderElement(container = null) {
+function buildLoaderElement(container = null, color = '#5FA1E3') {
   const el = Tpl.html`
     <svg class="circular-loader" viewBox="25 25 50 50" xmlns="http://www.w3.org/2000/svg">
-      <circle class="loader-path" cx="50" cy="50" r="20" fill="none" stroke-width="3" />
+      <circle class="loader-path" stroke="${color}" cx="50" cy="50" r="20" fill="none" stroke-width="3" />
     </svg>
   `.buildElement();
   if (container) {
@@ -444,11 +444,63 @@ function initMenu(container) {
   return new MDCMenu(container);
 }
 
+function buildMenu(actions, {container, menuClass, itemClass, itemCallback}) {
+  const el = Tpl.html`
+    <div class="${menuClass} mdc-menu mdc-menu-surface">
+      <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical">
+        ${ actions.map(([actionType, text]) => Tpl.html`
+          <li class="mdc-list-item ${itemClass} ${itemClass}-${actionType}" data-action="${actionType}" role="menuitem">
+            <span class="mdc-list-item__text">${text}</span>
+          </li>
+        `) }
+      </ul>
+    </div>
+  `.buildElement();
+
+  const onItemClick = (event) => {
+    event.stopPropagation();
+    const action = event.currentTarget.dataset.action;
+    itemCallback(action);
+    closeMenu();
+  };
+
+  const closeMenu = () => {
+    menu.open = false;
+    setTimeout(() => {
+      el.remove();
+    }, 500);
+  };
+
+  const onTouch = (event) => {
+    if (!el.contains(event.target)) {
+      closeMenu();
+    }
+    document.removeEventListener(touchEventType, onTouch);
+  };
+  const touchEventType = isTouchDevice() ? 'touchstart' : 'mousedown';
+  document.addEventListener(touchEventType, onTouch);
+
+  for (const item of $$('.chats_dialog_menu_item', el)) {
+    item.addEventListener('click', onItemClick);
+  }
+
+  const menu = initMenu(el);
+  container.appendChild(el);
+  return menu;
+}
+
 function downloadFile(url, filename) {
   const a = window.document.createElement('a');
   a.href = url;
   a.download = filename;
   a.click();
+}
+
+function isIosSafari() {
+  const ua = window.navigator.userAgent;
+  const iOS = !!ua.match(/iPad/i) || !!ua.match(/iPhone/i);
+  const webkit = !!ua.match(/WebKit/i);
+  return iOS && webkit && !ua.match(/CriOS/i);
 }
 
 export {
@@ -484,5 +536,7 @@ export {
   attachMenuListener,
   attachRipple,
   initMenu,
-  downloadFile
+  buildMenu,
+  downloadFile,
+  isIosSafari
 };

@@ -3,7 +3,7 @@ import {LoginController} from './login_controller.js';
 import {ChatsController} from './chats_controller';
 import {MessagesController} from './messages_controller.js';
 import {MDCSnackbar} from '@material/snackbar/component';
-import {Tpl} from './utils';
+import {isIosSafari, Tpl} from './utils';
 
 const App = new class {
   API_ID = 884322;
@@ -30,6 +30,9 @@ const App = new class {
     window.addEventListener('hashchange', this.onLocationChange);
     setTimeout(this.onLocationChange);
 
+    if (isIosSafari()) {
+      document.body.classList.add('ios_safari');
+    }
     // ApiClient.emitter.on('updateConnectionState', (event) => {
     //   const header = Utils.$('.header');
     //   if (!header) {
@@ -119,6 +122,20 @@ const App = new class {
   onResize = () => {
     document.body.classList.toggle('mobile_view', window.innerWidth < 1160);
   };
+
+  isMobileView() {
+    return document.body.classList.contains('mobile_view');
+  }
+
+  onRightSidebarOpen() {
+    if (!this.isMobileView()) {
+      document.body.classList.add('right_offset');
+    }
+  }
+
+  onRightSidebarClose() {
+    document.body.classList.remove('right_offset');
+  }
 
   onLocationChange = () => {
     if (this.getAuthUserId()) {

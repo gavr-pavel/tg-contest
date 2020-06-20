@@ -1,19 +1,29 @@
 import {FileApiManager} from './api/file_api_manager.js';
-import {getLabeledElements, $, Tpl, getEventPageXY, downloadFile} from './utils';
+import {getLabeledElements, $, Tpl, getEventPageXY, downloadFile, buildLoaderElement, buildMenu} from './utils';
 import {MediaApiManager} from './api/media_api_manager';
 
+import '../css/media_view.scss';
+
 const MediaViewController = new class {
+  preload = new Map();
+
   constructor() {
     this.container = Tpl.html`
       <div class="media_view" hidden>
-        <div class="media_view_author" data-js-label="author"></div>
-        <div class="media_view_actions"  data-js-label="controls">
-          <button class="media_view_actions_item media_view_actions_item-delete" data-js-label="button_delete"></button>
-          <button class="media_view_actions_item media_view_actions_item-forward" data-js-label="button_forward"></button>
-          <button class="media_view_actions_item media_view_actions_item-download" data-js-label="button_download"></button>
-          <button class="media_view_actions_item media_view_actions_item-close" data-js-label="button_close"></button>
+        <div class="media_view_header" data-js-label="header">
+          <button class="mdc-icon-button media_view_mobile_close_button"  data-js-label="button_close_mobile"></button>
+          <div class="media_view_author" data-js-label="header_author"></div>
+          <div class="media_view_actions"  data-js-label="header_actions">
+            <button class="mdc-icon-button media_view_actions_item media_view_actions_item-delete" data-js-label="button_delete"></button>
+            <button class="mdc-icon-button media_view_actions_item media_view_actions_item-forward" data-js-label="button_forward"></button>
+            <button class="mdc-icon-button media_view_actions_item media_view_actions_item-download" data-js-label="button_download"></button>
+            <button class="mdc-icon-button media_view_actions_item media_view_actions_item-close" data-js-label="button_close"></button>
+            <button class="mdc-icon-button media_view_actions_item media_view_actions_item-more" data-js-label="button_more"></button>
+          </div>
         </div>
         <div class="media_view_content" data-js-label="content"></div>
+        <div class="media_view_nav_left" hidden data-js-label="nav_left"></div>
+        <div class="media_view_nav_right" hidden data-js-label="nav_right"></div>
         <div class="media_view_caption" data-js-label="caption"></div>
       </div>
     `.buildElement();
@@ -22,14 +32,25 @@ const MediaViewController = new class {
 
     this.dom.button_download.addEventListener('click', this.download);
     this.dom.button_close.addEventListener('click', this.close);
+    this.dom.button_close_mobile.addEventListener('click', this.close);
+    this.dom.button_more.addEventListener('click', this.onMoreClick);
     this.dom.content.addEventListener('click', this.onContentClick);
     this.dom.content.addEventListener('touchstart', this.onContentTouchStart);
+    this.dom.nav_left.addEventListener('click', this.onNavClick);
+    this.dom.nav_right.addEventListener('click', this.onNavClick);
 
     document.body.appendChild(this.container);
   }
 
   showPhoto(photo, thumb, message) {
-    const photoSize = photo.sizes[photo.sizes.length - 1];
+    const types = ['x'];
+    if (window.innerWidth >= 800) {
+      types.unshift('y');
+    }
+    if (window.innerWidth >= 812800) {
+      types.unshift('w');
+    }
+    const photoSize = MediaApiManager.choosePhotoSize(photo.sizes, ...types) || photo.sizes.splice(-1)[0];
 
     const state = this.initLoading(photo, thumb, message, photoSize.size);
     const abortController = this.state.abortController;
@@ -41,8 +62,12 @@ const MediaViewController = new class {
           this.onLoaded(url, content, state);
         })
         .catch((err) => {
-          console.log(err);
+          if (err.name !== 'AbortError') {
+            console.log(err);
+          }
         });
+
+    this.initMediaPlaylist(message);
   }
 
   showGif(document, thumb, message) {
@@ -56,8 +81,12 @@ const MediaViewController = new class {
           this.onLoaded(url, content, state);
         })
         .catch((err) => {
-          console.log(err);
+          if (err.name !== 'AbortError') {
+            console.log(err);
+          }
         });
+
+    this.initGifPlaylist(message);
   }
 
   showVideo(document, thumb, message) {
@@ -67,7 +96,7 @@ const MediaViewController = new class {
     const attributes = MediaApiManager.getDocumentAttributes(document);
     const loop = attributes.duration < 30;
 
-    if (attributes.supports_streaming && window.MediaSource && document.size > 512 * 1024) {
+    if (attributes.supports_streaming && window.MediaSource && document.size > 1024 * 1024) {
       import('./video_streaming_process.js')
           .then(({VideoStreamingProcess}) => {
             const process = new VideoStreamingProcess(document, onProgress);
@@ -93,9 +122,13 @@ const MediaViewController = new class {
             this.onLoaded(url, content, state);
           })
           .catch((err) => {
-            console.log(err);
+            if (err.name !== 'AbortError') {
+              console.log(err);
+            }
           });
     }
+
+    this.initMediaPlaylist(message);
   }
 
   initLoading(object, thumb, message, totalSize) {
@@ -107,40 +140,46 @@ const MediaViewController = new class {
       abortController: new AbortController(),
     };
 
-    const progress = Tpl.html`
+    if (thumb) {
+      const progress = Tpl.html`
       <div class="message_media_progress">
         <svg class="message_media_progress_svg" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
           <path class="message_media_progress_path" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
         </svg>
       </div>
     `.buildElement();
-    const path = $('.message_media_progress_path', progress);
-    progress.addEventListener('click', (event) => {
-      event.stopPropagation();
-      state.aborted = true;
-      state.abortController.abort();
-    });
-    thumb.appendChild(progress);
-    thumb.classList.add('message_media_thumb-loading');
+      const path = $('.message_media_progress_path', progress);
+      progress.addEventListener('click', (event) => {
+        event.stopPropagation();
+        state.aborted = true;
+        state.abortController.abort();
+      });
+      thumb.appendChild(progress);
+      thumb.classList.add('message_media_thumb-loading');
 
-    state.onDone = () => {
-      progress.remove();
-      thumb.classList.remove('message_media_thumb-loading');
-      if (state.aborted) {
-        this.state = null;
-      }
-    };
+      state.onDone = () => {
+        progress.remove();
+        thumb.classList.remove('message_media_thumb-loading');
+        if (state.aborted) {
+          this.state = null;
+        }
+      };
 
-    state.onProgress = (loaded) => {
-      const percent = Math.round(Math.max(0, Math.min(1, loaded / totalSize)) * 100);
-      if (percent === 100) {
-        state.onDone();
-      } else {
-        path.style.strokeDasharray = `${percent}, 100`;
-      }
-    };
+      state.onProgress = (loaded) => {
+        const percent = Math.max(0, Math.min(1, loaded / totalSize));
+        if (percent === 1) {
+          state.onDone();
+        } else {
+          path.style.setProperty('--progress-value', percent);
+        }
+      };
 
-    state.abortController.signal.addEventListener('abort', state.onDone);
+      state.abortController.signal.addEventListener('abort', state.onDone);
+    }
+
+    buildLoaderElement(this.dom.content, 'white');
+    this.dom.caption.innerHTML = state.message.message ? Tpl.html`<div class="media_view_caption_text">${state.message.message}</div>` : '';
+    this.renderAuthor(state);
 
     this.state = state;
     return state;
@@ -154,20 +193,88 @@ const MediaViewController = new class {
     if (typeof content === 'string') {
       this.dom.content.innerHTML = content;
     } else {
+      this.dom.content.innerHTML = '';
       this.dom.content.appendChild(content);
     }
-    this.dom.caption.innerHTML = Tpl.html`<div class="media_view_caption_text">${state.message.message || ''}</div>`;
-    this.renderAuthor();
 
     this.state.url = url;
-    this.state.onDone();
+    if (this.state.onDone) {
+      this.state.onDone();
+    }
 
     this.container.hidden = false;
     document.addEventListener('keyup', this.onKeyUp);
   }
 
-  renderAuthor() {
-    const message = this.state.message;
+  async initMediaPlaylist(message) {
+    this.loadPlaylist(message, {_: 'inputMessagesFilterPhotoVideo'});
+  }
+
+  async initGifPlaylist(message) {
+    this.loadPlaylist(message, {_: 'inputMessagesFilterGif'});
+  }
+
+  async loadPlaylist(message, filter) {
+    const state = this.state;
+    const peer = MessagesApiManager.getMessageDialogPeer(message);
+    const {messages, users, chats} = await ApiClient.callMethod('messages.search', {
+      peer: MessagesApiManager.getInputPeer(peer),
+      offset_id: message.id,
+      add_offset: -20,
+      limit: 40,
+      filter
+    });
+    if (state !== this.state) {
+      return;
+    }
+    MessagesApiManager.updateUsers(users);
+    MessagesApiManager.updateChats(chats);
+    state.playlist = messages;
+
+    const curIndex = messages.findIndex(m => message.id === m.id);
+    this.dom.nav_left.hidden = curIndex <= 0;
+    this.dom.nav_right.hidden = curIndex >= messages.length - 1;
+
+    return messages;
+  }
+
+  onNav(direction) {
+    const playlist = this.state.playlist;
+    if (!playlist) {
+      return;
+    }
+    const curMessage = this.state.message;
+    const curIndex = playlist.findIndex(message => message.id === curMessage.id);
+
+    let message;
+    let mediaData;
+    let nextIndex;
+    for (let i = curIndex + direction; i >= 0 && i < playlist.length; i += direction) {
+      mediaData = MessagesController.getMessageMediaThumb(playlist[i]);
+      if (mediaData) {
+        nextIndex = i;
+        message = playlist[i];
+        break;
+      }
+    }
+
+    this.dom.nav_left.hidden = nextIndex <= 0;
+    this.dom.nav_right.hidden = nextIndex >= playlist.length - 1;
+
+    if (mediaData) {
+      this.destroyContent();
+      if (mediaData.type === 'photo') {
+        MediaViewController.showPhoto(mediaData.object, null, message);
+      } else if (mediaData.type === 'video') {
+        MediaViewController.showVideo(mediaData.object, null, message);
+      } else if (mediaData.type === 'gif') {
+        MediaViewController.showGif(mediaData.object, null, message);
+      }
+    }
+  }
+
+  renderAuthor(state) {
+    const message = state.message;
 
     let peer;
     let date;
@@ -179,23 +286,46 @@ const MediaViewController = new class {
       peer = MessagesApiManager.getMessageAuthorPeer(message);
       date = message.date;
     }
+    const peerId = MessagesApiManager.getPeerId(peer);
 
-    this.dom.author.innerHTML = Tpl.html`
+    if (+this.dom.header_author.dataset.peerId === peerId) {
+      $('.media_view_author_description', this.dom.header_author).innerHTML = Tpl.html`
+        <div class="media_view_author_name">${MessagesApiManager.getPeerName(peer)}</div>
+        <div class="media_view_author_date">${MessagesController.formatMessageDateTime(date)}</div>
+      `;
+    } else {
+      this.dom.header_author.dataset.peerId = peerId;
+      this.dom.header_author.innerHTML = Tpl.html`
       <div class="media_view_author_photo"></div>
       <div class="media_view_author_description">
         <div class="media_view_author_name">${MessagesApiManager.getPeerName(peer)}</div>
         <div class="media_view_author_date">${MessagesController.formatMessageDateTime(date)}</div>
       </div>
     `;
+      const photoEl = $('.media_view_author_photo', this.dom.header_author);
+      ChatsController.loadPeerPhoto(photoEl, peer);
+    }
 
-    const photoEl = $('.media_view_author_photo', this.dom.author);
-
-    ChatsController.loadPeerPhoto(photoEl, peer);
+    this.dom.header_author.onclick = () => {
+      this.close();
+      let messageId;
+      if (message.fwd_from) {
+        messageId = message.fwd_from.channel_post || 0;
+      } else {
+        messageId = message.id;
+      }
+      MessagesController.setChatByPeerId(peerId, messageId);
+    }
   }
 
   abort() {
-    if (this.state && this.state.abortController) {
-      this.state.abortController.abort();
+    if (this.state) {
+      if (this.state.streamingProcess) {
+        this.state.streamingProcess.stop();
+      }
+      if (this.state.abortController) {
+        this.state.abortController.abort();
+      }
     }
     this.state = null;
   }
@@ -204,20 +334,35 @@ const MediaViewController = new class {
     return !this.container.hidden;
   }
 
-  close = () => {
-    if (this.state.streamingProcess) {
-      this.state.streamingProcess.stop();
+  destroyContent() {
+    this.abort();
+    const video = $('video', this.dom.content);
+    if (video) {
+      video.pause();
     }
-    this.state = null;
-    this.dom.author.innerHTML = '';
     this.dom.content.innerHTML = '';
+  }
+
+  close = () => {
+    if (this.state) {
+      this.destroyContent();
+    }
+    this.playlist = null;
     this.container.hidden = true;
     document.removeEventListener('keyup', this.onKeyUp);
   };
 
   onKeyUp = (event) => {
-    if (event.keyCode === 27) {
-      this.close();
+    switch (event.keyCode) {
+      case 39:
+        this.onNav(1);
+        break;
+      case 37:
+        this.onNav(-1);
+        break;
+      case 27:
+        this.close();
+        break;
     }
   };
 
@@ -238,7 +383,8 @@ const MediaViewController = new class {
   }
 
   onContentClick = (event) => {
-    if (event.target === event.currentTarget) {
+    const target = event.target;
+    if (target === event.currentTarget) {
       this.close();
     }
   };
@@ -246,33 +392,92 @@ const MediaViewController = new class {
   onContentTouchStart = (event) => {
     event.preventDefault();
     let {pageY: startY} = getEventPageXY(event);
-    let progress = 0;
+    let progress = 1;
+    let translateY = 0;
+    let scale = 1;
     const onTouchMove = (event) => {
       const {pageY} = getEventPageXY(event);
-      const translateY = pageY - startY;
-      progress = Math.min(1, Math.pow(Math.abs(translateY), 2) / 10000);
-      this.dom.content.style.transform = `translateY(${translateY}px)`;
-      this.container.style.backgroundColor = `rgba(0, 0, 0, ${ 0.9 - 0.9 * progress })`;
-      this.dom.author.style.opacity = 0.5 - 0.5 * progress;
-      this.dom.actions.style.opacity = 1 - progress;
+      translateY = pageY - startY;
+      progress = 1 - Math.min(1, Math.pow(Math.abs(translateY), 2) / 10000);
+      scale = 1 - (.3 - .3*progress);
+      this.dom.content.style.transform = `translateY(${translateY}px) scale(${scale})`;
+      this.container.style.backgroundColor = `rgba(0, 0, 0, ${ progress })`;
+      this.dom.header.style.opacity = 0.5 * progress;
+      this.dom.caption.style.opacity = 0.5 * progress;
+      this.dom.nav_left.style.opacity = 0.5 * progress;
+      this.dom.nav_right.style.opacity = 0.5 * progress;
     };
     const onTouchEnd = () => {
       if (progress === 1) {
-        this.close();
+        const target = event.target;
+        if (target.tagName === 'VIDEO') {
+          target.paused ? target.play() : target.pause();
+        }
+        onCloseAnimationEnd();
+      } else if (progress === 0) {
+        this.dom.content.style.transition = '';
+        this.dom.content.style.transform = `translateY(${translateY * 5}px) scale(${scale})`;
+        setTimeout(() => {
+          onCloseAnimationEnd();
+          this.close();
+        }, 200);
+      } else {
+        onCloseAnimationEnd();
       }
       this.dom.content.removeEventListener('touchmove', onTouchMove);
       this.dom.content.removeEventListener('touchend', onTouchEnd);
-      this.dom.content.style.transform = '';
+    };
+    const onCloseAnimationEnd = () => {
       this.dom.content.style.transition = '';
+      this.dom.content.style.transform = '';
       this.container.style.backgroundColor = '';
-      this.dom.author.style.opacity = '';
-      this.dom.actions.style.opacity = '';
+      this.dom.header.style.opacity = '';
+      this.dom.caption.style.opacity = '';
+      this.dom.nav_left.style.opacity = '';
+      this.dom.nav_right.style.opacity = '';
     };
     this.dom.content.addEventListener('touchmove', onTouchMove);
     this.dom.content.addEventListener('touchend', onTouchEnd);
     this.dom.content.style.transition = 'none';
   };
 
+  onNavClick = (event) => {
+    const direction = event.target === this.dom.nav_left ? -1 : 1;
+    this.onNav(direction);
+  };
+
+  onMoreClick = () => {
+    const button = this.dom.button_more;
+
+    if (this.moreMenu && this.moreMenu.open) {
+      this.moreMenu = null;
+      return;
+    }
+
+    const menu = buildMenu([
+      ['forward', 'Forward'],
+      ['download', 'Download'],
+      ['delete', 'Delete']
+    ], {
+      container: button.parentNode,
+      menuClass: 'media_view_actions_menu',
+      itemClass: 'media_view_actions_menu_item',
+      itemCallback: (action) => {
+        switch (action) {
+          case 'download':
+            this.download();
+            break;
+        }
+      }
+    });
+
+    menu.setAnchorElement(button);
+    menu.setAnchorMargin({top: 40, right: 5});
+
+    menu.open = true;
+
+    this.moreMenu = menu;
+  }
 };
 
 window.MediaViewController = MediaViewController;

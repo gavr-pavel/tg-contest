@@ -1,5 +1,6 @@
 .chats_tabs {
-  overflow: hidden;
+  overflow-y: hidden;
+  overflow-x: auto;
   flex-shrink: 0;
   box-shadow: 0 2px 3px 0 rgba(0, 0, 0, 0.1);
 }
@@ -10,6 +11,7 @@
 }
 
 .chats_tabs_item.nav_tabs_item {
+  flex-shrink: 0;
   width: auto;
   padding: 0 6px;
 }

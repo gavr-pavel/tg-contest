@@ -1,24 +1,24 @@
 import {checkWebPSupport, convertWebP} from '../utils';
 
 const MediaApiManager = new class {
-  choosePhotoSize(sizes, type = 'm') {
+  choosePhotoSize(sizes, ...types) {
     if (!sizes) {
       return;
     }
-    const size = sizes.find(item => item.type === type);
-    if (size) {
-      return size;
+    for (const type of types) {
+      const size = sizes.find(item => item.type === type);
+      if (size) {
+        return size;
+      }
     }
-    if (type !== 'i') {
-      return sizes.find(item => item.type !== 'i');
-    }
+    return sizes.find(item => item.type !== 'i');
   }
 
   isCachedPhotoSize(photoSize) {
     return photoSize._ === 'photoCachedSize';
   }
 
-  async getCachedPhotoSize(photoSize, mimeType = 'image/jpeg') {
+  async getCachedPhoto(photoSize, mimeType = 'image/jpeg') {
     let blob;
     if (mimeType === 'image/webp') {
       const isWebPSupported = await checkWebPSupport();
@@ -32,8 +32,15 @@ const MediaApiManager = new class {
     return URL.createObjectURL(blob);
   }
 
-  getPhotoStrippedSize(sizes) {
-    const size = this.choosePhotoSize(sizes, 'i');
+  getInlinePhotoSize(sizes) {
+    if (!sizes) {
+      return;
+    }
+    return sizes.find(size => size.type === 'i');
+  }
+
+  getStrippedPhoto(sizes) {
+    const size = this.getInlinePhotoSize(sizes);
     if (size && size.bytes[0] === 0x01) {
       const header = this.jpegHeader;
       const footer = this.jpegFooter;

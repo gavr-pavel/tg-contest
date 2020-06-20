@@ -2,17 +2,18 @@ import {$, attachRipple, debounce, Tpl} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {ChatsController} from './chats_controller';
 import {I18n} from './i18n';
-import {MediaViewController} from './media_view_controller';
 import {MessagesController} from './messages_controller';
+import {App} from './app';
+
+import '../css/right_sidebar.scss';
 
 const MessagesSearchController = new class {
   show(peerId) {
     this.container = $('.right_sidebar');
-    this.container.parentNode.hidden = false;
+    this.container.hidden = false;
+    this._open = true;
+    App.onRightSidebarOpen();
 
-    if (peerId === this.peerId) {
-      return;
-    }
     this.peerId = peerId;
 
     this.container.innerHTML = `
@@ -30,16 +31,30 @@ const MessagesSearchController = new class {
     this.input = $('.messages_search_input', this.container);
     this.input.addEventListener('input', debounce(this.onInput, 100));
 
-    this.container.addEventListener('transitionend', () => {
-      this.input.focus();
-    }, {once: true});
-
     this.listWrap = $('.messages_search_results_list', this.container);
     this.listWrap.onscroll = this.onScroll;
 
     document.addEventListener('keyup', this.onKeyUp);
 
-    this._open = true;
+    if (App.isMobileView()) {
+      this.initMobileMode();
+    }
+
+    if (this.mobileMode) {
+      this.input.focus();
+    } else {
+      setTimeout(() => {
+        this.input.focus();
+      }, 200);
+    }
+  }
+
+  initMobileMode() {
+    this.mobileMode = true;
+    this.container.style.pointerEvents = 'none';
+    this.container.style.background = 'none';
+    const header = $('.sidebar_header', this.container);
+    header.style.pointerEvents = 'all';
   }
 
   isOpen() {
@@ -49,14 +64,25 @@ const MessagesSearchController = new class {
   close = () => {
     if (this._open) {
       this._open = false;
-      this.container.parentNode.hidden = true;
+      this.container.hidden = true;
+      App.onRightSidebarClose();
       this.peerId = null;
       document.removeEventListener('keyup', this.onKeyUp);
+      if (this.mobileMode) {
+        setTimeout(() => {
+          this.mobileMode = false;
+          this.container.style.pointerEvents = '';
+          this.container.style.background = '';
+        }, 200);
+      }
     }
   };
 
   onKeyUp = (event) => {
-    if (event.keyCode === 27 && !MediaViewController.isOpen()) {
+    if (window.MediaViewController && MediaViewController.isOpen()) {
+      return;
+    }
+    if (event.keyCode === 27) {
       this.close();
     }
   };
@@ -73,6 +99,11 @@ const MessagesSearchController = new class {
   };
 
   async loadResults(text, offsetId = 0) {
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
+    const signal = this.abortController.signal;
     const res = await ApiClient.callMethod('messages.search', {
       peer: MessagesApiManager.getInputPeerById(this.peerId),
       q: text,
@@ -81,17 +112,23 @@ const MessagesSearchController = new class {
       limit: 30,
     });
 
+    if (signal.aborted) {
+      return;
+    }
+
     MessagesApiManager.updateMessages(res.messages);
     MessagesApiManager.updateChats(res.chats);
     MessagesApiManager.updateUsers(res.users);
 
     const count = res.count || res.messages.length;
 
-    if (!offsetId) {
-      this.listWrap.innerHTML = '';
-      this.renderResultsHeader(count);
+    if (!this.mobileMode) {
+      if (!offsetId) {
+        this.listWrap.innerHTML = '';
+        this.renderResultsHeader(count);
+      }
+      this.renderResults(res.messages);
     }
-    this.renderResults(res.messages);
     if (res.messages.length) {
       this.offsetId = res.messages.slice(-1)[0].id;
     } else {

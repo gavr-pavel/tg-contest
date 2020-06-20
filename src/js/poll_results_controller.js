@@ -2,11 +2,15 @@ import {$, attachRipple, buildLoaderElement, Tpl} from './utils';
 import {ChatsController} from './chats_controller';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {I18n} from './i18n';
+import {App} from './app';
+
+import '../css/poll_results.scss';
 
 const PollResultsController = new class {
   show(pollController) {
     this.container = $('.right_sidebar');
-    this.container.parentNode.hidden = false;
+    this.container.hidden = false;
+    App.onRightSidebarOpen();
 
     this.container.innerHTML = Tpl.html`
       <div class="sidebar_header">
@@ -103,7 +107,8 @@ const PollResultsController = new class {
   };
 
   hide() {
-    this.container.parentNode.hidden = true;
+    this.container.hidden = true;
+    App.onRightSidebarClose();
   }
 };
 

@@ -12,7 +12,7 @@ const DialogsApiManager = new class {
     dialog.pinned = pinned;
     const list = dialog.folder_id === 1 ? MessagesApiManager.archivedDialogs : MessagesApiManager.dialogs;
     if (pinned) {
-      const index = MessagesApiManager.getDialogIndex(dialog, dialog.folder_id);
+      const index = MessagesApiManager.getDialogIndex(dialog, list);
       list.splice(index, 1);
       list.unshift(dialog);
       this.emitter.trigger('dialogOrderUpdate', {dialog, index: 0, folderId: dialog.folder_id});
@@ -45,7 +45,6 @@ const DialogsApiManager = new class {
         }
       ]
     });
-    console.log(updates); // todo update ui (updateFolderPeers)
     MessagesApiManager.onUpdates(updates);
   }
 };

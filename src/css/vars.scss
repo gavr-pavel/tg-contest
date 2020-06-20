@@ -1,0 +1,19 @@
+$primary_blue_color: #5FA1E3;
+$primary_green_color: #65AB5A;
+$secondary_gray_color: #717579;
+$error_red_color: #D24C47;
+
+$border_gray_color: #DADCE0;
+
+$icon_blue_color: $primary_blue_color;
+$icon_gray_color: $secondary_gray_color;
+$icon_mediumgray_color: #8E969B;
+$icon_lightgray_color: #ACB2B6;
+
+@function max($numbers...) {
+  @return m#{a}x(#{$numbers})
+}
+
+@function min($numbers...) {
+  @return m#{i}n(#{$numbers})
+}

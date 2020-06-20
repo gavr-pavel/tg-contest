@@ -235,14 +235,17 @@ class AudioPlayer {
     container.innerHTML = '';
 
     let el;
+    let titleEl;
     if (this.attributes.type === 'voice') {
       const author = MessagesApiManager.getPeerName(MessagesApiManager.getMessageAuthorPeer(message), false);
       el = Tpl.html`
         <div class="messages_header_audio mdc-ripple-surface">
           <div class="messages_header_audio_voice_author">${author}</div>
           <div class="messages_header_audio_voice_type">Voice Message</div>
+          <div class="mdc-icon-button messages_header_audio_close_button"></div>
         </div>
       `.buildElement();
+      titleEl = $('.messages_header_audio_voice_author', el);
     } else {
       const attributes = this.attributes;
       const title = attributes.audio_title || attributes.file_name || 'Unknown Track';
@@ -251,9 +254,12 @@ class AudioPlayer {
         <div class="messages_header_audio mdc-ripple-surface">
           <div class="messages_header_audio_title">${title}</div>
           <div class="messages_header_audio_performer">${performer}</div>
+          <div class="mdc-icon-button messages_header_audio_close_button"></div>
         </div>
       `.buildElement();
+      titleEl = $('.messages_header_audio_title', el);
     }
+    const closeButton = $('.messages_header_audio_close_button', el);
 
     attachRipple(el);
     container.appendChild(el);
@@ -269,6 +275,15 @@ class AudioPlayer {
     });
     el.addEventListener('click', () => {
       this.togglePlay();
+    });
+    titleEl.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const peerId = MessagesApiManager.getMessageDialogPeerId(message);
+      MessagesController.setChatByPeerId(peerId, message.id);
+    });
+    closeButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.destroy();
     });
 
     return el;

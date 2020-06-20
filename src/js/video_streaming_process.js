@@ -80,7 +80,7 @@ class VideoStreamingProcess {
     }
     if (!this.loadeddata) {
       this.loadedBytes = (this.loadedBytes || 0) + buf.byteLength;
-      this.onProgress(this.loadedBytes);
+      this.onProgress && this.onProgress(this.loadedBytes);
     }
   }
 
@@ -119,6 +119,7 @@ class VideoStreamingProcess {
   stop() {
     try {
       this.mp4box.stop();
+      URL.revokeObjectURL(this.video.src);
     } catch (e) {
       console.error(e);
     }

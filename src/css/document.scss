@@ -21,6 +21,7 @@
   }
   &:last-child {
     width: 100%;
+    min-width: 0;
   }
 }
 
@@ -82,9 +83,10 @@
 }
 
 .document_icon_progress_path {
+  --progress-value: 0;
   fill: none;
   stroke: #fff;
-  stroke-dasharray: 2, 100;
+  stroke-dasharray: calc(2 + 98 * var(--progress-value)), 100;
   transition: stroke-dasharray 0.4s;
 }
 
@@ -108,7 +110,7 @@
 .document_size,
 .document_duration,
 .document_performer {
-  color: #A1AAB2;
+  color: $secondary_gray_color;
   .message-out & {
     color: #65AB5A;
   }

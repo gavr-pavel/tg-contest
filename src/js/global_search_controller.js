@@ -13,7 +13,7 @@ const GlobalSearchController = new class {
     this.input = input;
     this.input.addEventListener('input', this.onInput);
 
-    ChatsController.container.hidden = true;
+    ChatsController.scrollContainer.hidden = true;
     this.container = $('.global_search_sidebar');
     this.container.hidden = false;
 
@@ -38,7 +38,7 @@ const GlobalSearchController = new class {
 
     this.container.hidden = true;
     this.container.innerHTML = '';
-    ChatsController.container.hidden = false;
+    ChatsController.scrollContainer.hidden = false;
 
     const backButtonEl = $('.chats_header_back_button');
     backButtonEl.hidden = true;
@@ -89,8 +89,9 @@ const GlobalSearchController = new class {
       if (signal.aborted) {
         return;
       }
-      if (!messages.messages.length) {
+      if (!messages.messages.length || messages.next_rate === this.nextRate) {
         this.noMore = true;
+        this.nextRate = null;
       } else {
         MessagesApiManager.updateUsers(messages.users);
         MessagesApiManager.updateChats(messages.chats);
