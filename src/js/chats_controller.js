@@ -15,6 +15,7 @@ import {FileApiManager} from './api/file_api_manager';
 const ChatsController = new class {
   chatElements = new Map();
   elementsOrder = [];
+  typingAnimations = new Map();
 
   init() {
     this.scrollContainer = $('.chats_sidebar');
@@ -39,6 +40,7 @@ const ChatsController = new class {
     MessagesApiManager.emitter.on('dialogFolderChange', this.onDialogFolderChange);
     MessagesApiManager.emitter.on('dialogNewMessage', this.onDialogNewMessage);
     MessagesApiManager.emitter.on('userStatusUpdate', this.onUserStatusUpdate);
+    MessagesApiManager.emitter.on('dialogUserTypingUpdate', this.onDialogUserTypingUpdate);
 
     this.initTabs();
 
@@ -305,7 +307,6 @@ const ChatsController = new class {
     if (el) {
       el.hidden = !this.checkDialogFilter(dialog, this.currentFilter);
       this.detachElement(el);
-      el.classList.toggle('chats_item-pinned', !!dialog.pinned);
       this.renderChatPreviewContent(el, dialog);
     } else {
       el = this.buildChatPreviewElement(dialog);
@@ -347,7 +348,10 @@ const ChatsController = new class {
     const {dialog, oldFolderId} = event.detail;
     const chatId = MessagesApiManager.getPeerId(dialog.peer);
     const el = this.chatElements.get(chatId);
-    el.remove(); // order update comes next
+    if (!oldFolderId) {
+      this.detachElement(el);
+      this.renderChatPreviewContent(el, dialog); // update pinned badge
+    }
   };
 
   onUserStatusUpdate = (event) => {
@@ -355,6 +359,33 @@ const ChatsController = new class {
     const el = this.chatElements.get(user.id);
     if (el) {
       this.updateChatStatus(el, user.status);
+    }
+  };
+
+  onDialogUserTypingUpdate = (event) => {
+    const {dialog} = event.detail;
+    const chatId = MessagesApiManager.getPeerId(dialog.peer);
+    const el = this.chatElements.get(chatId);
+    if (el) {
+      let typingAnimation = this.typingAnimations.get(chatId);
+      let typingEl;
+      if (typingAnimation) {
+        typingAnimation.abort();
+        typingEl = $('.chats_item_typing', el);
+      }
+      if (!typingEl) {
+        typingEl = Tpl.html`<div class="chats_item_typing"></div>`.buildElement();
+        $('.chats_item_message', el).before(typingEl);
+      }
+      typingAnimation = this.runTypingAnimation(dialog, (text) => {
+        if (text) {
+          typingEl.innerText = text;
+        } else {
+          typingEl.remove();
+          this.typingAnimations.delete(chatId);
+        }
+      });
+      this.typingAnimations.set(chatId, typingAnimation);
     }
   };
 
@@ -490,6 +521,7 @@ const ChatsController = new class {
     const date = this.formatDate(dialog);
     const lastMessage = MessagesApiManager.messages.get(dialog.top_message);
     const lastMessagePreview = lastMessage ? this.getMessagePreview(lastMessage) : '';
+    const typingEl = $('.chats_item_typing', el);
     $('.chats_item_text', el).innerHTML = Tpl.html`
       <div class="chats_item_text_row">
         <div class="chats_item_title">${title}</div>
@@ -500,6 +532,10 @@ const ChatsController = new class {
         ${badge}
       </div>
     `;
+    if (typingEl) {
+      $('.chats_item_message', el).before(typingEl);
+    }
+    el.classList.toggle('chats_item-pinned', !!dialog.pinned);
   }
 
   detachElement(el) {
@@ -696,6 +732,66 @@ const ChatsController = new class {
     }
   }
 
+  runTypingAnimation(dialog, callback) {
+    let timeoutId;
+    const abort = () => {
+      clearTimeout(timeoutId);
+    };
+    const chatId = MessagesApiManager.getPeerId(dialog.peer);
+    const isChat = dialog.peer._ !== 'peerUser';
+    const loop = (i) => {
+      let text = '';
+      const typingUsers = MessagesApiManager.typingUsers.get(chatId);
+      if (typingUsers && typingUsers.size) {
+        if (isChat) {
+          const entries = Array.from(typingUsers.entries()).filter(([, action]) => action._ === 'sendMessageTypingAction');
+          if (entries.length) {
+            const [userId] = entries[0];
+            const user = MessagesApiManager.users.get(userId);
+            const name = MessagesApiManager.getUserName(user);
+            if (entries.length === 1) {
+              text = name + ' is typing';
+            } else {
+              text = name + ' and ' + (entries.length - 1) + ' are typing';
+            }
+          }
+        } else {
+          const entries = Array.from(typingUsers.entries());
+          const [, action] = entries[0];
+          text = this.getTypingActionText(action);
+        }
+      }
+      if (text) {
+        text += '.'.repeat(i % 4);
+        callback(text);
+        timeoutId = setTimeout(() => loop(i + 1), 200);
+      } else {
+        callback();
+      }
+    };
+    loop(0);
+    return {abort};
+  }
+
+  getTypingActionText(action) {
+    switch (action._) {
+      case 'sendMessageTypingAction':
+        return 'typing';
+      case 'sendMessageRecordVideoAction':
+        return 'recording video';
+      case 'sendMessageUploadVideoAction':
+        return 'uploading video';
+      case 'sendMessageRecordAudioAction':
+        return 'recording audio';
+      case 'sendMessageUploadAudioAction':
+        return 'uploading audio';
+      case 'sendMessageUploadPhotoAction':
+        return 'uploading photo';
+      case 'sendMessageUploadDocumentAction':
+        return 'uploading document';
+    }
+    return '';
+  }
 };
 
 window.ChatsController = ChatsController;

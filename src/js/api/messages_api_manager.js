@@ -12,6 +12,7 @@ const MessagesApiManager = new class {
   chatMessages = new Map();
   chatsFull = new Map();
   usersFull = new Map();
+  typingUsers = new Map();
 
   emitter = ApiClient.emitter;
 
@@ -89,7 +90,7 @@ const MessagesApiManager = new class {
         if (dialog) {
           dialog.unread_count = update.still_unread_count;
           dialog.read_inbox_max_id = update.max_id;
-          console.log('dialogUnreadCountUpdate', {dialog}, dialog.read_inbox_max_id, dialog.unread_count);
+          // console.log('dialogUnreadCountUpdate', {dialog}, dialog.read_inbox_max_id, dialog.unread_count);
           this.emitter.trigger('dialogUnreadCountUpdate', {dialog});
         }
       } break;
@@ -160,6 +161,14 @@ const MessagesApiManager = new class {
             }
             this.handleDialogOrder(dialog);
           }
+        }
+      } break;
+      case 'updateUserTyping':
+      case 'updateChatUserTyping': {
+        const chatId = update.chat_id || update.user_id;
+        const dialog = this.peerDialogs.get(chatId);
+        if (dialog) {
+          this.handleDialogUserTyping(dialog, chatId, update.user_id, update.action);
         }
       } break;
       default: {
@@ -307,6 +316,25 @@ const MessagesApiManager = new class {
     dialogs.splice(newIndex, 0, dialog);
 
     this.emitter.trigger('dialogOrderUpdate', {dialog, index: newIndex, folderId});
+  }
+
+  handleDialogUserTyping(dialog, chatId, userId, action) {
+    let map = this.typingUsers.get(chatId);
+    if (!map) {
+      map = new Map();
+      this.typingUsers.set(chatId, map);
+    }
+    if (action._ === 'sendMessageCancelAction') {
+      map.delete(userId);
+    } else {
+      map.set(userId, action);
+      setTimeout(() => {
+        if (map.get(userId) === action) {
+          map.delete(userId);
+        }
+      }, 6000);
+    }
+    this.emitter.trigger('dialogUserTypingUpdate', {dialog, userId, action});
   }
 
   async loadDialogs(offset = {}, limit = 20, folderId = 0) {
@@ -672,13 +700,18 @@ const MessagesApiManager = new class {
   }
 
   getUserName(user, full = true) {
-    if (user.deleted) {
+    if (!user || user.deleted) {
       return 'Deleted Account';
-    } else if (full) {
-      return [user.first_name, user.last_name].join(' ').trim();
-    } else {
-      return user.first_name || user.last_name || '';
+    } else if (user.first_name || user.last_name) {
+      if (full) {
+        return [user.first_name, user.last_name].join(' ').trim();
+      } else {
+        return user.first_name || user.last_name;
+      }
+    } else if (user.phone) {
+      return '+' + user.phone;
     }
+    return '';
   }
 
   getChatName(chat) {

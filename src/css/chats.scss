@@ -234,6 +234,7 @@
 }
 
 .chats_item_message,
+.chats_item_typing,
 .contacts_item_status,
 .messages_search_results_item_message {
   flex: 1;
@@ -242,6 +243,10 @@
   text-overflow: ellipsis;
   color: #717579;
   min-height: 17px;
+}
+
+.chats_item_typing + .chats_item_message {
+  display: none;
 }
 
 .chats_new_chat_button {

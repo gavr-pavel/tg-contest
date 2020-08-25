@@ -18,7 +18,6 @@ import {MessagesSearchController} from './messages_search_controller';
 
 const MessagesController = new class {
   messageElements = new Map();
-
   polls = [];
 
   init() {
@@ -47,6 +46,7 @@ const MessagesController = new class {
     MessagesApiManager.emitter.on('chatDeleteMessage', this.onDeleteMessage);
     MessagesApiManager.emitter.on('userStatusUpdate', this.onUserStatusUpdate);
     MessagesApiManager.emitter.on('dialogOutboxReadUpdate', this.onOutboxReadUpdate);
+    MessagesApiManager.emitter.on('dialogUserTypingUpdate', this.onDialogUserTypingUpdate);
   }
 
   setChat(dialog, messageId = 0) {
@@ -144,6 +144,10 @@ const MessagesController = new class {
     this.chatId = null;
     this.clearMessages();
 
+    if (this.typingAnimation) {
+      this.typingAnimation.abort();
+    }
+
     delete $('.main_container').dataset.chat;
 
     if (changeLoc) {
@@ -181,24 +185,13 @@ const MessagesController = new class {
     const peer = dialog.peer;
     const peerName = MessagesApiManager.getPeerName(peer);
 
-    let peerStatus = '';
-    let peerStatusClass = '';
-
-    if (peer._ === 'peerUser') {
-      const user = MessagesApiManager.getPeerData(peer);
-      peerStatus = this.getUserStatusText(user);
-      if (user.status && user.status._ === 'userStatusOnline') {
-        peerStatusClass = 'messages_header_peer_status-online';
-      }
-    }
-
     this.header.innerHTML = Tpl.html`
       <button class="messages_header_back mdc-icon-button"></button>
       <div class="messages_header_peer mdc-ripple-surface">
         <div class="messages_header_peer_photo"></div>
         <div class="messages_header_peer_description">
           <div class="messages_header_peer_name">${peerName}</div>
-          <div class="messages_header_peer_status ${peerStatusClass}">${peerStatus}</div>
+          <div class="messages_header_peer_status"></div>
         </div>
       </div>
       <div class="messages_header_audio_wrap"></div>
@@ -229,7 +222,13 @@ const MessagesController = new class {
     ChatsController.loadPeerPhoto(photoEl, dialog.peer);
 
     if (peer._ === 'peerChannel' || peer._ === 'peerChat') {
-      this.loadChatHeaderInfo(peer);
+      MessagesApiManager.loadChatFull(peer)
+          .then((fullChat) => {
+            this.updateHeaderPinnedMessage(fullChat.pinned_msg_id);
+            this.updateHeaderPeerStatus();
+          });
+    } else {
+      this.updateHeaderPeerStatus();
     }
 
     if (this.headerAudioEl) {
@@ -256,42 +255,50 @@ const MessagesController = new class {
     });
   }
 
-  async loadChatHeaderInfo(peer) {
-    const fullChat = await MessagesApiManager.loadChatFull(peer);
-    if (fullChat.pinned_msg_id) {
-      MessagesApiManager.loadMessagesById(peer, fullChat.pinned_msg_id)
-          .then(([pinnedMessage]) => {
-            this.renderPinnedMessage(pinnedMessage);
-          });
-    }
-
-    const isChannel = peer.channel_id && !MessagesApiManager.isMegagroup(peer);
-    let statusText = '';
-    let membersCount;
-    let onlineCount;
-
-    if (fullChat.participants_count) {
-      membersCount = fullChat.participants_count;
-      onlineCount = fullChat.online_count;
-    } else if (fullChat.participants.participants) {
-      membersCount = fullChat.participants.participants.length;
-    }
-    if (membersCount) {
-      statusText = I18n.getPlural(isChannel ? 'chats_n_followers' : 'chats_n_members', membersCount, {
-        n: formatCountLong(membersCount)
-      });
-      if (onlineCount) {
-        statusText += `, ${onlineCount} online`;
+  async updateHeaderPeerStatus() {
+    const peer = this.dialog.peer;
+    if (peer._ === 'peerUser') {
+      const user = MessagesApiManager.getPeerData(peer);
+      const isOnline = user.status && user.status._ === 'userStatusOnline';
+      this.setHeaderStatusText(this.getUserStatusText(user), isOnline);
+    } else if (peer._ === 'peerChannel' || peer._ === 'peerChat') {
+      const fullChat = await MessagesApiManager.loadChatFull(peer);
+      const isChannel = peer.channel_id && !MessagesApiManager.isMegagroup(peer);
+      let statusText = '';
+      let membersCount;
+      let onlineCount;
+      if (fullChat.participants_count) {
+        membersCount = fullChat.participants_count;
+        onlineCount = fullChat.online_count;
+      } else if (fullChat.participants.participants) {
+        membersCount = fullChat.participants.participants.length;
       }
+      if (membersCount) {
+        statusText = I18n.getPlural(isChannel ? 'chats_n_followers' : 'chats_n_members', membersCount, {
+          n: formatCountLong(membersCount)
+        });
+        if (onlineCount) {
+          statusText += `, ${onlineCount} online`;
+        }
+      }
+      this.setHeaderStatusText(statusText);
     }
-    $('.messages_header_peer_status', this.header).innerText = statusText;
   }
 
-  renderPinnedMessage(message) {
+  async updateHeaderPinnedMessage(msgId) {
+    if (msgId) {
+      const [pinnedMessage] = await MessagesApiManager.loadMessagesById(this.dialog.peer, msgId);
+      this.renderPinnedMessage(pinnedMessage);
+    } else {
+      this.renderPinnedMessage(null);
+    }
+  }
+
+  renderPinnedMessage(message = null) {
     const container = $('.messages_header_pinned_message_wrap', this.header);
     container.innerHTML = '';
-
-    const el = Tpl.html`
+    if (message) {
+      const el = Tpl.html`
       <div class="messages_header_pinned_message mdc-ripple-surface" data-message-id="${message.id}">
         <div class="messages_header_pinned_message_content">
           <div class="messages_header_pinned_message_title">Pinned message</div>
@@ -299,15 +306,13 @@ const MessagesController = new class {
         </div>
       </div>
     `.buildElement();
-
-    attachRipple(el);
-
-    container.appendChild(el);
-
-    el.addEventListener('click', (event) => {
-      const messageId = +event.currentTarget.dataset.messageId;
-      this.jumpToMessage(messageId);
-    });
+      attachRipple(el);
+      container.appendChild(el);
+      el.addEventListener('click', (event) => {
+        const messageId = +event.currentTarget.dataset.messageId;
+        this.jumpToMessage(messageId);
+      });
+    }
   }
 
   loadHistory() {
@@ -499,9 +504,7 @@ const MessagesController = new class {
   onUserStatusUpdate =(event) => {
     const {user} = event.detail;
     if (this.chatId === user.id) {
-      const statusEl = $('.messages_header_peer_status', this.header);
-      statusEl.innerText = this.getUserStatusText(user);
-      statusEl.classList.toggle('messages_header_peer_status-online', user.status._ === 'userStatusOnline');
+      this. updateHeaderPeerStatus();
     }
   };
 
@@ -515,6 +518,31 @@ const MessagesController = new class {
           statusEl && statusEl.classList.add('message_status-read');
         }
       });
+    }
+  }
+
+  onDialogUserTypingUpdate = (event) => {
+    const {dialog} = event.detail;
+    if (dialog === this.dialog) {
+      if (this.typingAnimation) {
+        this.typingAnimation.abort();
+      }
+      this.typingAnimation = ChatsController.runTypingAnimation(dialog, (text) => {
+        if (text) {
+          this.setHeaderStatusText(text);
+        } else {
+          this.updateHeaderPeerStatus();
+          this.typingAnimation = null;
+        }
+      });
+    }
+  };
+
+  setHeaderStatusText(text, isOnline = null) {
+    const el = $('.messages_header_peer_status', this.header);
+    el.innerText = text;
+    if (isOnline !== null) {
+      el.classList.toggle('messages_header_peer_status-online', !!isOnline);
     }
   }
 
@@ -724,8 +752,8 @@ const MessagesController = new class {
           while (olderAuthorGroup.lastElementChild && !olderAuthorGroup.lastElementChild.classList.contains('message')) {
             olderAuthorGroup.lastElementChild.remove(); // remove author photo and message tail
           }
-          newerAuthorGroup.firstElementChild.classList.add('message-stick-to-prev');
-          olderAuthorGroup.lastElementChild.classList.add('message-stick-to-next');
+          newerAuthorGroup.firstElementChild && newerAuthorGroup.firstElementChild.classList.add('message-stick-to-prev');
+          olderAuthorGroup.lastElementChild && olderAuthorGroup.lastElementChild.classList.add('message-stick-to-next');
           if (moveToNewer) {
             newerAuthorGroup.prepend(...olderAuthorGroup.children);
             olderAuthorGroup.remove();
@@ -1353,13 +1381,13 @@ const MessagesController = new class {
     const captionText = message.message;
     if (!media) {
       if (mediaThumbData) {
-        return this.formatThumb(mediaThumbData, captionText);
+        return this.formatThumb(mediaThumbData, caption, captionText);
       }
       return caption;
     }
     switch (media._) {
       case 'messageMediaPhoto':
-        return this.formatThumb(mediaThumbData, captionText);
+        return this.formatThumb(mediaThumbData, caption, captionText);
       case 'messageMediaDocument':
         return this.formatDocument(media, mediaThumbData, caption, captionText);
       case 'messageMediaWebPage':
@@ -1381,7 +1409,7 @@ const MessagesController = new class {
 
   formatDocument(media, mediaThumbData, caption, captionText) {
     if (mediaThumbData) {
-      return this.formatThumb(mediaThumbData, captionText);
+      return this.formatThumb(mediaThumbData, caption, captionText);
     }
 
     const attributes = MediaApiManager.getDocumentAttributes(media.document);
@@ -1633,7 +1661,7 @@ const MessagesController = new class {
     }
   }
 
-  formatThumb(mediaThumbData, captionText) {
+  formatThumb(mediaThumbData, caption, captionText) {
     const result = Tpl.html``;
     let thumbWidth;
     let thumbHeight;
@@ -1673,7 +1701,7 @@ const MessagesController = new class {
     }
     if (captionText && mediaThumbData.type !== 'sticker') {
       const cssWidth = thumbWidth ? `width:${thumbWidth}px;` : '';
-      result.appendHtml`<div class="message_media_caption" style="${cssWidth}">${captionText}</div>`;
+      result.appendHtml`<div class="message_media_caption" style="${cssWidth}">${caption}</div>`;
     }
     return result;
   }

@@ -2,8 +2,6 @@ import {$, Tpl, buildLoaderElement, attachRipple, attachMenuListener} from './ut
 import {MessagesApiManager} from './api/messages_api_manager';
 
 const ArchivedChatsController = new class {
-  chatElements = new Map();
-
   show() {
     this.container = $('.archived_chats_sidebar');
     this.container.hidden = false;
@@ -23,7 +21,7 @@ const ArchivedChatsController = new class {
     backButtonEl.addEventListener('click', this.onBack);
     backButtonEl.hidden = false;
 
-    MessagesApiManager.emitter.on('onDialogOrderUpdate', this.onDialogOrderUpdate);
+    MessagesApiManager.emitter.on('dialogOrderUpdate', this.onDialogOrderUpdate);
 
     if (MessagesApiManager.archivedDialogs.length) {
       this.renderChats(MessagesApiManager.archivedDialogs);
@@ -36,7 +34,6 @@ const ArchivedChatsController = new class {
   }
 
   onBack = (event) => {
-    this.chatElements.clear();
     this.container.hidden = true;
     const backButtonEl = event.currentTarget;
     backButtonEl.removeEventListener('click', this.onBack);
@@ -86,9 +83,9 @@ const ArchivedChatsController = new class {
       return;
     }
     const chatId = MessagesApiManager.getPeerId(dialog.peer);
-    let el = this.chatElements.get(chatId);
+    let el = ChatsController.chatElements.get(chatId);
     if (el) {
-      el.classList.toggle('chats_item-pinned', !!dialog.pinned);
+      el.remove();
       ChatsController.renderChatPreviewContent(el, dialog);
     } else {
       el = ChatsController.buildChatPreviewElement(dialog);

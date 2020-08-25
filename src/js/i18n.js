@@ -11,7 +11,7 @@ const keys = {
   'chats_n_members': ['', '{n} member', '{n} members'],
   'chats_n_followers': ['', '{n} follower', '{n} followers'],
 
-  'date_n_minutes_ago': ['', '{} minute ago', '{} miinutes ago'],
+  'date_n_minutes_ago': ['', '{} minute ago', '{} minutes ago'],
 
   'poll_n_voted': ['No votes', '{n} voted', '{n} voted'],
   'poll_n_answered': ['Nobody answered yet', '{n} answered', '{n} answered'],

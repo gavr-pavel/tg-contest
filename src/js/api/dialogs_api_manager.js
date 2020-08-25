@@ -9,14 +9,15 @@ const DialogsApiManager = new class {
       peer: MessagesApiManager.getInputDialogPeer(dialog.peer),
       pinned
     });
-    dialog.pinned = pinned;
     const list = dialog.folder_id === 1 ? MessagesApiManager.archivedDialogs : MessagesApiManager.dialogs;
     if (pinned) {
+      dialog.pinned = true;
       const index = MessagesApiManager.getDialogIndex(dialog, list);
       list.splice(index, 1);
       list.unshift(dialog);
       this.emitter.trigger('dialogOrderUpdate', {dialog, index: 0, folderId: dialog.folder_id});
     } else {
+      delete dialog.pinned;
       MessagesApiManager.handleDialogOrder(dialog);
     }
     this.emitter.trigger('dialogPinnedUpdate', {dialog});

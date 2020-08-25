@@ -137,25 +137,31 @@ const MessagesFormController = new class {
     let recorder;
     let cancelled = false;
 
-    this.initRecorder().then((r) => {
-      if (cancelled) {
-        return;
-      }
-      recorder = r;
-      recorder.addEventListener('start', () => {
-        startAnimation();
-      });
-      recorder.addEventListener('stop', () => {
-        stopAnimation();
-      });
-      recorder.addEventListener('dataAvailable', (event) => {
-        if (!cancelled) {
-          const blob = new Blob([event.detail], {type: 'audio/ogg'});
-          this.onVoiceSend(blob);
-        }
-      });
-      recorder.start();
-    });
+    this.initRecorder()
+        .then((r) => {
+          if (cancelled) {
+            stopAnimation();
+            return;
+          }
+          recorder = r;
+          recorder.addEventListener('start', () => {
+            startAnimation();
+          });
+          recorder.addEventListener('stop', () => {
+            stopAnimation();
+          });
+          recorder.addEventListener('dataAvailable', (event) => {
+            if (!cancelled) {
+              const blob = new Blob([event.detail], {type: 'audio/ogg'});
+              this.onVoiceSend(blob);
+            }
+          });
+          recorder.start();
+        })
+        .catch((e) => {
+          stopAnimation();
+          alert('error: ' + e.toString());
+        });
 
     const timer = Tpl.html`<div class="messages_form_voice_timer"></div>`.buildElement();
     this.dom.input.after(timer);
@@ -203,6 +209,7 @@ const MessagesFormController = new class {
 
     return new Promise((resolve) => {
       recorder.addEventListener('streamReady', () => resolve(recorder));
+      recorder.addEventListener('streamError', () => reject(recorder));
       recorder.initStream();
     });
   }
