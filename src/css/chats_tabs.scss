@@ -1,8 +1,10 @@
 .chats_tabs {
-  overflow-y: hidden;
-  overflow-x: auto;
+  overflow: hidden;
   flex-shrink: 0;
   box-shadow: 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+  .mobile_view & {
+    overflow-x: auto;
+  }
 }
 
 .chats_tabs_list.nav_tabs_container {

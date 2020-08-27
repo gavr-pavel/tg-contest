@@ -158,9 +158,8 @@ const MessagesFormController = new class {
           });
           recorder.start();
         })
-        .catch((e) => {
+        .catch(() => {
           stopAnimation();
-          alert('error: ' + e.toString());
         });
 
     const timer = Tpl.html`<div class="messages_form_voice_timer"></div>`.buildElement();
@@ -207,10 +206,15 @@ const MessagesFormController = new class {
       encoderPath: './vendor/opus-recorder/encoder_worker.min.js'
     });
 
-    return new Promise((resolve) => {
-      recorder.addEventListener('streamReady', () => resolve(recorder));
-      recorder.addEventListener('streamError', () => reject(recorder));
-      recorder.initStream();
+    return new Promise((resolve, reject) => {
+      recorder.addEventListener('streamReady', () => {
+        resolve(recorder)
+      });
+      recorder.addEventListener('streamError', () => {
+        reject();
+      });
+      recorder.initStream()
+          .catch(reject);
     });
   }
 

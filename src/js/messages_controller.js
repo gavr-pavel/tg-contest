@@ -1,10 +1,21 @@
 import {
-  $, Tpl,
-  buildLoaderElement, cutText,
-  formatCountShort, formatCountLong,
+  $,
+  Tpl,
+  buildLoaderElement,
+  cutText,
+  formatCountShort,
+  formatCountLong,
   formatDateFull,
   formatDateRelative,
-  formatTime, formatDuration, initAnimation, attachRipple, downloadFile, $$, getDeferred, isIosSafari
+  formatTime,
+  formatDuration,
+  initAnimation,
+  attachRipple,
+  downloadFile,
+  $$,
+  getDeferred,
+  isIosSafari,
+  attachMenuListener, buildMenu, getEventPageXY, getClassesString
 } from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MediaApiManager} from './api/media_api_manager';
@@ -495,8 +506,16 @@ const MessagesController = new class {
     if (dialog === this.dialog) {
       const el = this.messageElements.get(message.id);
       if (el) {
+        const authorGroup = el.closest('.messages_group-author');
+        const dateGroup = el.closest('.messages_group-date');
         el.remove();
         this.messageElements.delete(message.id);
+        if (!$('.message', authorGroup)) {
+          authorGroup.remove();
+        }
+        if (!$('.message', dateGroup)) {
+          dateGroup.remove();
+        }
       }
     }
   };
@@ -847,13 +866,14 @@ const MessagesController = new class {
     const el = document.createElement('div');
 
     if (message._ === 'message') {
-      el.className = this.getClasses({
+      el.className = getClassesString({
         'message': true,
         'message-out': this.isOutMessage(message),
         'message-stick-to-next': options.stickToNext,
         'message-stick-to-prev': options.stickToPrev,
       });
       this.renderMessageContent(el, message, options);
+      attachMenuListener(el, this.onMessageMenu);
     } else if (message._ === 'messageService') {
       el.className = 'message-type-service';
       el.innerText = this.getServiceMessageText(message);
@@ -863,6 +883,48 @@ const MessagesController = new class {
     this.messageElements.set(message.id, el);
     return el;
   }
+
+  onMessageMenu = (event) => {
+    let target = event.target;
+    while (target && !target.classList.contains('message')) {
+      target = target.parentNode;
+    }
+    if (!target) {
+      return;
+    }
+    const message = MessagesApiManager.messages.get(+target.dataset.id);
+    const peer = this.dialog.peer;
+    const chat = MessagesApiManager.getPeerData(peer);
+    const isChannel = peer.channel_id && !MessagesApiManager.isMegagroup(peer);
+    const canDelete = !peer.channel_id || chat.creator;
+    const actions = [
+      !isChannel ? ['reply', 'Reply'] : null,
+      message.message ? ['copy', 'Copy'] : null,
+      ['forward', 'Forward'],
+      canDelete ? ['delete', 'Delete'] : null,
+    ].filter(a => a);
+    const menu = buildMenu(actions, {
+      container: $('.messages_container'),
+      menuClass: 'message_menu',
+      itemClass: 'message_menu_item',
+      itemCallback: (action) => this.onMessageMenuAction(message, action),
+    });
+    const {pageX, pageY} = getEventPageXY(event);
+    menu.setAbsolutePosition(pageX, pageY);
+    menu.setFixedPosition(true);
+    menu.open = true;
+  };
+
+  onMessageMenuAction = (message, action) => {
+    switch (action) {
+      case 'copy': {
+        navigator.clipboard.writeText(message.message);
+      } break;
+      case 'delete': {
+        MessagesApiManager.deleteMessages(this.dialog.peer, [message.id]);
+      } break;
+    }
+  };
 
   appendPendingMessage(content) {
     const el = Tpl.html`<div class="message message-out message-stick-to-next message-stick-to-prev"></div>`.buildElement();
@@ -875,16 +937,6 @@ const MessagesController = new class {
 
   removePendingMessage(el) {
     el.remove();
-  }
-
-  getClasses(dict) {
-    let className = '';
-    for (const [cls, cond] of Object.entries(dict)) {
-      if (cond) {
-        className += ' ' + cls;
-      }
-    }
-    return className;
   }
 
   renderMessageContent(el, message, options = {}) {
@@ -942,7 +994,9 @@ const MessagesController = new class {
       const document = message.media.document;
       const attributes = MediaApiManager.getDocumentAttributes(document);
       if (attributes.type === 'voice') {
-        this.drawVoiceWave(el, attributes.waveform, this.isOutMessage(message));
+        if (attributes.waveform) {
+          this.drawVoiceWave(el, attributes.waveform, this.isOutMessage(message));
+        }
         FileApiManager.loadDocument(document, {cache: true});
         import('./audio_player.js');
       }
@@ -1565,7 +1619,7 @@ const MessagesController = new class {
       footerButton = Tpl.html`<button class="poll_results_button">View Results</button>`;
     }
 
-    const pollClasses = this.getClasses({
+    const pollClasses = getClassesString({
       'poll-voted': voted || poll.closed,
       'poll-closed': poll.closed,
       'poll-public': poll.public_voters,

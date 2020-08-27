@@ -1,9 +1,19 @@
 import {
-  $, Tpl,
+  $,
+  Tpl,
   buildLoaderElement,
   formatCountShort,
-  formatDateFull, formatDateWeekday,
-  formatTime, isTouchDevice, attachMenuListener, attachRipple, initMenu, getEventPageXY, wait, buildMenu
+  formatDateFull,
+  formatDateWeekday,
+  formatTime,
+  isTouchDevice,
+  attachMenuListener,
+  attachRipple,
+  initMenu,
+  getEventPageXY,
+  wait,
+  buildMenu,
+  getStringFirstUnicodeChar, getClassesString
 } from './utils';
 import {App} from './app';
 import {MessagesApiManager} from './api/messages_api_manager';
@@ -108,7 +118,9 @@ const ChatsController = new class {
     const mdcMenu = initMenu(menuContainer);
 
     const menuButton = $('.chats_header_menu_button', this.header);
-    attachRipple(menuButton);
+    if (!isTouchDevice()) {
+      attachRipple(menuButton);
+    }
     menuButton.addEventListener('click', () => {
       if (!mdcMenu.open) {
         mdcMenu.open = true;
@@ -120,6 +132,7 @@ const ChatsController = new class {
       document.addEventListener('touchstart', (event) => {
         if (mdcMenu.open && !menuContainer.contains(event.target)) {
           mdcMenu.open = false;
+          event.preventDefault();
         }
       });
     }
@@ -294,6 +307,10 @@ const ChatsController = new class {
       this.renderChatPreviewContent(el, dialog);
     } else {
       this.buildChatPreviewElement(dialog);
+      if (this.placeholder) {
+        this.placeholder.remove();
+        this.placeholder = null;
+      }
     }
   };
 
@@ -310,6 +327,10 @@ const ChatsController = new class {
       this.renderChatPreviewContent(el, dialog);
     } else {
       el = this.buildChatPreviewElement(dialog);
+      if (this.placeholder) {
+        this.placeholder.remove();
+        this.placeholder = null;
+      }
     }
     if (!folderId) {
       this.elementsOrder.splice(index, 0, el);
@@ -402,14 +423,16 @@ const ChatsController = new class {
     if (lastEl) {
       const index = this.elementsOrder.indexOf(lastEl);
       const frag = document.createDocumentFragment();
-      for (let i = index; renderedCount < 20 && i < this.elementsOrder.length; i++) {
+      for (let i = index + 1; renderedCount < 20 && i < this.elementsOrder.length; i++) {
         const el = this.elementsOrder[i];
         if (!el.hidden) {
           frag.appendChild(el);
           renderedCount++;
         }
       }
-      this.listContainer.appendChild(frag);
+      if (renderedCount) {
+        this.listContainer.appendChild(frag);
+      }
     }
     if (renderedCount < 20 && !this.noMore) {
       this.loadMore();
@@ -425,6 +448,9 @@ const ChatsController = new class {
         .then((dialogs) => {
           if (!dialogs.length) {
             this.noMore = true;
+            if (!this.elementsOrder.length) {
+              this.showPlaceholder();
+            }
           } else {
             render && this.renderChats(dialogs, render);
             const lastDialog = dialogs[dialogs.length - 1];
@@ -490,7 +516,7 @@ const ChatsController = new class {
     const peerId = MessagesApiManager.getPeerId(dialog.peer);
     const el = Tpl.html`
       <div class="chats_item ${dialog.pinned ? ' chats_item-pinned' : ''}" data-peer-id="${peerId}">
-        <div class="chats_item_content mdc-ripple-surface">
+        <div class="chats_item_content ${ getClassesString({'mdc-ripple-surface': !isTouchDevice()}) }">
           <div class="chats_item_photo"></div>
           <div class="chats_item_text"></div>        
         </div>
@@ -653,17 +679,26 @@ const ChatsController = new class {
 
   setChatPhotoPlaceholder(photoEl, peerId) {
     const peer = MessagesApiManager.getPeerById(peerId);
-    const peerTitle = MessagesApiManager.getPeerName(peer);
-    photoEl.style.backgroundColor = this.getPlaceholderColor(peerId);
-    photoEl.innerHTML = '<div class="peer_photo_placeholder">' + peerTitle.charAt(0) + '</div>';
+    let shortTitle;
+    if (peer._ === 'peerUser') {
+      const user = MessagesApiManager.getPeerData(peer);
+      shortTitle = getStringFirstUnicodeChar(user.first_name) + getStringFirstUnicodeChar(user.last_name);
+    } else {
+      shortTitle = getStringFirstUnicodeChar(MessagesApiManager.getPeerName(peer));
+    }
+    photoEl.style.backgroundColor = this.getPhotoPlaceholderColor(peerId);
+    photoEl.innerHTML = Tpl.html`<div class="peer_photo_placeholder">${shortTitle}</div>`;
   }
 
-  getPlaceholderColor(peerId) {
+  getPhotoPlaceholderColor(peerId) {
     const colors = ['#FFBF69', '#247BA0', '#EA526F', '#2EC4B6', '#F79256', '#662C91', '#049A8F', '#06D6A0', '#F25C54'];
     return colors[peerId % colors.length];
   }
 
   onChatClick = (event) => {
+    if (event.button) {
+      return;
+    }
     event.preventDefault();
     const el = event.currentTarget;
     const peerId = +el.dataset.peerId;
@@ -703,7 +738,11 @@ const ChatsController = new class {
 
     if (isTouchDevice()) {
       const {pageX} = getEventPageXY(event);
-      menu.setAbsolutePosition(pageX, 0)
+      const toLeft = pageX > target.offsetWidth / 2;
+      menu.setAnchorElement(target);
+      menu.setAnchorCorner(toLeft ? 4 : 0);
+      menu.setAnchorMargin({left: pageX + (toLeft ? -50: 50), bottom: 0});
+      menu.setFixedPosition(true);
     } else {
       menu.setAnchorElement(target);
       menu.setAnchorCorner(4);
@@ -730,6 +769,21 @@ const ChatsController = new class {
         confirm('Are you sure?');
       } break;
     }
+  }
+
+  showPlaceholder() {
+    this.loader.remove();
+    this.placeholder = Tpl.html`
+      <div class="chats_placeholder">
+        <tgs-player src="tgs/ChickEgg.tgs" class="chats_placeholder_image"></tgs-player>
+        <span>You have no conversations yet</span>
+      </div>
+    `.buildElement();
+    this.listContainer.append(this.placeholder);
+    const player = $('tgs-player', this.placeholder);
+    player.addEventListener('ready', () => {
+      player.getLottie().playSegments([0, 150], true);
+    });
   }
 
   runTypingAnimation(dialog, callback) {

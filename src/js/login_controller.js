@@ -42,6 +42,19 @@ const LoginController = new class {
     }
   }
 
+  async setNearestCountry() {
+    const {country} = await ApiClient.callMethod('help.getNearestDc');
+    if (this.countryTextField.value || this.phoneTextField.value) {
+      return;
+    }
+    const found = CountryCodesConfig.find(([code]) => code === country);
+    if (found) {
+      const [, countryName, prefix] = found;
+      this.countryTextField.value = countryName;
+      this.phoneTextField.value = prefix.replace(/\s+/g, '') + ' ';
+    }
+  }
+
   setDomText(label, text) {
     this.dom[label].textContent = text;
   }
@@ -59,7 +72,7 @@ const LoginController = new class {
     }
   }
 
-  setStep(step, params = {}) {
+  setStep(step) {
     this.step = step;
 
     switch (step) {
@@ -78,8 +91,10 @@ const LoginController = new class {
         this.mdcComponents.push(this.phoneTextField);
         if (this.authParams.phoneNumber) {
           this.phoneTextField.value = this.authParams.phoneNumber;
+        } else {
+          this.setNearestCountry();
         }
-        this.phoneTextField.focus();
+        setTimeout(() => this.phoneTextField.focus(), 0);
       } break;
 
       case STEP_CODE: {

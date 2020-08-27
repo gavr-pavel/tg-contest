@@ -117,7 +117,8 @@ $emoji_dropdown_nav_height: 48px;
 
 .emoji_dropdown_section_content {
   height: 100%;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   .emoji_dropdown_section-emoji &,
   .emoji_dropdown_section-stickers & {
     height: calc(100% - #{$emoji_dropdown_nav_height});

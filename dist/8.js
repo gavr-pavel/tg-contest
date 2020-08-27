@@ -34,7 +34,7 @@
           </div>
         </div>
       </div>
-    `,this.scrollContainer=Object(a.a)(".chat_info_scroll_wrap",this.container),this.renderPeerPhoto(t),this.bindListeners(),this.loadPeerFullInfo(t).then(e=>{this.renderDesc(n,e)})}bindListeners(){document.addEventListener("keyup",this.onKeyUp);const e=Object(a.a)(".sidebar_close_button",this.container);e.addEventListener("click",this.close),Object(a.g)(e);const t=Object(a.a)(".sidebar_extra_menu_button",this.container);Object(a.g)(t),this.scrollContainer.addEventListener("scroll",this.onScroll),this.sharedTabsDom=Object(a.z)(this.container);for(const e of Object.values(this.sharedTabsDom))e.addEventListener("click",this.onSharedTabClick);this.setSharedSection("media")}getNotificationsCheckboxHtml(){return a.e.html`
+    `,this.scrollContainer=Object(a.a)(".chat_info_scroll_wrap",this.container),this.renderPeerPhoto(t),this.bindListeners(),this.loadPeerFullInfo(t).then(e=>{this.renderDesc(n,e)})}bindListeners(){document.addEventListener("keyup",this.onKeyUp);const e=Object(a.a)(".sidebar_close_button",this.container);e.addEventListener("click",this.close),Object(a.g)(e);const t=Object(a.a)(".sidebar_extra_menu_button",this.container);Object(a.g)(t),this.scrollContainer.addEventListener("scroll",this.onScroll),this.sharedTabsDom=Object(a.A)(this.container);for(const e of Object.values(this.sharedTabsDom))e.addEventListener("click",this.onSharedTabClick);this.setSharedSection("media")}getNotificationsCheckboxHtml(){return a.e.html`
       <div class="mdc-form-field">
         <div class="mdc-checkbox">
           <input type="checkbox" class="mdc-checkbox__native-control" id="checkbox-notifications"/>

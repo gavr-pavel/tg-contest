@@ -411,6 +411,7 @@ function attachMenuListener(el, callback) {
         } else {
           event.preventDefault();
         }
+        document.body.classList.remove('no_select');
         el.removeEventListener('touchend', onTouchEnd);
         el.removeEventListener('touchmove', onTouchEnd);
       };
@@ -419,13 +420,27 @@ function attachMenuListener(el, callback) {
       timeoutId = setTimeout(() => {
         timeoutId = null;
         callback(event);
+        cancelSelection();
+        document.body.classList.add('no_select');
       }, 300);
     });
   } else {
     el.addEventListener('contextmenu', (event) => {
       event.preventDefault();
       callback(event);
+      cancelSelection();
     });
+  }
+}
+
+function cancelSelection() {
+  const sel = window.getSelection() || document.selection;
+  if (sel) {
+    if (sel.removeAllRanges) {
+      sel.removeAllRanges();
+    } else if (sel.empty) {
+      sel.empty();
+    }
   }
 }
 
@@ -440,7 +455,9 @@ function attachRipple(...elements) {
 }
 
 function initMenu(container) {
-  attachRipple(...$$('.mdc-list-item', container));
+  if (!isTouchDevice()) {
+    attachRipple(...$$('.mdc-list-item', container));
+  }
   return new MDCMenu(container);
 }
 
@@ -460,8 +477,8 @@ function buildMenu(actions, {container, menuClass, itemClass, itemCallback}) {
   const onItemClick = (event) => {
     event.stopPropagation();
     const action = event.currentTarget.dataset.action;
-    itemCallback(action);
     closeMenu();
+    itemCallback(action);
   };
 
   const closeMenu = () => {
@@ -469,18 +486,21 @@ function buildMenu(actions, {container, menuClass, itemClass, itemCallback}) {
     setTimeout(() => {
       el.remove();
     }, 500);
+    document.removeEventListener(touchEventType, onTouch);
+    window.removeEventListener('scroll', closeMenu, true);
   };
 
   const onTouch = (event) => {
     if (!el.contains(event.target)) {
       closeMenu();
     }
-    document.removeEventListener(touchEventType, onTouch);
   };
   const touchEventType = isTouchDevice() ? 'touchstart' : 'mousedown';
   document.addEventListener(touchEventType, onTouch);
 
-  for (const item of $$('.chats_dialog_menu_item', el)) {
+  window.addEventListener('scroll', closeMenu, true);
+
+  for (const item of $$('.mdc-list-item', el)) {
     item.addEventListener('click', onItemClick);
   }
 
@@ -501,6 +521,21 @@ function isIosSafari() {
   const iOS = !!ua.match(/iPad/i) || !!ua.match(/iPhone/i);
   const webkit = !!ua.match(/WebKit/i);
   return iOS && webkit && !ua.match(/CriOS/i);
+}
+
+function getStringFirstUnicodeChar(string = '') {
+  const matches = String(string).match(/./u);
+  return matches ? matches[0] : '';
+}
+
+function getClassesString(dict) {
+  let className = '';
+  for (const [cls, cond] of Object.entries(dict)) {
+    if (cond) {
+      className += ' ' + cls;
+    }
+  }
+  return className;
 }
 
 export {
@@ -538,5 +573,7 @@ export {
   initMenu,
   buildMenu,
   downloadFile,
-  isIosSafari
+  isIosSafari,
+  getStringFirstUnicodeChar,
+  getClassesString
 };

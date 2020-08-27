@@ -367,6 +367,9 @@ const MessagesApiManager = new class {
     let {dialogs} = await ApiClient.callMethod('messages.getPinnedDialogs');
     dialogs = dialogs.filter(dialog => dialog._ === 'dialog'); // messages.getPinnedDialogs returns dialogFolder
     this.updateDialogs(dialogs);
+    for (const dialog of dialogs) {
+      this.emitter.trigger('dialogUnreadCountUpdate', {dialog});
+    }
   }
 
   loadArchivedDialogs(offset = {}, limit = 20) {
@@ -534,6 +537,28 @@ const MessagesApiManager = new class {
         delete dialog.top_message;
       }
       this.emitter.trigger('dialogTopMessageUpdate', {dialog});
+    }
+  }
+
+  async deleteMessages(peer, ids) {
+    if (peer._ === 'peerChannel') {
+      const channel = this.chats.get(peer.channel_id);
+      await ApiClient.callMethod('channels.deleteMessages', {
+        channel: this.getInputChannel(channel),
+        id: ids
+      });
+    } else {
+      await ApiClient.callMethod('messages.deleteMessages', {
+        id: ids
+      });
+    }
+    const chatId = this.getPeerId(peer);
+    for (const msgId of ids) {
+      const message = this.messages.get(msgId);
+      if (message) {
+        this.messages.delete(msgId);
+        this.updateChatDeletedMessage(chatId, message);
+      }
     }
   }
 
@@ -740,6 +765,10 @@ const MessagesApiManager = new class {
     return {_: 'inputUser', user_id: user.id, access_hash: user.access_hash || 0};
   }
 
+  getInputChannel(channel) {
+    return {_: 'inputChannel', channel_id: channel.id, access_hash: channel.access_hash || 0};
+  }
+
   getInputPeerById(peerId) {
     return this.getInputPeer(this.getPeerById(peerId));
   }
@@ -850,7 +879,7 @@ const MessagesApiManager = new class {
     if (peer && peer.channel_id) {
       const channel = this.chats.get(peer.channel_id);
       res = await ApiClient.callMethod('channels.getMessages', {
-        channel: {_: 'inputChannel', channel_id: channel.id, access_hash: channel.access_hash},
+        channel: this.getInputChannel(channel),
         id: messageIds.map((id) => {return {_: 'inputMessageID', id}})
       });
     } else {

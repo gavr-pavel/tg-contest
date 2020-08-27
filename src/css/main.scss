@@ -131,6 +131,11 @@ pre {
   }
 }
 
+.no_select {
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
 .circular-loader {
   --loader-size: 56px;
   position: absolute;

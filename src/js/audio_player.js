@@ -142,7 +142,9 @@ class AudioPlayer {
     if (this.attributes.type === 'voice') {
       const filledWaveEl = $('.document_voice_wave-filled', documentWrapEl);
       updateProgress = (progress) => {
-        filledWaveEl.style.width = (progress * 100) + '%';
+        if (filledWaveEl) {
+          filledWaveEl.style.width = (progress * 100) + '%';
+        }
       };
       updateCurrentTime = (currentTime, duration) => {
         durationEl.innerText = formatDuration(duration - currentTime);

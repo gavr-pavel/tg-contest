@@ -80,6 +80,7 @@
   padding: 8px;
   overflow-y: auto;
   overflow-x: hidden;
+  flex: 1;
   .mobile_view & {
     padding: 0;
   }
@@ -94,6 +95,7 @@
   position: relative;
   touch-action: manipulation;
   user-select: none;
+  -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   &[hidden] {
     display: none;
@@ -112,6 +114,10 @@
     border-radius: 0;
     padding-right: 16px;
   }
+  .chats_item-selected &,
+  .mobile_view &:hover {
+    background: #F4F4F5;
+  }
 }
 
 .chats_item_message_highlight {
@@ -120,10 +126,6 @@
 
 .chats_item_message_author_label {
   color: #000;
-}
-
-.chats_item-selected {
-  background: #F4F4F5;
 }
 
 .chats_item-pinned:not([hidden]) + .chats_item:not(.chats_item-pinned) {
@@ -278,9 +280,6 @@
   padding-right: 30px;
   background: no-repeat 16px center;
 }
-.chats_dialog_menu_item-pin {
-  background-image: svg('../icons/pin_svg.svg', (path: (fill: $secondary_gray_color)));
-}
 .chats_dialog_menu_item-mute {
   background-image: svg('../icons/mute_svg.svg', (path: (fill: $secondary_gray_color)));
 }
@@ -302,4 +301,22 @@
 .chats_dialog_menu_item-delete {
   background-image: svg('../icons/delete_svg.svg', (path: (fill: $error_red_color)));
   color: $error_red_color;
+}
+
+.chats_placeholder {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  text-align: center;
+  color: $secondary_gray_color;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.chats_placeholder_image {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto;
+  margin-bottom: 20px;
 }

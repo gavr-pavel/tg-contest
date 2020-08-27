@@ -142,6 +142,7 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, .15);
   overflow: hidden;
   position: relative;
+  -webkit-touch-callout: none;
   &:after { // highlight
     content: '';
     position: absolute;
@@ -696,4 +697,23 @@
   100% {
     transform: rotate(360deg);
   }
+}
+
+.message_menu_item  {
+  padding-left: 73px;
+  padding-right: 30px;
+  background: no-repeat 16px center;
+}
+.message_menu_item-reply {
+  background-image: svg('../icons/reply_svg.svg', (path: (fill: $secondary_gray_color)));
+}
+.message_menu_item-copy {
+  background-image: svg('../icons/copy_svg.svg', (path: (fill: $secondary_gray_color)));
+}
+.message_menu_item-forward {
+  background-image: svg('../icons/forward_svg.svg', (path: (fill: $secondary_gray_color)));
+}
+.message_menu_item-delete {
+  background-image: svg('../icons/delete_svg.svg', (path: (fill: $error_red_color)));
+  color: $error_red_color;
 }

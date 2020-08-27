@@ -19,6 +19,8 @@ const ContactsController = new class {
 
     $('.chats_header_menu_button').hidden = true;
 
+    $('.chats_tabs').hidden = true;
+
     ApiClient.callMethod('contacts.getContacts').then((res) => {
       MessagesApiManager.updateUsers(res.users);
       this.loader.remove();
@@ -80,6 +82,8 @@ const ContactsController = new class {
     backButtonEl.removeEventListener('click', this.onBack);
 
     $('.chats_header_menu_button').hidden = false;
+
+    $('.chats_tabs').hidden = false;
   };
 
   onContactClick = (event) => {
