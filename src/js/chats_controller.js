@@ -51,6 +51,7 @@ const ChatsController = new class {
     MessagesApiManager.emitter.on('dialogNewMessage', this.onDialogNewMessage);
     MessagesApiManager.emitter.on('userStatusUpdate', this.onUserStatusUpdate);
     MessagesApiManager.emitter.on('dialogUserTypingUpdate', this.onDialogUserTypingUpdate);
+    MessagesApiManager.emitter.on('dialogOutboxReadUpdate', this.onDialogOutboxReadUpdate);
 
     this.initTabs();
 
@@ -410,6 +411,15 @@ const ChatsController = new class {
     }
   };
 
+  onDialogOutboxReadUpdate = (event) => {
+    const {dialog} = event.detail;
+    const chatId = MessagesApiManager.getPeerId(dialog.peer);
+    const el = this.chatElements.get(chatId);
+    if (el) {
+      this.renderChatPreviewContent(el, dialog);
+    }
+  };
+
   onScroll = () => {
     const container = this.scrollContainer;
     if (container.scrollTop + container.offsetHeight > container.scrollHeight - 500) {
@@ -551,6 +561,7 @@ const ChatsController = new class {
     $('.chats_item_text', el).innerHTML = Tpl.html`
       <div class="chats_item_text_row">
         <div class="chats_item_title">${title}</div>
+        ${MessagesController.formatMessageStatus(lastMessage, dialog)}
         <div class="chats_item_date">${date}</div>
       </div>
       <div class="chats_item_text_row">

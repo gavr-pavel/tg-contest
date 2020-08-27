@@ -1441,7 +1441,7 @@ const MessagesController = new class {
   }
 
   formatMessageStatus(message, dialog) {
-    if (message.out && message.from_id) {
+    if (message && message.out && message.from_id) {
       const readOutboxMaxId = dialog.read_outbox_max_id;
       const status = message.id <= readOutboxMaxId ? 'read' : 'sent';
       return Tpl.html`<div class="message_status message_status-${status}"></div>`;
