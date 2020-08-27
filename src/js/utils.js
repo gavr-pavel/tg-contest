@@ -414,9 +414,11 @@ function attachMenuListener(el, callback) {
         document.body.classList.remove('no_select');
         el.removeEventListener('touchend', onTouchEnd);
         el.removeEventListener('touchmove', onTouchEnd);
+        document.removeEventListener('touchstart', onTouchEnd);
       };
       el.addEventListener('touchend', onTouchEnd);
       el.addEventListener('touchmove', onTouchEnd);
+      document.addEventListener('touchstart', onTouchEnd, true);
       timeoutId = setTimeout(() => {
         timeoutId = null;
         callback(event);
