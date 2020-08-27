@@ -1149,18 +1149,11 @@ const MessagesController = new class {
     }
   };
 
-  loadFile(button, document) {
+  loadFile(button, document, abortController = null) {
     if (button.dataset.loading) {
       return;
     }
     button.dataset.loading = 1;
-
-    const abortController = new AbortController();
-
-    const onAbort = () => {
-      abortController.abort();
-      onDone();
-    };
 
     const onProgress = (loaded) => {
       if (progressPath) {
@@ -1175,6 +1168,16 @@ const MessagesController = new class {
       button.innerHTML = '';
     };
 
+    const onAbort = () => {
+      abortController.abort();
+    };
+
+    if (!abortController) {
+      abortController = new AbortController();
+    }
+    const abortSignal = abortController.signal;
+    abortSignal.addEventListener('abort', onDone);
+
     let progressPath;
     if (button.classList.contains('document_icon') || button.classList.contains('chat_info_shared_docs_item_icon')) {
       button.classList.add('document_icon-loading');
@@ -1187,17 +1190,24 @@ const MessagesController = new class {
       progressPath = $('.document_icon_progress_path', button);
     }
 
-    return FileApiManager.loadDocument(document, {onProgress, signal: abortController.signal})
+    return FileApiManager.loadDocument(document, {onProgress, signal: abortSignal})
         .finally(onDone);
   }
 
   async playAudio(btn, {document: doc, attributes, message}) {
+    if (btn.dataset.loading) {
+      return;
+    }
     if (this.audioPlayer) {
-      if (this.audioPlayer.doc.id === doc.id) {
-        this.audioPlayer.togglePlay();
+      const audioPlayer = this.audioPlayer;
+      if (audioPlayer.doc.id === doc.id) {
+        audioPlayer.togglePlay();
         return;
       } else {
-        this.audioPlayer.destroy();
+        if (audioPlayer.abortController) {
+          audioPlayer.abortController.abort();
+        }
+        audioPlayer.destroy();
         this.audioPlayer = null;
       }
     }
@@ -1209,8 +1219,18 @@ const MessagesController = new class {
     if ((doc.mime_type === 'audio/mpeg' || doc.mime_type === 'audio/mp3') && window.MediaSource) {
       audioPlayer.initStreaming();
     } else {
-      const src = await this.loadFile(btn, doc);
-      audioPlayer.initSrc(src);
+      try {
+        audioPlayer.abortController = new AbortController();
+        const src = await this.loadFile(btn, doc, audioPlayer.abortController);
+        audioPlayer.abortController = null;
+        audioPlayer.initSrc(src);
+      } catch (e) {
+        audioPlayer.destroy();
+        if (audioPlayer === this.audioPlayer) {
+          this.audioPlayer = null;
+        }
+        return;
+      }
     }
 
     audioPlayer.initMessageAudioPlayer(btn);

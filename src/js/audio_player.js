@@ -90,6 +90,9 @@ class AudioPlayer {
 
   async destroy() {
     const audio = await this.getAudio();
+    if (!audio) {
+      return;
+    }
     audio.pause();
     for (const [eventType, listener] of this.listeners) {
       if (eventType === 'stop') {
