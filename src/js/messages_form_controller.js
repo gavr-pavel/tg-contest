@@ -11,7 +11,6 @@ import {
 } from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {MessagesController} from './messages_controller';
-import {FileUploadPopup} from './file_upload_popup';
 
 const MessagesFormController = new class {
   init() {
@@ -43,8 +42,11 @@ const MessagesFormController = new class {
 
     attachRipple(button);
 
-    FileUploadPopup.init();
-    FileUploadPopup.bind(this.dom.media_button);
+    import('./file_upload_popup.js')
+        .then(({FileUploadPopup}) => {
+          FileUploadPopup.init();
+          FileUploadPopup.bind(this.dom.media_button);
+        });
   }
 
   onShown() {

@@ -2,6 +2,8 @@ import {$, attachRipple, formatFileSize, isTouchDevice, Tpl} from './utils';
 import {I18n} from './i18n';
 import {MessagesFormController} from './messages_form_controller';
 import {MDCTextField} from '@material/textfield/index';
+import {Popup} from './popup';
+import '../css/file_upload_popup.scss';
 
 const FileUploadPopup = new class {
 
@@ -176,42 +178,35 @@ const FileUploadPopup = new class {
   }
 
   buildPopup(title, content, files, sendAsPhoto = false) {
-    const layer = Tpl.html`
-      <div class="messages_upload_popup_layer">
-        <div class="messages_upload_popup">
-          <div class="messages_upload_popup_header">
-            <button class="mdc-icon-button messages_upload_popup_close_button"></button>
-            <div class="messages_upload_popup_title">${title}</div>
-            <button class="mdc-button mdc-button--unelevated messages_upload_popup_send_button">Send</button>        
+    const contentTpl = Tpl.html`
+      <div class="messages_upload_popup_content"></div>
+      <div class="mdc-text-field mdc-text-field--outlined messages_upload_popup_caption_text_field">
+        <input type="text" class="mdc-text-field__input messages_upload_popup_caption_input">
+        <div class="mdc-notched-outline">
+          <div class="mdc-notched-outline__leading"></div>
+          <div class="mdc-notched-outline__notch">
+            <label class="mdc-floating-label">Caption</label>
           </div>
-          <div class="messages_upload_popup_content"></div>
-          <div class="mdc-text-field mdc-text-field--outlined messages_upload_popup_caption_text_field">
-            <input type="text" class="mdc-text-field__input messages_upload_popup_caption_input">
-            <div class="mdc-notched-outline">
-              <div class="mdc-notched-outline__leading"></div>
-              <div class="mdc-notched-outline__notch">
-                <label class="mdc-floating-label">Caption</label>
-              </div>
-              <div class="mdc-notched-outline__trailing"></div>
-            </div>
-          </div>
+          <div class="mdc-notched-outline__trailing"></div>
         </div>
       </div>
-    `.buildElement();
-
-    $('.messages_upload_popup_content', layer).appendChild(content);
-    $('.messages_upload_popup_close_button', layer).addEventListener('click', () => {
-      layer.remove();
+    `;
+    const popup = new Popup({
+      title,
+      content: contentTpl,
+      buttonText: 'Send',
+      onButtonClick: () => {
+        const caption = $('.messages_upload_popup_caption_input', layer).value.trim();
+        MessagesFormController.onMediaSend(files, sendAsPhoto, caption);
+        popup.close();
+      }
     });
-    $('.messages_upload_popup_send_button', layer).addEventListener('click', () => {
-      const caption = $('.messages_upload_popup_caption_input', layer).value.trim();
-      MessagesFormController.onMediaSend(files, sendAsPhoto, caption);
-      layer.remove();
-    });
 
-    const container = $('.messages_container');
-    container.appendChild(layer);
-    new MDCTextField($('.mdc-text-field', layer));
+    $('.messages_upload_popup_content', popup.el).appendChild(content);
+
+    popup.show();
+
+    new MDCTextField($('.mdc-text-field', popup.el));
   }
 };
 

@@ -164,7 +164,8 @@ $emoji_dropdown_nav_height: 48px;
   }
 }
 
-.emoji_dropdown_section-stickers .emoji_dropdown_list {
+.emoji_dropdown_section-stickers .emoji_dropdown_list,
+.stickers_popup_content {
   display: grid;
   grid-template-columns: repeat(auto-fill, 70px);
   justify-content: space-evenly;
@@ -190,7 +191,8 @@ $emoji_dropdown_nav_height: 48px;
   color: $secondary_gray_color;
 }
 
-.emoji_dropdown_section-stickers .emoji_dropdown_list_item {
+.emoji_dropdown_section-stickers .emoji_dropdown_list_item,
+.stickers_popup_content .emoji_dropdown_list_item {
   width: 70px;
   height: 70px;
   cursor: pointer;
@@ -202,15 +204,18 @@ $emoji_dropdown_nav_height: 48px;
   }
 }
 
-.emoji_dropdown_list_item-preview {
+.emoji_dropdown_list_item.emoji_dropdown_list_item-preview { // higher priority
   position: absolute;
   z-index: 1;
   left: 0;
   top: 0;
   right: 0;
   bottom: 0;
-  padding: 20%;
-  background: rgba(0, 0, 0, .8);
+  width: 200px;
+  height: 200px;
+  margin: auto;
+  background: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.8);
 }
 
 .emoji_dropdown_top_nav {
@@ -480,4 +485,29 @@ $emoji_dropdown_nav_height: 48px;
   position: absolute;
   left: 0;
   top: 0;
+}
+
+.stickers_popup_content {
+  margin: 0 -18px;
+  padding: 0 9px 9px;
+  max-height: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid transparent;
+  &._scroll_top {
+    border-top: 1px solid $border_gray_color;
+  }
+  &._scroll_bottom {
+    border-bottom: 1px solid $border_gray_color;
+  }
+}
+
+.stickers_popup_footer {
+  margin: 0 -18px -32px;
+  padding: 8px 0;
+  text-align: center;
+}
+
+.stickers_popup_button {
+  height: 44px;
 }

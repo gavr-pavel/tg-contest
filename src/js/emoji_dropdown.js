@@ -1,8 +1,19 @@
-import {getLabeledElements, $, $$, Storage, Tpl, isTouchDevice, debounce, buildLoaderElement} from './utils';
+import {
+  getLabeledElements,
+  $,
+  $$,
+  Storage,
+  Tpl,
+  isTouchDevice,
+  debounce,
+  buildLoaderElement,
+  getClassesString, initScrollBorder, cancelSelection
+} from './utils';
 import {EmojiConfig} from './emoji_config';
 import {ApiClient} from './api/api_client';
 import {MessagesFormController} from './messages_form_controller';
 import '../css/emoji_dropdown.scss';
+import {Popup} from './popup';
 
 const EmojiDropdown = new class {
   stickerSets = new Map();
@@ -467,23 +478,48 @@ const EmojiDropdown = new class {
     const button = event.currentTarget;
     const setId = button.dataset.setId;
     const fullSet = this.stickerSets.get(setId);
-    const set = fullSet.set;
-    const inputStickerSetId = {_: 'inputStickerSetID', id: set.id, access_hash: set.access_hash};
     if (button.classList.toggle('emoji_dropdown_search_sticker_set_add_button-added')) {
-      ApiClient.callMethod('messages.installStickerSet', {stickerset: inputStickerSetId});
+      this.installStickerSet(fullSet);
       button.innerText = 'Added';
-      const el = Tpl.html`<div class="emoji_dropdown_list" data-set-id="${set.id}"></div>`.buildElement();
-      const topButton = Tpl.html`<div class="emoji_dropdown_top_nav_item" data-set-id="${set.id}"></div>`.buildElement();
-      this.initStickerSet(set, el, topButton);
-      $('.emoji_dropdown_top_nav', this.dom.section_stickers).children[1].after(topButton);
-      $('.emoji_dropdown_section_content', this.dom.section_stickers).children[1].after(el);
     } else {
-      ApiClient.callMethod('messages.uninstallStickerSet', {stickerset: inputStickerSetId});
+      this.uninstallStickerSet(fullSet);
       button.innerText = 'Add';
-      $(`.emoji_dropdown_list[data-set-id="${set.id}"]`, this.dom.section_stickers).remove();
-      $(`.emoji_dropdown_top_nav_item[data-set-id="${set.id}"]`, this.dom.section_stickers).remove();
     }
   };
+
+  installStickerSet(fullSet) {
+    const set = fullSet.set;
+    const inputStickerSetId = {_: 'inputStickerSetID', id: set.id, access_hash: set.access_hash};
+    ApiClient.callMethod('messages.installStickerSet', {stickerset: inputStickerSetId});
+    fullSet.set.installed_date = ApiClient.getServerTimeNow();
+    const el = Tpl.html`<div class="emoji_dropdown_list" data-set-id="${set.id}"></div>`.buildElement();
+    const topButton = Tpl.html`<div class="emoji_dropdown_top_nav_item" data-set-id="${set.id}"></div>`.buildElement();
+    this.initStickerSet(set, el, topButton);
+
+    const topNavContainer = $('.emoji_dropdown_top_nav', this.dom.section_stickers);
+    const sectionContentContainer = $('.emoji_dropdown_section_content', this.dom.section_stickers);
+    if (topNavContainer.children.length) {
+      const children = topNavContainer.children;
+      let index = 0;
+      while (index + 1 < children.length && isNaN(children[index + 1].dataset.setId)) {
+        index++;
+      }
+      topNavContainer.children[index].after(topButton);
+      sectionContentContainer.children[index].after(el);
+    } else {
+      topNavContainer.append(topButton);
+      sectionContentContainer.append(el);
+    }
+  }
+
+  uninstallStickerSet(fullSet) {
+    const set = fullSet.set;
+    const inputStickerSetId = {_: 'inputStickerSetID', id: set.id, access_hash: set.access_hash};
+    ApiClient.callMethod('messages.uninstallStickerSet', {stickerset: inputStickerSetId});
+    delete fullSet.set.installed_date;
+    $(`.emoji_dropdown_list[data-set-id="${set.id}"]`, this.dom.section_stickers).remove();
+    $(`.emoji_dropdown_top_nav_item[data-set-id="${set.id}"]`, this.dom.section_stickers).remove();
+  }
 
   async loadFoundStickersPreview(set, container, signal) {
     const fullSet = await this.loadStickerSet(set);
@@ -616,7 +652,7 @@ const EmojiDropdown = new class {
     const index = el.dataset.stickerIndex;
     const document = this.getSetSticker(setId, index);
     MessagesFormController.onStickerSend(document);
-    this.hide();
+    // this.hide();
   };
 
   onStickerOver = (event) => {
@@ -646,10 +682,13 @@ const EmojiDropdown = new class {
       const replaceEl = Tpl.html`<div class="emoji_dropdown_list_item"></div>`.buildElement();
       target.replaceWith(replaceEl);
       target.classList.add('emoji_dropdown_list_item-preview');
-      this.container.appendChild(target);
+      (replaceEl.closest('.stickers_popup_content') || this.container).appendChild(target);
+      cancelSelection();
+      document.body.classList.add('no_select');
       document.addEventListener('touchend', () => {
         target.classList.remove('emoji_dropdown_list_item-preview');
         replaceEl.replaceWith(target);
+        document.body.classList.remove('no_select');
       }, {once: true});
     };
     const touchEnd = () => {
@@ -716,7 +755,7 @@ const EmojiDropdown = new class {
     }
     const document = this.gifs.get(el.dataset.id);
     MessagesFormController.onStickerSend(document);
-    this.hide();
+    // this.hide();
   };
 
   onGifOver = (event) => {
@@ -846,6 +885,64 @@ const EmojiDropdown = new class {
       event.preventDefault(); // prevent input blur
     }
   };
+
+  async showStickerSetPopup(stickerSetInput) {
+    const fullSet = await this.loadStickerSet(stickerSetInput);
+    const set = fullSet.set;
+    let isAdded = !!set.installed_date;
+
+    const popup = new Popup({
+      title: set.title,
+      content: Tpl.html`
+        <div class="stickers_popup_content"></div>
+        <div class="stickers_popup_footer">
+          <button class="mdc-button stickers_popup_button"></button>
+        </div>
+      `,
+    });
+
+    const container = $('.stickers_popup_content', popup.el);
+    const button = $('.stickers_popup_button', popup.el);
+
+    const updateButtonState = (isAdded) => {
+      button.classList.toggle('mdc-button--unelevated', !isAdded);
+      button.innerText = isAdded ? 'Remove stickers' : `Add ${fullSet.documents.length} stickers`;
+    };
+
+    updateButtonState(isAdded);
+
+    const documents = fullSet.documents;
+    for (let index = 0; index < documents.length; index++) {
+      const stickerEl = Tpl.html`<div class="emoji_dropdown_list_item" data-sticker-index="${index}"></div>`.buildElement();
+      container.appendChild(stickerEl);
+    }
+    container.dataset.setId = set.id;
+    container.addEventListener('click', this.onStickerClick);
+    container.addEventListener('mouseover', this.onStickerOver);
+    container.addEventListener('touchstart', this.onStickerTouchStart);
+    this.loadStickersList(container, documents);
+
+    button.addEventListener('click', () => {
+      if (isAdded) {
+        this.uninstallStickerSet(fullSet);
+      } else {
+        this.installStickerSet(fullSet);
+      }
+      isAdded = !isAdded;
+      updateButtonState(isAdded);
+    });
+
+    container.addEventListener('click', (event) => {
+      const el = event.target;
+      if (el.classList.contains('emoji_dropdown_list_item')) {
+        popup.hide();
+      }
+    });
+
+    popup.show();
+
+    initScrollBorder(container);
+  }
 };
 
 window.EmojiDropdown = EmojiDropdown;

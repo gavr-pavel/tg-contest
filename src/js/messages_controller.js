@@ -817,7 +817,7 @@ const MessagesController = new class {
       }
       if (readInboxMaxId && message.id === readInboxMaxId && readInboxMaxId !== this.dialog.top_message) {
         const topMessage = MessagesApiManager.messages.get(this.dialog.top_message);
-        if (!topMessage.out) {
+        if (topMessage && !topMessage.out) {
           const unreadEl = Tpl.html`<div class="message-type-service message-type-unread">Unread messages</div>`.buildElement();
           if (lastDateGroup.children.length === 1) { // only date
             lastDateGroup.after(unreadEl);
@@ -1075,16 +1075,23 @@ const MessagesController = new class {
       // animated emoji
       return;
     }
-    import('./media_view_controller')
-        .then(({MediaViewController}) => {
-          if (thumbData.type === 'photo') {
-            MediaViewController.showPhoto(thumbData.object, thumb, message);
-          } else if (thumbData.type === 'video') {
-            MediaViewController.showVideo(thumbData.object, thumb, message);
-          } else if (thumbData.type === 'gif') {
-            MediaViewController.showGif(thumbData.object, thumb, message);
-          }
-        });
+    if (thumbData.type === 'sticker') {
+      import('./emoji_dropdown')
+          .then(({EmojiDropdown}) => {
+            EmojiDropdown.showStickerSetPopup(thumbData.attributes.stickerSetInput);
+          })
+    } else {
+      import('./media_view_controller')
+          .then(({MediaViewController}) => {
+            if (thumbData.type === 'photo') {
+              MediaViewController.showPhoto(thumbData.object, thumb, message);
+            } else if (thumbData.type === 'video') {
+              MediaViewController.showVideo(thumbData.object, thumb, message);
+            } else if (thumbData.type === 'gif') {
+              MediaViewController.showGif(thumbData.object, thumb, message);
+            }
+          });
+    }
   };
 
   onRoundClick = (event) => {

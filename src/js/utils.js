@@ -540,6 +540,16 @@ function getClassesString(dict) {
   return className;
 }
 
+function initScrollBorder(el) {
+  const onScroll = () => {
+    const scrollTop = el.scrollTop;
+    el.classList.toggle('_scroll_top', scrollTop > 0);
+    el.classList.toggle('_scroll_bottom', scrollTop + el.clientHeight < el.scrollHeight);
+  };
+  el.addEventListener('scroll', onScroll);
+  onScroll();
+}
+
 export {
   Storage,
   Emitter,
@@ -577,5 +587,7 @@ export {
   downloadFile,
   isIosSafari,
   getStringFirstUnicodeChar,
-  getClassesString
+  getClassesString,
+  initScrollBorder,
+  cancelSelection
 };

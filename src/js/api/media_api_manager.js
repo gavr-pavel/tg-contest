@@ -83,7 +83,7 @@ const MediaApiManager = new class {
           break;
         case 'documentAttributeSticker':
           result.sticker = true;
-          if (attribute.alt !== undefined) {
+          if (attribute.alt !== void(0)) {
             result.stickerEmoji = attribute.alt;
           }
           if (attribute.stickerset) {
