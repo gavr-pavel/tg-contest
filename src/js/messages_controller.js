@@ -42,7 +42,7 @@ const MessagesController = new class {
 
     this.scrollDownButton = $('.messages_scroll_down_button');
     this.scrollDownButton.addEventListener('click', () => {
-      this.jumpToMessage(this.dialog.top_message);
+      this.jumpToMessage(this.dialog.top_message, false, false);
     });
 
     this.container.addEventListener('click', this.onGlobalClick);
@@ -462,9 +462,9 @@ const MessagesController = new class {
     return deferred.promise;
   }
 
-  jumpToMessage(messageId, unread = false) {
+  jumpToMessage(messageId, unread = false, highlight = true) {
     if (this.messageElements.has(messageId)) {
-      this.scrollToMessage(messageId, unread);
+      this.scrollToMessage(messageId, unread, highlight);
       return;
     }
     this.clearMessages();
@@ -473,7 +473,7 @@ const MessagesController = new class {
     MessagesApiManager.loadMessages(this.dialog.peer, messageId, 20, -10)
         .then((messages) => {
           this.prependHistory(messages);
-          this.scrollToMessage(messageId, unread);
+          this.scrollToMessage(messageId, unread, highlight);
         })
         .catch((error) => {
           debugger;
@@ -486,7 +486,7 @@ const MessagesController = new class {
 
   }
 
-  scrollToMessage(messageId, unread = false) {
+  scrollToMessage(messageId, unread = false, highlight = true) {
     const el = this.messageElements.get(messageId);
     if (!el) {
       return;
@@ -503,10 +503,12 @@ const MessagesController = new class {
       if (messageRect.top < containerRect.top || messageRect.bottom > containerRect.bottom) {
         el.scrollIntoView({block: 'center'});
       }
-      el.classList.add('message-highlighted');
-      requestAnimationFrame(() => {
-        el.classList.remove('message-highlighted');
-      });
+      if (highlight) {
+        el.classList.add('message-highlighted');
+        requestAnimationFrame(() => {
+          el.classList.remove('message-highlighted');
+        });
+      }
     }
   }
 
@@ -637,9 +639,9 @@ const MessagesController = new class {
     const scrollBottom = scrollContainer.scrollHeight - (scrollTop + scrollContainer.clientHeight);
     const prevScrolling = !!this.scrolling;
     this.scrolling = scrollBottom > 0;
+    this.scrollDownButton.hidden = scrollBottom < 100;
     if (force || this.scrolling !== prevScrolling) {
       this.scrollContainer.classList.toggle('messages_scroll-scrolling', this.scrolling && !this.footer.hidden);
-      this.scrollDownButton.hidden = !this.scrolling;
     }
     if (!this.loading) {
       if (scrollTop < 500 && !this.noMore) {

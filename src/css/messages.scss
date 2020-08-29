@@ -676,6 +676,9 @@
   .mobile_view & {
     right: 8px;
   }
+  .messages_footer[hidden] + & {
+    bottom: 18px;
+  }
   &[hidden] {
     visibility: hidden;
     opacity: 0;
