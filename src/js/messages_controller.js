@@ -26,6 +26,7 @@ import {ApiClient} from './api/api_client';
 import {I18n} from './i18n';
 import {App} from './app';
 import {MessagesSearchController} from './messages_search_controller';
+import {DialogsApiManager} from './api/dialogs_api_manager';
 
 const MessagesController = new class {
   messageElements = new Map();
@@ -208,7 +209,7 @@ const MessagesController = new class {
       <div class="messages_header_audio_wrap"></div>
       <div class="messages_header_pinned_message_wrap"></div>
       <div class="messages_header_actions">
-        <button class="messages_header_action_search mdc-icon-button"></button>
+<!--        <button class="messages_header_action_search mdc-icon-button"></button>-->
         <button class="messages_header_action_more mdc-icon-button"></button>
       </div>
     `;
@@ -249,21 +250,73 @@ const MessagesController = new class {
 
     attachRipple(...$('.messages_header_actions', this.header).children);
 
-    $('.messages_header_action_search', this.header).addEventListener('click', () => {
-      this.ChatInfoController && this.ChatInfoController.close();
-      if (this.MessagesSearchController && this.MessagesSearchController.isOpen()) {
-        this.MessagesSearchController.close();
-      } else {
-        import('./messages_search_controller')
-            .then(({MessagesSearchController}) => {
-              MessagesSearchController.show(this.chatId);
-            });
-      }
-    });
+    $('.messages_header_action_more', this.header).addEventListener('click', this.onHeaderMoreClick);
+
+    // $('.messages_header_action_search', this.header).addEventListener('click', () => {
+    //   this.ChatInfoController && this.ChatInfoController.close();
+    //   if (this.MessagesSearchController && this.MessagesSearchController.isOpen()) {
+    //     this.MessagesSearchController.close();
+    //   } else {
+    //     import('./messages_search_controller')
+    //         .then(({MessagesSearchController}) => {
+    //           MessagesSearchController.show(this.chatId);
+    //         });
+    //   }
+    // });
 
     $('.messages_header_back', this.header).addEventListener('click', () => {
       this.exitChat();
     });
+  }
+
+  onHeaderMoreClick = (event) => {
+    const button = event.currentTarget;
+
+    if (this.headerMoreMenu && this.headerMoreMenu.open) {
+      this.headerMoreMenu = null;
+      return;
+    }
+
+    const isMuted = !!this.dialog.notify_settings.mute_until;
+
+    const menu = buildMenu([
+      ['search', 'Search'],
+      isMuted ? ['unmute', 'Unmute'] : ['mute', 'Mute'],
+      ['delete', 'Delete']
+    ], {
+      container: button.parentNode,
+      menuClass: 'messages_header_actions_menu',
+      itemClass: 'messages_header_actions_menu_item',
+      itemCallback: this.onHeaderActionClick,
+    });
+
+    menu.setAnchorElement(button);
+    menu.setAnchorMargin({top: 45, right: 5});
+    // menu.setAnchorCorner(4);
+    // menu.setFixedPosition(true);
+
+    menu.open = true;
+
+    this.headerMoreMenu = menu;
+  }
+
+  onHeaderActionClick = (action) => {
+    switch (action) {
+      case 'search': {
+        this.ChatInfoController && this.ChatInfoController.close();
+        import('./messages_search_controller')
+            .then(({MessagesSearchController}) => {
+              MessagesSearchController.show(this.chatId);
+            });
+      } break;
+      case 'mute':
+      case 'unmute': {
+        DialogsApiManager.toggleDialogMute(dialog, action === 'mute');
+      } break;
+      case 'delete': {
+        confirm('Are you sure?');
+      } break;
+    }
   }
 
   async updateHeaderPeerStatus() {

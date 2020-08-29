@@ -658,10 +658,16 @@
 
 .messages_footer {
   //padding: 0 0 20px;
+  transition: transform .2s;
 }
 .messages_footer_emoji-shown {
   .mobile_view & {
     margin-bottom: 280px;
+  }
+}
+.messages_footer_search-shown {
+  .mobile_view & {
+    transform: translateX(-100%);
   }
 }
 

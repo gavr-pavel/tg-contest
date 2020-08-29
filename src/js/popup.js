@@ -11,7 +11,7 @@ class Popup {
     }
 
     this.el = Tpl.html`
-      <div class="popup_layer">
+      <div class="popup_layer" hidden>
         <div class="popup">
           <div class="popup_header">
             <button class="mdc-icon-button popup_close_button"></button>
@@ -39,11 +39,17 @@ class Popup {
 
   show = () => {
     $('.main_container').appendChild(this.el);
+    requestAnimationFrame(() => {
+      this.el.hidden = false;
+    });
   }
 
   hide = () => {
-    this.el.remove();
-    this.el = null;
+    this.el.hidden = true;
+    setTimeout(() => {
+      this.el.remove();
+      this.el = null;
+    }, 400);
   }
 }
 

@@ -40,6 +40,10 @@
   overflow-x: hidden;
   overflow-y: auto;
   height: 100%;
+  transition: box-shadow .2s;
+  &._scroll_top {
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+  }
 }
 
 .chat_info_desc {
@@ -408,4 +412,47 @@
   padding: 8px;
   overflow-y: auto;
   overflow-x: hidden;
+  &._scroll_top {
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+}
+
+.messages_search_footer {
+  background: #fff;
+  box-shadow: 0 -3px 3px rgba(0, 0, 0, .1);
+  display: flex;
+  pointer-events: all;
+  position: absolute;
+  align-items: center;
+  left: 0;
+  bottom: 270px;
+  right: 0;
+  height: 46px;
+  padding: 0 18px;
+  transition: top .3s ease-in-out;
+}
+
+.messages_search_footer_info {
+  margin-right: auto;
+  color: $secondary_gray_color;
+  font-size: 16px;
+}
+
+.messages_search_footer_button {
+  width: 24px;
+  height: 24px;
+  background: no-repeat center;
+  font-size: 0;
+  margin-left: 12px;
+  &:disabled {
+    opacity: 0.3;
+  }
+}
+
+.messages_search_footer_button-up {
+  background: svg('../icons/up_svg.svg', (fill: (path: $secondary_gray_color)));
+}
+
+.messages_search_footer_button-down {
+  background: svg('../icons/down_svg.svg', (fill: (path: $secondary_gray_color)));
 }

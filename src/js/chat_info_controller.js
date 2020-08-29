@@ -1,4 +1,13 @@
-import {$, attachRipple, downloadFile, formatDuration, formatFileSize, getLabeledElements, Tpl} from './utils';
+import {
+  $,
+  attachRipple,
+  downloadFile,
+  formatDuration,
+  formatFileSize,
+  getLabeledElements,
+  initScrollBorder,
+  Tpl
+} from './utils';
 import {MDCCheckbox} from '@material/checkbox';
 import {MessagesApiManager} from "./api/messages_api_manager";
 import {ApiClient} from "./api/api_client";
@@ -99,6 +108,7 @@ const ChatInfoController = new class {
     `;
 
     this.scrollContainer = $('.chat_info_scroll_wrap', this.container);
+    initScrollBorder(this.scrollContainer);
 
     this.renderPeerPhoto(peer);
     this.bindListeners();

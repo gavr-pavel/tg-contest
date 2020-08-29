@@ -1,4 +1,4 @@
-import {$, attachRipple, debounce, Tpl} from './utils';
+import {$, attachRipple, debounce, initScrollBorder, Tpl} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 import {ChatsController} from './chats_controller';
 import {I18n} from './i18n';
@@ -33,6 +33,7 @@ const MessagesSearchController = new class {
 
     this.listWrap = $('.messages_search_results_list', this.container);
     this.listWrap.onscroll = this.onScroll;
+    initScrollBorder(this.listWrap);
 
     document.addEventListener('keyup', this.onKeyUp);
 
@@ -55,6 +56,75 @@ const MessagesSearchController = new class {
     this.container.style.background = 'none';
     const header = $('.sidebar_header', this.container);
     header.style.pointerEvents = 'all';
+    MessagesController.footer.classList.add('messages_footer_search-shown');
+    this.initFooter();
+  }
+
+  initFooter() {
+    const footer = Tpl.html`
+      <div class="messages_search_footer">
+        <div class="messages_search_footer_info"></div>
+        <button class="messages_search_footer_button messages_search_footer_button-up" disabled>Previous</button>
+        <button class="messages_search_footer_button messages_search_footer_button-down" disabled>Next</button>
+      </div>
+    `.buildElement();
+
+    this.container.appendChild(footer);
+
+    const info = $('.messages_search_footer_info', footer);
+    const buttonUp = $('.messages_search_footer_button-up', footer);
+    const buttonDown = $('.messages_search_footer_button-down', footer);
+
+    let index = 0;
+    let totalCount = 0;
+    let results = [];
+
+    const jumpToIndex = (index) => {
+      const message = results[index];
+      MessagesController.jumpToMessage(message.id);
+      updateInfoText();
+      updateButtons();
+      if (this.offsetId && results.length - index < 3) {
+        this.loadMore();
+      }
+    };
+
+    const updateInfoText = () => {
+      info.innerText = totalCount ? `${index+1} of ${totalCount}` : 'No results';
+    };
+
+    const updateButtons = () => {
+      buttonUp.disabled = index >= totalCount - 1;
+      buttonDown.disabled = index <= 0;
+    };
+
+    buttonUp.addEventListener('click', () => {
+      jumpToIndex(++index);
+    });
+
+    buttonDown.addEventListener('click', () => {
+      jumpToIndex(--index);
+    });
+
+    this.renderMobileResults = (offsetId, count, messages) => {
+      if (!offsetId) {
+        totalCount = count;
+        index = 0;
+        results = [];
+        updateInfoText();
+      }
+      results = results.concat(messages);
+      if (totalCount && index >= results.length - messages.length) {
+        jumpToIndex(index);
+      }
+    };
+
+    const onResize = () => {
+      footer.style.top = (window.visualViewport.height - footer.offsetHeight) + 'px';
+    };
+
+    window.visualViewport.addEventListener('resize', onResize);
+    onResize();
   }
 
   isOpen() {
@@ -69,6 +139,7 @@ const MessagesSearchController = new class {
       this.peerId = null;
       document.removeEventListener('keyup', this.onKeyUp);
       if (this.mobileMode) {
+        MessagesController.footer.classList.remove('messages_footer_search-shown');
         setTimeout(() => {
           this.mobileMode = false;
           this.container.style.pointerEvents = '';
@@ -128,6 +199,8 @@ const MessagesSearchController = new class {
         this.renderResultsHeader(count);
       }
       this.renderResults(res.messages);
+    } else {
+      this.renderMobileResults(offsetId, count, res.messages);
     }
     if (res.messages.length) {
       this.offsetId = res.messages.slice(-1)[0].id;
@@ -188,7 +261,7 @@ const MessagesSearchController = new class {
   }
 
   loadMore() {
-    if (this.loading) {
+    if (this.loading || this.noMore || !this.offsetId) {
       return;
     }
     this.loading = true;
