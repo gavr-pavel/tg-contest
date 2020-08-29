@@ -1,5 +1,8 @@
 .poll {
   min-width: 300px;
+  .mobile_view & {
+    min-width: auto;
+  }
 }
 
 .poll_question {
@@ -170,7 +173,8 @@
   visibility: hidden;
   opacity: 0;
   transform: translateX(-10px);
-  transition: .2s;
+  transition-property: visibility, opacity, transform;
+  transition-duration: .2s;
   .poll-voted & {
     visibility: visible;
     opacity: 1;

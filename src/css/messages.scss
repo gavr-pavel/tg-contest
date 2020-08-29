@@ -668,13 +668,14 @@
 .messages_scroll_down_button {
   position: absolute;
   right: calc((100% - 720px) / 2 + 14px);
-  bottom: 80px;
+  bottom: 100px;
   background: #fff svg('../icons/down_svg.svg', (path: (fill: $secondary_gray_color))) no-repeat center;
   box-shadow: 0 1px 2px rgba(0, 0, 0, .15);
   border-radius: 50%;
   transition: visibility .2s, transform .2s, opacity .2s;
   .mobile_view & {
     right: 8px;
+    bottom: 80px;
   }
   .messages_footer[hidden] + & {
     bottom: 18px;

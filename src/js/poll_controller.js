@@ -210,18 +210,22 @@ class PollController {
         percentEl.classList.toggle('poll_option_percent-long', percent === 100);
         const scaleEl = $('.poll_option_scale', option);
         scaleEl.style.setProperty('--voters-percent', percent + '%');
-        option.classList.toggle('poll_option-selected', !!answerResult.chosen);
-        if (poll.quiz) {
-          option.classList.toggle('poll_option-correct', !!answerResult.correct);
-          option.classList.toggle('poll_option-wrong', !answerResult.correct);
-        }
-        if (answerResult.chosen) {
-          voted = true;
+        if (!results.min) {
+          option.classList.toggle('poll_option-selected', !!answerResult.chosen);
+          if (poll.quiz) {
+            option.classList.toggle('poll_option-correct', !!answerResult.correct);
+            option.classList.toggle('poll_option-wrong', !answerResult.correct);
+          }
+          if (answerResult.chosen) {
+            voted = true;
+          }
         }
       }
     }
 
-    this.container.classList.toggle('poll-voted', voted);
+    if (!results.min) {
+      this.container.classList.toggle('poll-voted', voted);
+    }
     if (poll.quiz) {
       this.solutionButton.hidden = !results.solution;
     }
