@@ -98,11 +98,13 @@ const MessagesSearchController = new class {
       buttonDown.disabled = index <= 0;
     };
 
-    buttonUp.addEventListener('click', () => {
+    buttonUp.addEventListener('click', (event) => {
+      event.preventDefault();
       jumpToIndex(++index);
     });
 
-    buttonDown.addEventListener('click', () => {
+    buttonDown.addEventListener('click', (event) => {
+      event.preventDefault();
       jumpToIndex(--index);
     });
 
@@ -124,6 +126,7 @@ const MessagesSearchController = new class {
     };
 
     window.visualViewport.addEventListener('resize', onResize);
+    window.addEventListener('scroll', onResize);
     onResize();
   }
 

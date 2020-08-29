@@ -57,22 +57,7 @@
     }
   }
 }
-//.document_icon-audio {
-//  &:not(.document_icon-loading) {
-//    background-image: svg('../icons/largeplay_svg.svg', (path: (fill: white))) ;
-//    background-position-x: 10px;
-//    .message-out & {
-//      background-image: svg('../icons/largeplay_svg.svg', (path: (fill: #F1FEE1)));
-//    }
-//  }
-//  &.document_icon-playing {
-//    background-image: svg('../icons/largepause_svg.svg', (path: (fill: white)));
-//    background-position: center;
-//    .message-out & {
-//      background-image: svg('../icons/largepause_svg.svg', (path: (fill: #F1FEE1)));
-//    }
-//  }
-//}
+
 .document_icon-loading {
   background-image: svg('../icons/close_svg.svg', (path: (fill: white)));
   background-position: center;
@@ -80,6 +65,8 @@
 
 .document_icon_progress_svg {
   animation: spin 1s infinite linear;
+  position: relative;
+  z-index: 1;
 }
 
 .document_icon_progress_path {

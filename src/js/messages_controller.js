@@ -40,6 +40,11 @@ const MessagesController = new class {
 
     this.loader = buildLoaderElement(null, 'white');
 
+    this.scrollDownButton = $('.messages_scroll_down_button');
+    this.scrollDownButton.addEventListener('click', () => {
+      this.jumpToMessage(this.dialog.top_message);
+    });
+
     this.container.addEventListener('click', this.onGlobalClick);
     this.scrollContainer.addEventListener('scroll', this.onScroll);
     window.addEventListener('resize', this.onScroll);
@@ -209,7 +214,7 @@ const MessagesController = new class {
       <div class="messages_header_audio_wrap"></div>
       <div class="messages_header_pinned_message_wrap"></div>
       <div class="messages_header_actions">
-<!--        <button class="messages_header_action_search mdc-icon-button"></button>-->
+        <button class="messages_header_action_search mdc-icon-button"></button>
         <button class="messages_header_action_more mdc-icon-button"></button>
       </div>
     `;
@@ -251,18 +256,7 @@ const MessagesController = new class {
     attachRipple(...$('.messages_header_actions', this.header).children);
 
     $('.messages_header_action_more', this.header).addEventListener('click', this.onHeaderMoreClick);
-
-    // $('.messages_header_action_search', this.header).addEventListener('click', () => {
-    //   this.ChatInfoController && this.ChatInfoController.close();
-    //   if (this.MessagesSearchController && this.MessagesSearchController.isOpen()) {
-    //     this.MessagesSearchController.close();
-    //   } else {
-    //     import('./messages_search_controller')
-    //         .then(({MessagesSearchController}) => {
-    //           MessagesSearchController.show(this.chatId);
-    //         });
-    //   }
-    // });
+    $('.messages_header_action_search', this.header).addEventListener('click', this.onSearchClick);
 
     $('.messages_header_back', this.header).addEventListener('click', () => {
       this.exitChat();
@@ -284,16 +278,15 @@ const MessagesController = new class {
       isMuted ? ['unmute', 'Unmute'] : ['mute', 'Mute'],
       ['delete', 'Delete']
     ], {
-      container: button.parentNode,
+      container: $('.main_container'),
       menuClass: 'messages_header_actions_menu',
       itemClass: 'messages_header_actions_menu_item',
       itemCallback: this.onHeaderActionClick,
     });
 
     menu.setAnchorElement(button);
-    menu.setAnchorMargin({top: 45, right: 5});
-    // menu.setAnchorCorner(4);
-    // menu.setFixedPosition(true);
+    menu.setAnchorMargin({top: 45, right: 0});
+    menu.setFixedPosition(true);
 
     menu.open = true;
 
@@ -303,11 +296,7 @@ const MessagesController = new class {
   onHeaderActionClick = (action) => {
     switch (action) {
       case 'search': {
-        this.ChatInfoController && this.ChatInfoController.close();
-        import('./messages_search_controller')
-            .then(({MessagesSearchController}) => {
-              MessagesSearchController.show(this.chatId);
-            });
+        this.onSearchClick();
       } break;
       case 'mute':
       case 'unmute': {
@@ -317,6 +306,14 @@ const MessagesController = new class {
         confirm('Are you sure?');
       } break;
     }
+  }
+
+  onSearchClick = () => {
+    this.ChatInfoController && this.ChatInfoController.close();
+    import('./messages_search_controller')
+        .then(({MessagesSearchController}) => {
+          MessagesSearchController.show(this.chatId);
+        });
   }
 
   async updateHeaderPeerStatus() {
@@ -642,6 +639,7 @@ const MessagesController = new class {
     this.scrolling = scrollBottom > 0;
     if (force || this.scrolling !== prevScrolling) {
       this.scrollContainer.classList.toggle('messages_scroll-scrolling', this.scrolling && !this.footer.hidden);
+      this.scrollDownButton.hidden = !this.scrolling;
     }
     if (!this.loading) {
       if (scrollTop < 500 && !this.noMore) {
@@ -1191,6 +1189,9 @@ const MessagesController = new class {
 
   onFileClick = (event) => {
     const button = event.currentTarget;
+    if (button.dataset.loading) {
+      return;
+    }
 
     const msgId = +button.dataset.messageId /* shared media */ || +button.closest('.message').dataset.id;
     const message = MessagesApiManager.messages.get(msgId);
@@ -1209,9 +1210,9 @@ const MessagesController = new class {
     }
   };
 
-  loadFile(button, document, abortController = null) {
+  async loadFile(button, document, abortController = null) {
     if (button.dataset.loading) {
-      return;
+      throw new Error('File is loading already');
     }
     button.dataset.loading = 1;
 

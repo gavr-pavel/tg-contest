@@ -199,14 +199,26 @@
   //position: relative;
 }
 
+.messages_header_action_search,
 .messages_header_action_more {
   border-radius: 50%;
   overflow: hidden;
   margin-left: 8px;
 }
 
+.messages_header_action_search {
+  background: svg('../icons/search_svg.svg', (path: (fill: $icon_gray_color))) no-repeat center;
+  .mobile_view & {
+    display: none;
+  }
+}
+
 .messages_header_action_more {
   background: svg('../icons/more_svg.svg', (path: (fill: $icon_gray_color))) no-repeat center;
+}
+
+.messages_header_actions_menu {
+  z-index: 100;
 }
 
 .messages_header_actions_menu_item  {
@@ -216,6 +228,10 @@
 }
 .messages_header_actions_menu_item-search {
   background-image: svg('../icons/search_svg.svg', (path: (fill: $secondary_gray_color)));
+  display: none;
+  .mobile_view & {
+    display: flex;
+  }
 }
 .messages_header_actions_menu_item-mute {
   background-image: svg('../icons/mute_svg.svg', (path: (fill: $secondary_gray_color)));

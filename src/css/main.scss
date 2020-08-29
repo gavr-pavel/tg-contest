@@ -136,6 +136,10 @@ pre {
   -webkit-touch-callout: none;
 }
 
+.no_transition {
+  transition: none;
+}
+
 .circular-loader {
   --loader-size: 56px;
   position: absolute;

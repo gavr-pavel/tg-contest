@@ -9,7 +9,7 @@
   height: 100%;
   background: rgba(0, 0, 0,.3);
   transition: visibility .2s, opacity .2s;
-  will-change: transform;
+  will-change: transform, opacitys;
   &[hidden] {
     display: block;
     visibility: hidden;

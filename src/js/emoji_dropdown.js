@@ -37,7 +37,7 @@ const EmojiDropdown = new class {
             <div class="emoji_dropdown_section_content"></div>
           </section>        
         </div>
-        <div class="emoji_dropdown_bottom_nav">
+        <div class="emoji_dropdown_bottom_nav" data-js-label="bottom_nav">
           <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-search" data-js-label="nav_search"></div>
           <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-emoji" data-js-label="nav_emoji"></div>
           <div class="emoji_dropdown_bottom_nav_item emoji_dropdown_bottom_nav_item-stickers" data-js-label="nav_stickers"></div>
@@ -49,15 +49,16 @@ const EmojiDropdown = new class {
             <button class="emoji_dropdown_search_back_button mdc-icon-button"></button>
             <input class="emoji_dropdown_search_input">
           </div>
-          <div class="emoji_dropdown_search_results"></div>
-          <div class="emoji_dropdown_search_trending"></div>
+          <div class="emoji_dropdown_search_results" data-js-label="search_results"></div>
+          <div class="emoji_dropdown_search_trending" data-js-label="search_trending"></div>
         </div>
       </div>
     `.buildElement();
 
     this.dom = getLabeledElements(this.container);
 
-    $('.emoji_dropdown_bottom_nav', this.container).addEventListener('click', this.onBottomNavClick);
+    this.dom.bottom_nav.addEventListener('click', this.onBottomNavClick);
+    initScrollBorder(this.dom.search_container);
 
     this.initEmojiSection();
     this.initStickersSection();
@@ -333,6 +334,8 @@ const EmojiDropdown = new class {
     const searchContainer = this.dom.search_container;
     searchContainer.hidden = false;
     this.container.classList.add('emoji_dropdown-search');
+    MessagesController.footer.classList.add('no_transition');
+    MessagesController.footer.classList.remove('messages_footer_emoji-shown');
 
     const resultsContainer = $('.emoji_dropdown_search_results', searchContainer);
     const trendingContainer = $('.emoji_dropdown_search_trending', searchContainer);
@@ -419,6 +422,8 @@ const EmojiDropdown = new class {
     backButton.onclick = () => {
       searchContainer.hidden = true;
       this.container.classList.remove('emoji_dropdown-search');
+      MessagesController.footer.classList.add('messages_footer_emoji-shown');
+      requestAnimationFrame(() => MessagesController.footer.classList.remove('no_transition'));
       searchContainer.classList.remove('emoji_dropdown_search-stickers', 'emoji_dropdown_search-gifs');
       resultsContainer.innerHTML = '';
       trendingContainer.innerHTML = '';
@@ -815,7 +820,13 @@ const EmojiDropdown = new class {
       this.input.focus();
     }
 
-    MessagesController.footer.classList.add('messages_footer_emoji-shown');
+    requestAnimationFrame(() => {
+      MessagesController.footer.classList.add('messages_footer_emoji-shown');
+    });
+
+    if (isTouchDevice()) {
+      // MessagesController.scrollToBottom(true);
+    }
 
     const scrollContainers = $$('.emoji_dropdown_section_content', this.container);
     for (const scrollContainer of scrollContainers) {
@@ -823,9 +834,17 @@ const EmojiDropdown = new class {
     }
   };
 
-  hide() {
+  hide(noTransition = false) {
     this.container.hidden = true;
+    if (noTransition) {
+      MessagesController.footer.classList.add('no_transition');
+    }
     MessagesController.footer.classList.remove('messages_footer_emoji-shown');
+    if (noTransition) {
+      requestAnimationFrame(() => {
+        MessagesController.footer.classList.remove('no_transition');
+      });
+    }
     this.button.classList.remove('messages_form_emoji_button-active');
     document.removeEventListener('mousedown', this.onGlobalClick);
   };
@@ -837,7 +856,7 @@ const EmojiDropdown = new class {
     if (isTouchDevice()) {
       button.addEventListener('click', () => {
         if (this.isShown()) {
-          this.hide();
+          this.hide(true);
           input.focus();
         } else {
           this.show();
@@ -894,14 +913,16 @@ const EmojiDropdown = new class {
     const popup = new Popup({
       title: set.title,
       content: Tpl.html`
-        <div class="stickers_popup_content"></div>
+        <div class="stickers_popup_content">
+          <div class="stickers_popup_list"></div>
+        </div>
         <div class="stickers_popup_footer">
           <button class="mdc-button stickers_popup_button"></button>
         </div>
       `,
     });
 
-    const container = $('.stickers_popup_content', popup.el);
+    const container = $('.stickers_popup_list', popup.el);
     const button = $('.stickers_popup_button', popup.el);
 
     const updateButtonState = (isAdded) => {

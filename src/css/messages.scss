@@ -594,75 +594,16 @@
 }
 
 
-
-//
-//.messages_placeholder {
-//  position: absolute;
-//  left: 50%;
-//  top: 50%;
-//  transform: translate(-50%, -50%);
-//  padding-top: 165px;
-//  background: svg('../icons/chatsplaceholder_svg.svg', (path: (fill: white))) no-repeat top center;
-//  filter: drop-shadow(0 2px 3px rgba(0,0,0,.15))
-//}
-//
-//.messages_placeholder_title {
-//  color: #fff;
-//  font-size: 24px;
-//  text-align: center;
-//}
-//
-//.messages_placeholder_actions {
-//  display: flex;
-//  justify-content: space-between;
-//  width: 350px;
-//  margin-top: 45px;
-//}
-//
-//.messages_placeholder_action {
-//  width: 72px;
-//  height: 72px;
-//  border-radius: 50%;
-//  background: #fff no-repeat center;
-//  color: #fff;
-//  &:hover {
-//    background-color: #5DA3EF;
-//  }
-//}
-//.messages_placeholder_action_label {
-//  position: absolute;
-//  left: 50%;
-//  text-align: center;
-//  transform: translateX(-50%);
-//  padding-top: 45px;
-//  font-size: 14px;
-//}
-//.messages_placeholder_action-private {
-//  background-image: svg('../icons/newprivate_svg.svg', (path: (fill: $icon_mediumgray_color)));
-//  &:hover {
-//    background-image: svg('../icons/newprivate_svg.svg', (path: (fill: white)));
-//  }
-//}
-//.messages_placeholder_action-group {
-//  background-image: svg('../icons/newgroup_svg.svg', (path: (fill: $icon_mediumgray_color)));
-//  &:hover {
-//    background-image: svg('../icons/newgroup_svg.svg', (path: (fill: white)));
-//  }
-//}
-//.messages_placeholder_action-channel {
-//  background-image: svg('../icons/newchannel_svg.svg', (path: (fill: $icon_mediumgray_color)));
-//  &:hover {
-//    background-image: svg('../icons/newchannel_svg.svg', (path: (fill: white)));
-//  }
-//}
-
 .messages_footer {
   //padding: 0 0 20px;
-  transition: transform .2s;
+  transition: transform .3s;
+  z-index: 10;
 }
 .messages_footer_emoji-shown {
   .mobile_view & {
-    margin-bottom: 280px;
+    //margin-bottom: 280px;
+    transform: translateY(-280px);
+    margin-top: 280px;
   }
 }
 .messages_footer_search-shown {
@@ -722,4 +663,22 @@
 .message_menu_item-delete {
   background-image: svg('../icons/delete_svg.svg', (path: (fill: $error_red_color)));
   color: $error_red_color;
+}
+
+.messages_scroll_down_button {
+  position: absolute;
+  right: calc((100% - 720px) / 2 + 14px);
+  bottom: 80px;
+  background: #fff svg('../icons/down_svg.svg', (path: (fill: $secondary_gray_color))) no-repeat center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .15);
+  border-radius: 50%;
+  transition: visibility .2s, transform .2s, opacity .2s;
+  .mobile_view & {
+    right: 8px;
+  }
+  &[hidden] {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(30px);
+  }
 }
