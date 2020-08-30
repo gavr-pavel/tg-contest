@@ -178,13 +178,12 @@
 }
 
 .message-out {
+  --primary-color: #{$primary_green_color};
+  --link-color: #{$primary_green_color};
   background: #F1FEE1;
   margin-right: 0;
   margin-left: auto;
   border-radius: 10px 10px 0 10px;
-  a {
-    color: #65AB5A;
-  }
 }
 .message-has-thumb:not(.message-has-caption) {
   border-bottom-right-radius: 10px;
@@ -412,7 +411,7 @@
   white-space: nowrap;
   cursor: default;
   .message-out & {
-    color: #65AB5A;
+    color: $primary_green_color;
   }
   .document + & {
     margin-top: -13px;
@@ -489,12 +488,9 @@
 .message_forwarded_content,
 .message_reply_to_content {
   position: relative;
-  border-left: 2px solid $primary_blue_color;
+  border-left: 2px solid var(--primary-color);
   padding-left: 8px;
   margin-top: 5px;
-  .message-out & {
-    border-color: $primary_green_color;
-  }
 }
 
 .wepbage_site_name {
@@ -551,10 +547,7 @@
 .message_reply_to_author {
   font-size: 13px;
   font-weight: 500;
-  color: $primary_blue_color;
-  .message-out & {
-    color: $primary_green_color;
-  }
+  color: var(--primary-color);
   .message-type-sticker.message-out &,
   .message-type-emoji.message-out & {
     color: $primary_blue_color;
@@ -571,19 +564,13 @@
 .message_forwarded_header {
   font-size: 13px;
   font-weight: 500;
-  color: $primary_blue_color;
+  color: var(--primary-color);
   margin-bottom: 5px;
-  .message-out & {
-    color: $primary_green_color;
-  }
 }
 
 .message_forwarded_content {
   padding-left: 8px;
-  border-left: 2px solid $primary_blue_color;
-  .message-out & {
-    border-left-color: $primary_green_color;
-  }
+  border-left: 2px solid var(--primary-color);
 }
 
 .message_forwarded_author {

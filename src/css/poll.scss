@@ -140,7 +140,7 @@
   margin: 0 auto;
   font-size: 16px;
   font-weight: 500;
-  color: $primary_blue_color;
+  color: var(--primary-color);
 }
 
 .poll-voted .poll_vote_button {

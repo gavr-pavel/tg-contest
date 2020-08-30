@@ -13,7 +13,7 @@ import {
   getEventPageXY,
   wait,
   buildMenu,
-  getStringFirstUnicodeChar, getClassesString
+  getStringFirstUnicodeChar, getClassesString, initHorizontalScroll
 } from './utils';
 import {App} from './app';
 import {MessagesApiManager} from './api/messages_api_manager';
@@ -36,6 +36,9 @@ const ChatsController = new class {
 
     this.initHeader();
 
+    this.tabsContainer = $('.chats_tabs');
+    this.initTabs();
+
     this.loader = buildLoaderElement(this.listContainer);
 
     this.newChatButton = Tpl.html`<button class="chats_new_chat_button mdc-icon-button"></button>`.buildElement();
@@ -52,8 +55,6 @@ const ChatsController = new class {
     MessagesApiManager.emitter.on('userStatusUpdate', this.onUserStatusUpdate);
     MessagesApiManager.emitter.on('dialogUserTypingUpdate', this.onDialogUserTypingUpdate);
     MessagesApiManager.emitter.on('dialogOutboxReadUpdate', this.onDialogOutboxReadUpdate);
-
-    this.initTabs();
 
     this.loadMore()
         .then((dialogs) => {
@@ -171,7 +172,7 @@ const ChatsController = new class {
 
   initHeaderSearch() {
     const input = $('.chats_header_search_input');
-    input.addEventListener('input', () => {
+    input.addEventListener('focus', () => {
       GlobalSearchController.show(input);
     });
   }
@@ -181,6 +182,7 @@ const ChatsController = new class {
     if (this.filters.length) {
       this.renderTabs();
     }
+    initHorizontalScroll(this.tabsContainer);
   }
 
   renderTabs() {
@@ -203,7 +205,7 @@ const ChatsController = new class {
       el.addEventListener('click', this.onTabClick);
       container.appendChild(el);
     }
-    $('.chats_tabs').appendChild(container);
+    this.tabsContainer.appendChild(container);
   }
 
   onTabClick = (event) => {
@@ -856,6 +858,16 @@ const ChatsController = new class {
         return 'uploading document';
     }
     return '';
+  }
+
+  hide() {
+    this.scrollContainer.hidden = true;
+    this.tabsContainer.hidden = true;
+  }
+
+  show() {
+    this.scrollContainer.hidden = false;
+    this.tabsContainer.hidden = false;
   }
 };
 

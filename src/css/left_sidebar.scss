@@ -48,6 +48,10 @@
   background-image: svg('../icons/edit_svg.svg', (path: (fill: $icon_gray_color)));
 }
 
+.settings_main_menu_item-folders {
+  background-image: svg('../icons/folder.svg', (path: (fill: $icon_gray_color)));
+}
+
 .settings_main_menu_item-general {
   background-image: svg('../icons/settings_svg.svg', (path: (fill: $icon_gray_color)));
 }
@@ -72,7 +76,9 @@
   padding: 12px 8px;
   border-bottom: 1px solid $border_gray_color;
 }
-.global_search_sublist:last-child {
+.global_search_sublist:last-child,
+.global_search_sublist-people,
+.global_search_sublist-recent {
   border-bottom: 0;
 }
 
@@ -80,8 +86,47 @@
   color: #717579;
   background-color: #fff;
   font-weight: 500;
-  padding: 8px 16px;
+  padding: 8px;
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.global_search_people_list {
+  overflow: hidden;
+  white-space: nowrap;
+  margin: 0 -14px;
+  padding: 8px 0;
+}
+
+.global_search_people_item {
+  display: inline-block;
+  width: 82px;
+  text-align: center;
+  &:hover {
+    opacity: 0.8;
+    cursor: pointer;
+  }
+}
+
+.global_search_people_item_photo {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto;
+  border-radius: 50%;
+}
+
+.global_search_people_item_name {
+  margin-top: 7px;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+}
+
+.global_search_sublist_header_clear {
+  float: right;
+  margin: -11px 0;
+  background: svg('../icons/close_svg.svg', (path: (fill: $secondary_gray_color))) no-repeat center;
 }

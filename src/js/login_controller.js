@@ -656,7 +656,7 @@ const LoginController = new class {
     await ApiClient.callMethod('photos.uploadProfilePhoto', {
       file: inputFile
     });
-    MessagesApiManager.reloadUser(App.getAuthUserId());
+    MessagesApiManager.loadUsers([App.getAuthUserId()]);
   }
 
   destroy() {

@@ -7,7 +7,7 @@ import {
   isTouchDevice,
   debounce,
   buildLoaderElement,
-  getClassesString, initScrollBorder, cancelSelection
+  getClassesString, initScrollBorder, cancelSelection, initHorizontalScroll
 } from './utils';
 import {EmojiConfig} from './emoji_config';
 import {ApiClient} from './api/api_client';
@@ -161,11 +161,7 @@ const EmojiDropdown = new class {
     const topNavContainer = $('.emoji_dropdown_top_nav', this.dom.section_stickers);
     topNavContainer.append(topNavFrag);
     topNavContainer.addEventListener('click', this.onStickerNavClick);
-    if (isTouchDevice()) {
-      topNavContainer.style.overflowX = 'auto';
-    } else {
-      topNavContainer.addEventListener('mousewheel', this.onStickersNavScroll);
-    }
+    initHorizontalScroll(topNavContainer);
   }
 
   async loadStickerSet(set) {

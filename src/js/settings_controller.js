@@ -34,6 +34,9 @@ const SettingsController = new class {
         <li class="mdc-list-item settings_main_menu_item-edit" tabindex="0">
           <span class="mdc-list-item__text">Edit Profile</span>
         </li>
+        <li class="mdc-list-item settings_main_menu_item-folders">
+          <span class="mdc-list-item__text">Chat Folders</span>
+        </li>
         <li class="mdc-list-item settings_main_menu_item-general">
           <span class="mdc-list-item__text">General Settings</span>
         </li>

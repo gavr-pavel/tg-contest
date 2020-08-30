@@ -238,7 +238,7 @@ const MessagesApiManager = new class {
   async handleNewDialog(message) {
     if (message.to_id._ === 'peerChannel') {
       // workaround for broken channel access_hash in updates
-      await this.reloadChannel(message.to_id.channel_id);
+      await this.loadChannels([message.to_id.channel_id]);
     }
     const dialog = await this.loadPeerDialog(this.getMessageDialogPeer(message));
     if (dialog) {
@@ -761,12 +761,16 @@ const MessagesApiManager = new class {
     }
   }
 
-  getInputUser(user) {
-    return {_: 'inputUser', user_id: user.id, access_hash: user.access_hash || 0};
+  getInputUser({id, access_hash = 0}) {
+    return {_: 'inputUser', user_id: id, access_hash};
   }
 
-  getInputChannel(channel) {
-    return {_: 'inputChannel', channel_id: channel.id, access_hash: channel.access_hash || 0};
+  getInputChat({id, access_hash = 0}) {
+    return {_: 'inputChat', chat_id: id, access_hash};
+  }
+
+  getInputChannel({id, access_hash = 0}) {
+    return {_: 'inputChannel', channel_id: id, access_hash};
   }
 
   getInputPeerById(peerId) {
@@ -819,18 +823,67 @@ const MessagesApiManager = new class {
     return !!channel.megagroup;
   }
 
-  async reloadChannel(channelId) {
-    const res = await ApiClient.callMethod('channels.getChannels', {
-      id: [this.getInputPeerById(channelId)]
-    });
-    this.updateChats(res.chats, true);
+  async loadChannels(channels, forceReload = false) {
+    channels = channels.map(channel => typeof channel === 'number' ? {id: channel} : channel);
+    if (!forceReload) {
+      channels = channels.filter(channel => !this.chats.has(channel.id));
+    }
+    if (channels.length) {
+      const res = await ApiClient.callMethod('channels.getChannels', {
+        id: channels.map(channel => this.getInputChannel(channel))
+      });
+      this.updateChats(res.chats, forceReload);
+    }
   }
 
-  async reloadUser(userId) {
-    const res = await ApiClient.callMethod('users.getUsers', {
-      id: [this.getInputPeerById(userId)]
-    });
-    this.updateUsers(res);
+  async loadChats(chats, forceReload = false) {
+    chats = chats.map(chat => typeof chat === 'number' ? {id: chat} : chat);
+    if (!forceReload) {
+      chats = chats.filter(chat => !this.chats.has(chat.id));
+    }
+    if (chats.length) {
+      const res = await ApiClient.callMethod('messages.getChats', {
+        id: chats.map(chat => chat.id)
+      });
+      this.updateChats(res.chats);
+    }
+  }
+
+  async loadUsers(users, forceReload = false) {
+    users = users.map(user => typeof user === 'number' ? {id: user} : user);
+    if (!forceReload) {
+      users = users.filter(user => !this.users.has(user.id));
+    }
+    if (users.length) {
+      const res = await ApiClient.callMethod('users.getUsers', {
+        id: users.map(user => this.getInputUser(user))
+      });
+      this.updateUsers(res);
+    }
+  }
+
+  loadPeers(peers) {
+    const channels = [];
+    const chats = [];
+    const users = [];
+    for (const peer of peers) {
+      switch (peer._) {
+        case 'peerChannel':
+          channels.push({id: peer.channel_id, access_hash: peer.access_hash});
+          break;
+        case 'peerChat':
+          chats.push({id: peer.chat_id, access_hash: peer.access_hash});
+          break;
+        case 'peerUser':
+          users.push({id: peer.user_id, access_hash: peer.access_hash});
+          break;
+      }
+    }
+    return Promise.all([
+      this.loadChannels(channels),
+      this.loadChats(chats),
+      this.loadUsers(users)
+    ]);
   }
 
   async loadChatFull(peer) {
@@ -893,6 +946,14 @@ const MessagesApiManager = new class {
     this.updateMessages(res.messages);
 
     return res.messages;
+  }
+
+  generateIdsHash(items, extractId) {
+    let hash = 0;
+    for (const item of items) {
+      hash = (((hash * 0x4F25) & 0x7FFFFFFF) + extractId(item)) & 0x7FFFFFFF;
+    }
+    return hash;
   }
 };
 

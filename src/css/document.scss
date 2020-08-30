@@ -36,7 +36,7 @@
   cursor: pointer;
   outline: none;
   .message-out & {
-    background-color: #65AB5A;
+    background-color: $primary_green_color;
   }
 }
 .document_icon-audio {
@@ -99,7 +99,7 @@
 .document_performer {
   color: $secondary_gray_color;
   .message-out & {
-    color: #65AB5A;
+    color: $primary_green_color;
   }
 }
 
@@ -149,10 +149,7 @@
   min-width: 2px;
   height: 100%;
   border-radius: 1px;
-  background: $primary_blue_color;
-  .message-out & {
-    background: #65AB5A;
-  }
+  background: var(--primary-color);
   &:after {
     content: '';
     position: absolute;

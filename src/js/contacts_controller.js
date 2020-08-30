@@ -6,7 +6,7 @@ import {ChatsController} from "./chats_controller";
 
 const ContactsController = new class {
   show() {
-    ChatsController.scrollContainer.hidden = true;
+    ChatsController.hide();
 
     this.container = $('.contacts_sidebar');
     this.container.hidden = false;
@@ -75,7 +75,7 @@ const ContactsController = new class {
   onBack = () => {
     this.container.hidden = true;
     this.container.innerHTML = '';
-    ChatsController.scrollContainer.hidden = false;
+    ChatsController.show();
 
     const backButtonEl = $('.chats_header_back_button');
     backButtonEl.hidden = true;

@@ -550,6 +550,19 @@ function initScrollBorder(el) {
   onScroll();
 }
 
+function initHorizontalScroll(container) {
+  if (isTouchDevice()) {
+    container.style.overflowX = 'auto';
+  } else {
+    container.addEventListener('mousewheel', (event) => {
+      event.preventDefault();
+      const container = event.currentTarget;
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      container.scrollLeft += delta;
+    });
+  }
+}
+
 export {
   Storage,
   Emitter,
@@ -589,5 +602,6 @@ export {
   getStringFirstUnicodeChar,
   getClassesString,
   initScrollBorder,
-  cancelSelection
+  cancelSelection,
+  initHorizontalScroll
 };

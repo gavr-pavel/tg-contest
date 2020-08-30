@@ -37,6 +37,11 @@ $mdc-icon-button-size: 40px;
 //@import "media_view";
 //@import "emoji_dropdown";
 
+:root {
+  --primary-color: #{$primary_blue_color};
+  --link-color: #4891E6;
+}
+
 html,
 body {
   margin: 0;
@@ -57,7 +62,7 @@ body {
 }
 
 a {
-  color: #4891E6;
+  color: var(--link-color);
   text-decoration: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
