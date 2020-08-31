@@ -71,7 +71,7 @@ const ChatInfoController = new class {
 
     this.container.innerHTML = Tpl.html`
       <div class="sidebar_header">
-        <button type="button" class="sidebar_close_button mdc-icon-button"></button>
+        <button class="mdc-icon-button sidebar_close_button"></button>
         <div class="sidebar_header_title">Info</div>
         <button type="button" class="sidebar_extra_menu_button mdc-icon-button"></button>
       </div>

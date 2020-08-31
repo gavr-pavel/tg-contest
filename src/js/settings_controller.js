@@ -13,6 +13,7 @@ const SettingsController = new class {
     this.container.hidden = false;
     this.container.innerHTML = `
       <div class="sidebar_header">
+        <button class="mdc-icon-button sidebar_back_button"></button>
         <div class="sidebar_header_title">Settings</div>
         <div class="mdc-menu-surface--anchor">
           <button type="button" class="sidebar_extra_menu_button mdc-icon-button"></button>
@@ -54,17 +55,21 @@ const SettingsController = new class {
 
     this.loadUserPhoto(user);
 
-    const backButtonEl = $('.chats_header_back_button');
-    attachRipple(backButtonEl);
+    const backButtonEl = $('.sidebar_back_button', this.container);
     backButtonEl.addEventListener('click', this.onBack);
-    backButtonEl.hidden = false;
+    attachRipple(backButtonEl);
 
     const extraMenuButtonEl = $('.sidebar_extra_menu_button', this.container);
-    attachRipple(extraMenuButtonEl);
     extraMenuButtonEl.addEventListener('click', this.onExtraMenuClick);
+    attachRipple(extraMenuButtonEl);
 
     const logoutButtonEl = $('.settings_extra_menu_item-log_out', this.container);
     logoutButtonEl.addEventListener('click', this.onLogoutClick);
+
+    $('.settings_main_menu_item-folders', this.container).addEventListener('click', () => {
+      import('./folders_settings_controller')
+          .then(({FoldersSettingsController}) => new FoldersSettingsController().show());
+    });
 
     attachRipple(...$$('.mdc-list-item', this.container));
   }

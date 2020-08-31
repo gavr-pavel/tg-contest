@@ -48,6 +48,18 @@ const DialogsApiManager = new class {
     });
     MessagesApiManager.onUpdates(updates);
   }
+
+  async updateDialogFilter(filter) {
+    await ApiClient.callMethod('messages.updateDialogFilter', {
+      id: filter.id,
+      filter
+    });
+    MessagesApiManager.handleUpdate({
+      _: 'updateDialogFilter',
+      id: filter.id,
+      filter
+    });
+  }
 };
 
 window.DialogsApiManager = DialogsApiManager;

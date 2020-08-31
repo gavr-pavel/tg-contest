@@ -55,6 +55,8 @@ const ChatsController = new class {
     MessagesApiManager.emitter.on('userStatusUpdate', this.onUserStatusUpdate);
     MessagesApiManager.emitter.on('dialogUserTypingUpdate', this.onDialogUserTypingUpdate);
     MessagesApiManager.emitter.on('dialogOutboxReadUpdate', this.onDialogOutboxReadUpdate);
+    MessagesApiManager.emitter.on('dialogFilterUpdate', this.onDialogFilterUpdate);
+    MessagesApiManager.emitter.on('dialogFilterOrderUpdate', this.onDialogFilterOrderUpdate);
 
     this.loadMore()
         .then((dialogs) => {
@@ -179,13 +181,15 @@ const ChatsController = new class {
 
   async initTabs() {
     this.filters = await ApiClient.callMethod('messages.getDialogFilters');
-    if (this.filters.length) {
-      this.renderTabs();
-    }
+    this.renderTabs();
     initHorizontalScroll(this.tabsContainer);
   }
 
   renderTabs() {
+    this.tabsContainer.innerHTML = '';
+    if (!this.filters.length) {
+      return;
+    }
     const container = Tpl.html`<div class="nav_tabs_container chats_tabs_list"></div>`.buildElement();
     {
       const el = Tpl.html`
@@ -420,6 +424,34 @@ const ChatsController = new class {
     if (el) {
       this.renderChatPreviewContent(el, dialog);
     }
+  };
+
+  onDialogFilterUpdate = (event) => {
+    const {id, filter} = event.detail;
+    const index = this.filters.findIndex(f => f.id === id);
+    if (filter) {
+      if (index > -1) {
+        this.filters.splice(index, 1, filter);
+      } else {
+        this.filters.push(filter);
+      }
+    } else {
+      this.filters.splice(index, 1);
+    }
+    this.renderTabs();
+  };
+
+  onDialogFilterOrderUpdate = (event) => {
+    const {order} = event.detail;
+    const map = new Map(this.filters.map(filter => [filter.id, filter]));
+    this.filters = [];
+    for (const id of order) {
+      const filter = map.get(id);
+      if (filter) {
+        this.filters.push(filter);
+      }
+    }
+    this.renderTabs();
   };
 
   onScroll = () => {

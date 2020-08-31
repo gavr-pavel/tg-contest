@@ -1,4 +1,4 @@
-import {$, Tpl, buildLoaderElement, attachRipple, attachMenuListener} from './utils';
+import {$, Tpl, buildLoaderElement, attachRipple, attachMenuListener, initScrollBorder} from './utils';
 import {MessagesApiManager} from './api/messages_api_manager';
 
 const ArchivedChatsController = new class {
@@ -8,6 +8,7 @@ const ArchivedChatsController = new class {
 
     this.container.innerHTML = `
       <div class="sidebar_header">
+        <button class="mdc-icon-button sidebar_back_button"></button>
         <div class="sidebar_header_title">Archived chats</div>
       </div>
       <div class="archived_chats_list"></div>
@@ -17,9 +18,10 @@ const ArchivedChatsController = new class {
 
     this.loader = buildLoaderElement(this.scrollContainer);
 
-    const backButtonEl = $('.chats_header_back_button');
+    initScrollBorder($('.archived_chats_list', this.container));
+
+    const backButtonEl = $('.sidebar_back_button', this.container);
     backButtonEl.addEventListener('click', this.onBack);
-    backButtonEl.hidden = false;
 
     MessagesApiManager.emitter.on('dialogOrderUpdate', this.onDialogOrderUpdate);
 
@@ -33,11 +35,8 @@ const ArchivedChatsController = new class {
     this.loadMore();
   }
 
-  onBack = (event) => {
+  onBack = () => {
     this.container.hidden = true;
-    const backButtonEl = event.currentTarget;
-    backButtonEl.removeEventListener('click', this.onBack);
-    backButtonEl.hidden = true;
   };
 
   loadMore() {

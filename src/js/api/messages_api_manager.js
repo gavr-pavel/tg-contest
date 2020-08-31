@@ -171,8 +171,14 @@ const MessagesApiManager = new class {
           this.handleDialogUserTyping(dialog, chatId, update.user_id, update.action);
         }
       } break;
+      case 'updateDialogFilter': {
+        this.emitter.trigger('dialogFilterUpdate', {id: update.id, filter: update.filter});
+      } break;
+      case 'updateDialogFilterOrder': {
+        this.emitter.trigger('dialogFilterOrderUpdate', {order: update.order});
+      } break;
       default: {
-        // console.log('Unhandled update', update._, update);
+        console.log('Unhandled update', update._, update);
       }
     }
   }
@@ -337,7 +343,7 @@ const MessagesApiManager = new class {
     this.emitter.trigger('dialogUserTypingUpdate', {dialog, userId, action});
   }
 
-  async loadDialogs(offset = {}, limit = 20, folderId = 0) {
+  async loadDialogs(offset = {}, limit = 20, folderId = 0, saveList = true) {
     const {dialogs, messages, chats, users} = await ApiClient.callMethod('messages.getDialogs', {
       folder_id: folderId,
       exclude_pinned: !!folderId,
@@ -352,11 +358,13 @@ const MessagesApiManager = new class {
     this.updateMessages(messages);
     this.updateDialogs(dialogs);
 
-    for (const dialog of dialogs) {
-      if (dialog.folder_id === 1) {
-        this.archivedDialogs.push(dialog);
-      } else {
-        this.dialogs.push(dialog);
+    if (saveList) {
+      for (const dialog of dialogs) {
+        if (dialog.folder_id === 1) {
+          this.archivedDialogs.push(dialog);
+        } else {
+          this.dialogs.push(dialog);
+        }
       }
     }
 
@@ -692,10 +700,13 @@ const MessagesApiManager = new class {
   getPeerId(peer) {
     switch (peer._) {
       case 'peerUser':
+      case 'inputPeerUser':
         return peer.user_id;
-      case 'peerChat': // Group
+      case 'peerChat':
+      case 'inputPeerChat':
         return peer.chat_id;
-      case 'peerChannel': // Channel/supergroup
+      case 'peerChannel':
+      case 'inputPeerChannel':
         return peer.channel_id;
     }
   }
@@ -750,9 +761,9 @@ const MessagesApiManager = new class {
     const peerData = this.getPeerData(peer);
     switch (peer._) {
       case 'peerUser':
-        if (peer.user_id === App.getAuthUserId()) {
-          return {_: 'inputPeerSelf'};
-        }
+        // if (peer.user_id === App.getAuthUserId()) {
+        //   return {_: 'inputPeerSelf'};
+        // }
         return {_: 'inputPeerUser', user_id: peer.user_id, access_hash: peerData && peerData.access_hash || 0};
       case 'peerChat':
         return {_: 'inputPeerChat', chat_id: peer.chat_id, access_hash: peerData && peerData.access_hash || 0};
@@ -818,6 +829,18 @@ const MessagesApiManager = new class {
     }
   }
 
+  getPeerByInputPeer(inputPeer) {
+    switch (inputPeer._) {
+      case 'inputPeerChannel':
+        return {_: 'peerChannel', channel_id: inputPeer.channel_id};
+      case 'inputPeerChat':
+        return {_: 'peerChat', chat_id: inputPeer.chat_id};
+      case 'inputPeerUser':
+        return {_: 'peerUser', user_id: inputPeer.user_id};
+    }
+    return inputPeer;
+  }
+
   isMegagroup(peer) {
     const channel = this.chats.get(peer.channel_id);
     return !!channel.megagroup;
@@ -869,12 +892,15 @@ const MessagesApiManager = new class {
     for (const peer of peers) {
       switch (peer._) {
         case 'peerChannel':
+        case 'inputPeerChannel':
           channels.push({id: peer.channel_id, access_hash: peer.access_hash});
           break;
         case 'peerChat':
+        case 'inputPeerChat':
           chats.push({id: peer.chat_id, access_hash: peer.access_hash});
           break;
         case 'peerUser':
+        case 'inputPeerUser':
           users.push({id: peer.user_id, access_hash: peer.access_hash});
           break;
       }

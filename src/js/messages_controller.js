@@ -42,7 +42,9 @@ const MessagesController = new class {
 
     this.scrollDownButton = $('.messages_scroll_down_button');
     this.scrollDownButton.addEventListener('click', () => {
+      this.scrollContainer.style.overflow = 'hidden'; // ios safari 💩
       this.jumpToMessage(this.dialog.top_message, false, false);
+      this.scrollContainer.style.overflow = '';
     });
 
     this.container.addEventListener('click', this.onGlobalClick);

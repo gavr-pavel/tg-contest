@@ -9,7 +9,8 @@
 }
 
 .settings_sidebar,
-.archived_chats_sidebar {
+.archived_chats_sidebar,
+.folders_settings_sidebar {
   background: #fff;
   box-sizing: border-box;
   height: 100%;
@@ -18,12 +19,32 @@
   top: 0;
   width: 100%;
   z-index: 5;
+  transition-property: visibility, transform;
+  transition-duration: .3s;
+  box-shadow: -50px 0 100px rgba(0, 0, 0, .3);
+  will-change: transform;
+  &[hidden] {
+    display: block;
+    visibility: hidden;
+    transform: translateX(150%);
+  }
+}
+
+.archived_chats_sidebar,
+.folders_settings_sidebar {
+  display: flex;
+  flex-direction: column;
 }
 
 .archived_chats_list {
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 8px;
   .mobile_view & {
     padding: 0;
+  }
+  &._scroll_top {
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
   }
 }
 
@@ -83,7 +104,7 @@
 }
 
 .global_search_sublist_header {
-  color: #717579;
+  color: $secondary_gray_color;
   background-color: #fff;
   font-weight: 500;
   padding: 8px;

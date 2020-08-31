@@ -52,11 +52,25 @@ const GlobalSearchController = new class {
 
     $('.chats_header_menu_button').hidden = true;
 
-    this.loadPeople();
-    this.loadRecent();
+    Promise.all([
+      this.loadPeople(),
+      this.loadRecent()
+    ]).then(([topPeers, recentPeers]) => {
+      if (topPeers.length) {
+        this.renderPeople(topPeers);
+      }
+      if (recentPeers.length) {
+        this.renderRecent(recentPeers);
+      }
+    });
   }
 
   onBack = () => {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+
     this.input.removeEventListener('input', this.onInput);
     this.input.value = '';
     this.users.clear();
@@ -285,10 +299,8 @@ const GlobalSearchController = new class {
     const peerId = +el.dataset.peerId;
     const messageId = +(el.dataset.messageId || 0);
     MessagesController.setChatByPeerId(peerId, messageId);
-    const peer = MessagesApiManager.getPeerById(peerId);
-    const peerData = MessagesApiManager.getPeerData(peer);
-    const recentPeer = Object.assign({access_hash: peerData.access_hash}, peer);
-    this.saveRecentPeer(recentPeer);
+    const inputPeer = MessagesApiManager.getInputPeerById(peerId);
+    this.saveRecentPeer(inputPeer);
   };
 
   // saveTmpPeers(map, ...lists) {
@@ -320,9 +332,7 @@ const GlobalSearchController = new class {
 
     const category = res.categories.find(item => item.category._ === 'topPeerCategoryCorrespondents');
     const peers = category.peers.map(item => item.peer).filter(peer => peer.user_id !== App.getAuthUserId());
-    if (peers.length) {
-      this.renderPeople(peers);
-    }
+    return peers;
   }
 
   renderPeople(peers) {
@@ -347,11 +357,16 @@ const GlobalSearchController = new class {
   }
 
   async loadRecent() {
-    const peers = this.getRecentPeers();
-    if (peers.length) {
-      await MessagesApiManager.loadPeers(peers);
-      this.renderRecent(peers);
+    const inputPeers = this.getRecentPeers();
+    if (inputPeers.length) {
+      try {
+        await MessagesApiManager.loadPeers(inputPeers);
+        return inputPeers.map(inputPeer => MessagesApiManager.getPeerByInputPeer(inputPeer));
+      } catch (e) {
+        console.log(e);
+      }
     }
+    return [];
   }
 
   renderRecent(peers) {

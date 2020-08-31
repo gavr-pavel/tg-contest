@@ -70,9 +70,9 @@ class ApiConnection {
       serializer.storeString(getBrowser(), 'device_model');
       serializer.storeString(getOSName(), 'system_version');
       serializer.storeString(App.APP_VERSION, 'app_version');
-      serializer.storeString(getSystemLang(), 'system_lang_code');
+      serializer.storeString('en', 'system_lang_code');
       serializer.storeString('', 'lang_pack');
-      serializer.storeString(getSystemLang(), 'lang_code');
+      serializer.storeString('en', 'lang_code');
       this.connectionInited = true;
     }
 
