@@ -21,7 +21,7 @@ const LoginController = new class {
 
   init() {
     const template = importTemplate('login');
-    const container = $('.login_container', template);
+    const container = template.firstElementChild;
     this.dom = getLabeledElements(container);
     this.dom.container = container;
     this.dom.form.addEventListener('submit', this.onFormSubmit);
