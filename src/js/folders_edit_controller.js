@@ -8,6 +8,7 @@ import {FoldersChatsController} from './folders_chats_controller';
 class FoldersEditController {
   show(filter, create = false, onSave) {
     this.filter = filter;
+    this.onSave = onSave;
 
     this.container = Tpl.html`
       <div class="folders_settings_sidebar" hidden>
@@ -57,9 +58,8 @@ class FoldersEditController {
     });
     this.saveButton = saveButton;
 
-    const moreButton = $('.sidebar_extra_menu_button', this.container);
-    moreButton.addEventListener('click', () => {
-    });
+    const extraButton = $('.sidebar_extra_menu_button', this.container);
+    extraButton.addEventListener('click', this.onExtraButtonClick);
 
     const titleField = new MDCTextField($('.folders_settings_title_text_field', this.container));
     titleField.input_.addEventListener('input', () => {
@@ -205,6 +205,32 @@ class FoldersEditController {
     const includedChats = this.getIncludedChatTypes(filter).some(([enabled]) => enabled) || !!filter.include_peers.length;
     this.saveButton.hidden = !filter.title || !includedChats || !this.titleChanged && !this.chatsChanged;
   }
+
+  onExtraButtonClick = (event) => {
+    const button = event.currentTarget;
+
+    const menu = buildMenu([
+        ['delete', 'Delete']
+    ], {
+      container: button.parentNode,
+      menuClass: '',
+      itemClass: 'folders_settings_extra_menu_item',
+      itemCallback: (action) => {
+        switch (action) {
+          case 'delete':
+            this.hide();
+            this.onSave();
+            break;
+        }
+      },
+    });
+
+    menu.setAnchorElement(button);
+    menu.setAnchorMargin({top: 45, left: -110});
+    menu.setFixedPosition(true);
+
+    menu.open = true;
+  };
 }
 
 export {FoldersEditController};

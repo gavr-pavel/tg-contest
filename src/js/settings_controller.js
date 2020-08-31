@@ -88,13 +88,16 @@ const SettingsController = new class {
     backButtonEl.hidden = true;
   };
 
-  onExtraMenuClick = () => {
+  onExtraMenuClick = (event) => {
+    const button = event.currentTarget;
     const menuEl = $('.sidebar_extra_menu', this.container);
     const menu = new MDCMenu(menuEl);
-console.log(menu);
     if (!menu.open) {
       menu.open = true;
-      // menu.setAbsolutePosition(239, 57);
+      if (!App.isMobileView()) {
+        menu.setAnchorElement(button)
+        menu.setAnchorMargin({top: 45, left: -100});
+      }
     }
   };
 

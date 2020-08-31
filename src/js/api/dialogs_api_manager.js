@@ -49,16 +49,16 @@ const DialogsApiManager = new class {
     MessagesApiManager.onUpdates(updates);
   }
 
-  async updateDialogFilter(filter) {
-    await ApiClient.callMethod('messages.updateDialogFilter', {
-      id: filter.id,
-      filter
-    });
-    MessagesApiManager.handleUpdate({
-      _: 'updateDialogFilter',
-      id: filter.id,
-      filter
-    });
+  async updateDialogFilter(filter, id = 0) {
+    if (!id) {
+      id = filter.id;
+    }
+    await ApiClient.callMethod('messages.updateDialogFilter', {id, filter});
+    MessagesApiManager.handleUpdate({_: 'updateDialogFilter', id, filter});
+  }
+
+  deleteDialogFilter(id) {
+    return this.updateDialogFilter(void(0), id);
   }
 };
 

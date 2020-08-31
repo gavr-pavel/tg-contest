@@ -215,3 +215,14 @@
 .folders_settings_chat_name {
   font-size: 16px;
 }
+
+.folders_settings_extra_menu_item {
+  padding-left: 73px;
+  padding-right: 30px;
+  background: no-repeat 16px center;
+}
+
+.folders_settings_extra_menu_item-delete {
+  background-image: svg('../icons/delete_svg.svg', (path: (fill: $error_red_color)));
+  color: $error_red_color;
+}

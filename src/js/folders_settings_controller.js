@@ -130,11 +130,12 @@ class FoldersSettingsController {
   }
 
   editFilter(el, filter) {
-    new FoldersEditController().show(filter, false, () => {
-      DialogsApiManager.updateDialogFilter(filter);
-      if (filter) {
+    new FoldersEditController().show(filter, false, (updatedFilter) => {
+      if (updatedFilter) {
+        DialogsApiManager.updateDialogFilter(updatedFilter);
         el.replaceWith(this.buildFilterEl(filter, this.getFilterDescription(filter)));
       } else {
+        DialogsApiManager.deleteDialogFilter(filter.id);
         el.remove();
       }
     });
