@@ -59,6 +59,7 @@ $emoji_dropdown_nav_height: 48px;
   background: no-repeat center;
   cursor: pointer;
   transition: transform .2s, visibility .2s;
+  -webkit-tap-highlight-color: transparent;
   &:hover {
     background-color: rgba(0, 0, 0, .05);
   }
@@ -153,6 +154,7 @@ $emoji_dropdown_nav_height: 48px;
   height: 42px;
   cursor: pointer;
   border-radius: 5px;
+  -webkit-tap-highlight-color: transparent;
   &:hover {
     background-color: #F1F3F4;
   }
@@ -204,6 +206,7 @@ $emoji_dropdown_nav_height: 48px;
   background: no-repeat center;
   background-size: cover;
   border-radius: 5px;
+  -webkit-tap-highlight-color: transparent;
   &:hover {
     background-color: #F4F4F5;
   }
@@ -250,6 +253,7 @@ $emoji_dropdown_nav_height: 48px;
   width: 100%;
   background: no-repeat center;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   &:hover {
     background-color: rgba(0, 0, 0, .05);
   }

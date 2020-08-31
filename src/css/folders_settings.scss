@@ -67,6 +67,7 @@
   display: flex;
   align-items: center;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   &:hover {
     background-color: #F4F4F5;
   }
@@ -132,6 +133,7 @@
   align-items: center;
   padding: 9px 12px;
   position: relative;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .folders_settings_chat-option {
