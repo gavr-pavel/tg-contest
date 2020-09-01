@@ -6,10 +6,29 @@
   margin: 0 auto;
   padding: 0 20px 20px;
   box-sizing: border-box;
+  position: relative;
   .mobile_view & {
     padding: 0 8px 8px;
   }
 }
+
+//.messages_form::before {
+//  --footer-shadow-color: rgb(131 168 129);
+//  box-shadow: 0px -7px 5px var(--footer-shadow-color);
+//  content: '';
+//  position: absolute;
+//  left: 20px;
+//  right: 20px;
+//  top: 0;
+//  height: 50%;
+//  .mobile_view & {
+//    left: 0;
+//    right: 0;
+//  }
+//  @media (max-aspect-ratio: 1/1) {
+//    --footer-shadow-color: rgb(67 128 83);
+//  }
+//}
 
 .messages_form_input {
   display: block;

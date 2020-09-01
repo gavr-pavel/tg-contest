@@ -524,7 +524,7 @@ const EmojiDropdown = new class {
 
   async loadFoundStickersPreview(set, container, signal) {
     const fullSet = await this.loadStickerSet(set);
-    const num = Math.min(set.count, 5);
+    const num = Math.min(set.count, 8);
     for (let index = 0; index < num; index++) {
       const stickerEl = Tpl.html`<div class="emoji_dropdown_list_item" data-sticker-index="${index}"></div>`.buildElement();
       container.appendChild(stickerEl);
@@ -610,6 +610,9 @@ const EmojiDropdown = new class {
         break;
       }
       currentList = list;
+    }
+    if (!currentList) {
+      return;
     }
     const category = currentList.dataset.category;
     const prevNavItem = $(`.emoji_dropdown_top_nav_item-active`, this.dom.section_emoji);

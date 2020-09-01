@@ -19,6 +19,12 @@ $emoji_dropdown_nav_height: 48px;
   transform-origin: 29px calc(100% + 35px);
   will-change: transform;
   user-select: none;
+  &[hidden] {
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    transform: scale(0);
+  }
   .mobile_view & {
     position: fixed;
     bottom: -$emoji_dropdown_mobile_height;
@@ -26,21 +32,17 @@ $emoji_dropdown_nav_height: 48px;
     width: 100%;
     height: $emoji_dropdown_mobile_height;
     border-radius: 0;
-    //transition: none;
+    transition: visibility .3s, height .3s step-start;
+  }
+  .mobile_view &[hidden] {
+    opacity: 1;
+    transform: none;
+    height: 0;
+    transition: visibility .3s, height .3s step-end;
   }
   .mobile_view &.emoji_dropdown-search {
     height: 100%;
     bottom: 0;
-  }
-}
-.emoji_dropdown[hidden] {
-  display: block;
-  visibility: hidden;
-  opacity: 0;
-  transform: scale(0);
-  .mobile_view & {
-    opacity: 1;
-    transform: none;
   }
 }
 
@@ -475,15 +477,24 @@ $emoji_dropdown_nav_height: 48px;
 }
 
 .emoji_dropdown_search_sticker_set_preview {
+  --preview-stickers-num: 5;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(var(--preview-stickers-num), 1fr);
+  grid-template-rows: 1fr;
+  grid-auto-rows: 0;
   gap: 5px;
   padding: 0 16px;
+  overflow: hidden;
   &:empty {
-     padding-top: calc((100% - 52px) / 5); // 52 = paddings (16px x 2) and gaps (5px x (5-1))
+     padding-top: calc((100% - 52px) / var(--preview-stickers-num)); // 52 = paddings (16px x 2) and gaps (5px x (5-1))
    }
   .mobile_view &:empty {
-    padding-top: calc((100% - 20px) / 5);
+    padding-top: calc((100% - 20px) / var(--preview-stickers-num));
+  }
+  .mobile_view & {
+    @media only screen and (min-width: 600px) {
+      --preview-stickers-num: 8;
+    }
   }
 }
 

@@ -93,7 +93,7 @@ class FoldersChatsController {
     const offsetDate = this.peersOffset.peer ? MessagesApiManager.getPeerId(this.peersOffset.peer) : 0;
     const index = MessagesApiManager.dialogs.findIndex((dialog) => {
       const message = MessagesApiManager.messages.get(dialog.top_message);
-      return message && message.date < offsetDate;
+      return !offsetDate || message && message.date < offsetDate;
     });
     if (index > -1) {
       dialogs = MessagesApiManager.dialogs.slice(index, index + 20);
@@ -101,7 +101,7 @@ class FoldersChatsController {
     if (!dialogs.length) {
       this.loading = true;
       try {
-        dialogs = await MessagesApiManager.loadDialogs(this.peersOffset);
+        dialogs = await MessagesApiManager.loadDialogs(this.peersOffset, 20, 0, false);
       } catch(e) {
         console.log(error);
         const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
@@ -114,6 +114,8 @@ class FoldersChatsController {
         this.noMore = true;
         return;
       }
+    }
+    if (dialogs.length) {
       const lastDialog = dialogs[dialogs.length - 1];
       const lastDialogMessage = MessagesApiManager.messages.get(lastDialog.top_message);
       if (lastDialogMessage) {
@@ -123,9 +125,10 @@ class FoldersChatsController {
           date: lastDialogMessage.date,
         };
       }
+      const peers = dialogs.map(dialog => dialog.peer);
+      this.renderPeers(peers);
     }
-    const peers = dialogs.map(dialog => dialog.peer);
-    this.renderPeers(peers);
+    return [];
   }
 
   onScroll = () => {

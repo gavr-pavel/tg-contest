@@ -228,3 +228,70 @@
   background-image: svg('../icons/delete_svg.svg', (path: (fill: $error_red_color)));
   color: $error_red_color;
 }
+//
+//.folders_settings_search_container {
+//  padding: 2px 12px;
+//}
+//
+//.folders_settings_search_input {
+//  border: none;
+//  font: inherit;
+//  outline: none;
+//  width: 100px;
+//  height: 32px;
+//  margin: 0 8px;
+//  padding: 0 8px;
+//}
+//
+//.folders_settings_search_item {
+//  display: inline-block;
+//  height: 32px;
+//  line-height: 32px;
+//  background: #F1F3F4;
+//  border-radius: 16px;
+//  font-size: 16px;
+//  margin: 4px;
+//  padding: 0 16px 0 40px;
+//  position: relative;
+//}
+//
+//.folders_settings_search_item_photo,
+//.folders_settings_search_item_icon {
+//  position: absolute;
+//  left: 00px;
+//  top: 00px;
+//  width: 32px;
+//  height: 32px;
+//  border-radius: 16px;
+//  overflow: hidden;
+//}
+//
+//.folders_settings_search_item_icon {
+//  background: $primary_blue_color no-repeat center;
+//  background-size: 18px;
+//}
+//
+//.folders_settings_search_item_icon-contacts {
+//  background-image: svg('../icons/user_svg.svg', (path: (fill: white)));
+//}
+//.folders_settings_search_item_icon-non_contacts {
+//  background-image: svg('../icons/noncontacts.svg', (path: (fill: white)));
+//}
+//.folders_settings_search_item_icon-groups {
+//  background-image: svg('../icons/group_svg.svg', (path: (fill: white)));
+//}
+//.folders_settings_search_item_icon-broadcasts {
+//  background-image: svg('../icons/channel_svg.svg', (path: (fill: white)));
+//}
+//.folders_settings_search_item_icon-bots {
+//  background-image: svg('../icons/bots.svg', (path: (fill: white)));
+//}
+//.folders_settings_search_item_icon-exclude_muted {
+//  background-image: svg('../icons/mute_svg.svg', (path: (fill: white)));
+//}
+//.folders_settings_search_item_icon-exclude_read {
+//  background-image: svg('../icons/readchats.svg', (path: (fill: white)));
+//}
+//.folders_settings_search_item_icon-exclude_archived {
+//  background-image: svg('../icons/archive_svg.svg', (path: (fill: white)));
+//}

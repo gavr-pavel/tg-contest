@@ -76,7 +76,7 @@ const ChatsController = new class {
       for (const dialog of dialogs) {
         const peerId = MessagesApiManager.getPeerId(dialog.peer);
         if (!this.chatElements.has(peerId)) {
-          this.buildChatPreviewElement(dialog);
+          this.buildChatPreviewElement(dialog, true);
         }
       }
       await wait(1000);
@@ -125,18 +125,20 @@ const ChatsController = new class {
     if (!isTouchDevice()) {
       attachRipple(menuButton);
     }
+    let clickCancelled = false;
     menuButton.addEventListener('click', () => {
-      if (!mdcMenu.open) {
+      if (!mdcMenu.open && !clickCancelled) {
         mdcMenu.open = true;
-        mdcMenu.setAbsolutePosition(14, 60);
+      mdcMenu.setAbsolutePosition(14, 60);
       }
     });
 
     if (isTouchDevice()) {
       document.addEventListener('touchstart', (event) => {
+        clickCancelled = false;
         if (mdcMenu.open && !menuContainer.contains(event.target)) {
           mdcMenu.open = false;
-          event.preventDefault();
+          clickCancelled = true;
         }
       });
     }
@@ -233,6 +235,7 @@ const ChatsController = new class {
       const visible = this.checkDialogFilter(dialog, filter);
       el.hidden = !visible;
       if (visible && renderedCount < 20) {
+        this.loadChatPhoto(el, dialog);
         frag.appendChild(el);
         renderedCount++;
       }
@@ -332,6 +335,9 @@ const ChatsController = new class {
       el.hidden = !this.checkDialogFilter(dialog, this.currentFilter);
       this.detachElement(el);
       this.renderChatPreviewContent(el, dialog);
+      if (!el.hidden) {
+        this.loadChatPhoto(el, dialog);
+      }
     } else {
       el = this.buildChatPreviewElement(dialog);
       if (this.placeholder) {
@@ -470,6 +476,7 @@ const ChatsController = new class {
       for (let i = index + 1; renderedCount < 20 && i < this.elementsOrder.length; i++) {
         const el = this.elementsOrder[i];
         if (!el.hidden) {
+          this.loadChatPhoto(el);
           frag.appendChild(el);
           renderedCount++;
         }
@@ -504,8 +511,10 @@ const ChatsController = new class {
         })
         .catch((error) => {
           console.log(error);
-          const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
-          App.alert(errorText);
+          if (error.error_message) {
+            const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
+            App.alert(errorText);
+          }
           if (error.error_code === 420) {
             const timeout = +error.error_message.match(/^FLOOD_WAIT_(\d+)$/);
             console.log('chats load more timeout', timeout, error);
@@ -556,7 +565,7 @@ const ChatsController = new class {
     }
   }
 
-  buildChatPreviewElement(dialog) {
+  buildChatPreviewElement(dialog, preload = false) {
     const peerId = MessagesApiManager.getPeerId(dialog.peer);
     const el = Tpl.html`
       <div class="chats_item ${dialog.pinned ? ' chats_item-pinned' : ''}" data-peer-id="${peerId}">
@@ -567,7 +576,9 @@ const ChatsController = new class {
       </div>
     `.buildElement();
     this.renderChatPreviewContent(el, dialog);
-    this.loadChatPhoto(el, dialog);
+    if (!preload) {
+      this.loadChatPhoto(el, dialog);
+    }
     if (dialog.peer._ === 'peerUser') {
       const user = MessagesApiManager.getPeerData(dialog.peer);
       this.updateChatStatus(el, user.status);
@@ -685,7 +696,13 @@ const ChatsController = new class {
     photoEl.classList.toggle('chats_item_photo-online', isOnline);
   }
 
-  loadChatPhoto(el, dialog) {
+  loadChatPhoto(el, dialog = null) {
+    if (el.dataset.photoLoaded) {
+      return;
+    }
+    if (dialog === null) {
+      dialog = MessagesApiManager.getDialog(+el.dataset.peerId);
+    }
     const photoEl = $('.chats_item_photo', el);
     if (this.isPeerSelf(dialog.peer)) {
       photoEl.classList.add('chats_item_photo_saved_messages');

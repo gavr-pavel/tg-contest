@@ -25,7 +25,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   transform: translateZ(0);
-  transition: transform .2s, width .2s step-start, padding-left .2s step-start;
+  transition: transform .3s, width .3s step-start, padding-left .3s step-start;
   .right_offset & {
     transform: translateX(var(--right-offset-translateX));
     padding-left: calc(-1 * var(--right-offset-translateX));
@@ -34,16 +34,7 @@
 }
 
 .messages_scroll-scrolling {
-  mask-image: linear-gradient(to top, transparent 5px, #000 15px);
-}
-
-.messages_footer {
-  transition: transform .2s, width .2s step-start, padding-left .2s step-start;
-  .right_offset & {
-    transform: translateX(var(--right-offset-translateX));
-    padding-left: calc(-1 * var(--right-offset-translateX));
-    width: calc(100vw - 420px * 2);
-  }
+  mask-image: linear-gradient(to top, transparent 1px, #000 10px);
 }
 
 .messages_list {
@@ -272,6 +263,7 @@
 }
 
 .message_text {
+  word-break: break-word;
   .message-type-emoji & {
     font-size: 50px;
     line-height: 50px;
@@ -583,8 +575,13 @@
 
 .messages_footer {
   //padding: 0 0 20px;
-  transition: transform .3s;
   z-index: 10;
+  transition: transform .3s, width .3s step-start, padding-left .3s step-start;
+  .right_offset & {
+    transform: translateX(var(--right-offset-translateX));
+    padding-left: calc(-1 * var(--right-offset-translateX));
+    width: calc(100vw - 420px * 2);
+  }
 }
 .messages_footer_emoji-shown {
   .mobile_view & {

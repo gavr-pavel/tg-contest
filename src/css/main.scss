@@ -114,25 +114,34 @@ pre {
 
 .mobile_view {
   .main_container {
-    //position: fixed;
     width: 100%;
     height: 100%;
-    grid-template: 100% / 100%;
+    display: block;
     &[data-chat] {
       .left_sidebar {
-        display: none;
+        //display: none;
       }
     }
     &:not([data-chat]) {
       .messages_container {
-        display: none;
+        visibility: hidden;
+        //transform: translateX(100%);
       }
     }
+  }
+  .messages_container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    will-change: transform;
+    //transition: visibility .3s, transform .3s;
   }
   .left_sidebar,
   .right_sidebar,
   .messages_container {
     width: 100%;
+    height: 100%;
+    transform: translateZ(0);
   }
 }
 

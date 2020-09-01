@@ -1,4 +1,6 @@
 .poll {
+  position: relative;
+  z-index: 1;
   min-width: 300px;
   .mobile_view & {
     min-width: auto;
@@ -9,12 +11,14 @@
   font-size: 16px;
   font-weight: 600;
   margin-bottom: 5px;
+  word-break: break-word;
 }
 
 .poll_subheader {
   line-height: 18px;
   display: flex;
   margin-bottom: 15px;
+  word-break: break-word;
 }
 
 .poll_type {

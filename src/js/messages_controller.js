@@ -166,6 +166,10 @@ const MessagesController = new class {
     if (this.typingAnimation) {
       this.typingAnimation.abort();
     }
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null
+    }
 
     delete $('.main_container').dataset.chat;
 
@@ -280,6 +284,7 @@ const MessagesController = new class {
       isMuted ? ['unmute', 'Unmute'] : ['mute', 'Mute'],
       ['delete', 'Delete']
     ], {
+      button: button,
       container: $('.main_container'),
       menuClass: 'messages_header_actions_menu',
       itemClass: 'messages_header_actions_menu_item',
@@ -383,10 +388,12 @@ const MessagesController = new class {
       return;
     }
     this.loading = true;
+    this.abortController = new AbortController();
+    const signal = this.abortController.signal;
     const dialog = this.dialog;
-    MessagesApiManager.loadChatHistory(dialog, this.minMsgId, 30)
+    MessagesApiManager.loadChatHistory(dialog, this.minMsgId, 20)
         .then((messages) => {
-          if (dialog === this.dialog) {
+          if (dialog === this.dialog && !signal.aborted) {
             if (!messages.length) {
               this.noMore = true;
             }
@@ -395,8 +402,10 @@ const MessagesController = new class {
           }
         })
         .catch((error) => {
-          const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
-          App.alert(errorText);
+          if (error.error_message) {
+            const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
+            App.alert(errorText);
+          }
           console.log(error);
         })
         .finally(() => {
@@ -409,13 +418,15 @@ const MessagesController = new class {
       return;
     }
     this.loading = true;
+    this.abortController = new AbortController();
+    const signal = this.abortController.signal;
     const dialog = this.dialog;
-    const limit = 20;
+    const limit = 30;
     const addOffset = down ? -limit : 0;
     const offsetId = down ? this.maxMsgId : this.minMsgId;
     MessagesApiManager.loadMessages(dialog.peer, offsetId, limit, addOffset)
         .then((messages) => {
-          if (dialog !== this.dialog) {
+          if (dialog !== this.dialog || signal.aborted) {
             return;
           }
           if (!messages.length) {
@@ -430,8 +441,9 @@ const MessagesController = new class {
           }
         })
         .catch((error) => {
-          const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
-          App.alert(errorText);
+          if (error.error_message) {
+            App.alert(error.error_message);
+          }
           console.log(error);
         })
         .finally(() => {
@@ -479,8 +491,11 @@ const MessagesController = new class {
         })
         .catch((error) => {
           debugger;
-          const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
-          App.alert(errorText);
+          console.log(error);
+          if (error.error_message) {
+            const errorText = 'An error occurred' + (error.error_message ? ': ' + error.error_message : '');
+            App.alert(errorText);
+          }
         })
         .finally(() => {
           this.loading = false;
@@ -1281,7 +1296,12 @@ const MessagesController = new class {
     const audioPlayer = new AudioPlayer(doc, attributes);
     this.audioPlayer = audioPlayer;
 
-    if ((doc.mime_type === 'audio/mpeg' || doc.mime_type === 'audio/mp3') && window.MediaSource) {
+    const isMp3 = doc.mime_type === 'audio/mpeg' || doc.mime_type === 'audio/mp3';
+
+    if (isMp3 && App.isServiceWorkerActived()) {
+      const url = `/document${message.id}_${doc.id}_${doc.size}.mp3`;
+      audioPlayer.initSrc(url);
+    } else if (isMp3 && window.MediaSource) {
       audioPlayer.initStreaming();
     } else {
       try {

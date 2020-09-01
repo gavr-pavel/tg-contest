@@ -33,6 +33,8 @@ const App = new class {
     if (isIosSafari()) {
       document.body.classList.add('ios_safari');
     }
+
+    this.initServiceWorker();
     // ApiClient.emitter.on('updateConnectionState', (event) => {
     //   const header = Utils.$('.header');
     //   if (!header) {
@@ -181,6 +183,36 @@ const App = new class {
 
     this.snackbar = new MDCSnackbar(el);
     this.snackbar.open();
+  }
+
+  async initServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.register('./sw.js');
+      await navigator.serviceWorker.ready;
+      this.sw = navigator.serviceWorker.controller || registration.active;
+      const channel = new MessageChannel();
+      this.sw.postMessage('init', [channel.port1]);
+      this.swPort = channel.port2;
+      this.swPort.onmessage = (event) => {
+        if (event.data.task === 'loadDocumentRange') {
+          const {taskId, messageId, documentId, offset, limit} = event.data;
+          const message = MessagesApiManager.messages.get(+messageId);
+          if (message && message.media && message.media.document && message.media.document.id === documentId) {
+            const document = message.media.document;
+            FileApiManager.loadDocumentBytes(document, offset, limit)
+                .then((bytes) => {
+                  this.swPort.postMessage({type: 'taskResult', taskId, result: {total: document.size, bytes}})
+                });
+          } else {
+            this.swPort.postMessage({type: 'taskResult', taskId, result: null});
+          }
+        }
+      };
+    }
+  }
+
+  isServiceWorkerActived() {
+    return !!(this.sw && this.sw.state === 'activated');
   }
 };
 

@@ -463,7 +463,7 @@ function initMenu(container) {
   return new MDCMenu(container);
 }
 
-function buildMenu(actions, {container, menuClass, itemClass, itemCallback}) {
+function buildMenu(actions, {container, menuClass, itemClass, itemCallback, button}) {
   const el = Tpl.html`
     <div class="${menuClass} mdc-menu mdc-menu-surface">
       <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical">
@@ -493,7 +493,7 @@ function buildMenu(actions, {container, menuClass, itemClass, itemCallback}) {
   };
 
   const onTouch = (event) => {
-    if (!el.contains(event.target)) {
+    if (!el.contains(event.target) && event.target !== button) {
       closeMenu();
     }
   };

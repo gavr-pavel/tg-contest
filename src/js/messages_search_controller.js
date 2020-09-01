@@ -99,13 +99,15 @@ const MessagesSearchController = new class {
     };
 
     buttonUp.addEventListener('click', (event) => {
-      event.preventDefault();
       jumpToIndex(++index);
+      this.input.focus();
+      event.preventDefault();
     });
 
     buttonDown.addEventListener('click', (event) => {
-      event.preventDefault();
       jumpToIndex(--index);
+      this.input.focus();
+      event.preventDefault();
     });
 
     this.renderMobileResults = (offsetId, count, messages) => {

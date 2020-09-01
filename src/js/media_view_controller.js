@@ -96,9 +96,14 @@ const MediaViewController = new class {
     const abortController = this.state.abortController;
     const onProgress = this.state.onProgress;
     const attributes = MediaApiManager.getDocumentAttributes(document);
+    const streaming = !!attributes.supports_streaming;
     const loop = attributes.duration < 30;
 
-    if (attributes.supports_streaming && window.MediaSource && document.size > 1024 * 1024) {
+    if (streaming && App.isServiceWorkerActived()) {
+      const url = `/document${message.id}_${document.id}_${document.size}.mp4`;
+      const content = `<video class="media_view_content_video" src="${url}" playsinline autoplay controls ${loop ? 'loop' : ''}></video>`;
+      this.onLoaded(url, content, state);
+    } else if (streaming && window.MediaSource && document.size > 1024 * 1024) {
       import('./video_streaming_process.js')
           .then(({VideoStreamingProcess}) => {
             const process = new VideoStreamingProcess(document, onProgress);
@@ -443,10 +448,10 @@ const MediaViewController = new class {
     };
     const onTouchEnd = () => {
       if (progress === 1) {
-        const target = event.target;
-        if (target.tagName === 'VIDEO') {
-          target.paused ? target.play() : target.pause();
-        }
+        // const target = event.target;
+        // if (target.tagName === 'VIDEO') {
+        //   target.paused ? target.play() : target.pause();
+        // }
         onCloseAnimationEnd();
       } else if (progress === 0) {
         this.dom.content.style.transition = '';
@@ -493,6 +498,7 @@ const MediaViewController = new class {
       ['download', 'Download'],
       ['delete', 'Delete']
     ], {
+      button: button,
       container: button.parentNode,
       menuClass: 'media_view_actions_menu',
       itemClass: 'media_view_actions_menu_item',
