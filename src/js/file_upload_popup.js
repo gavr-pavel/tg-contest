@@ -196,9 +196,9 @@ const FileUploadPopup = new class {
       content: contentTpl,
       buttonText: 'Send',
       onButtonClick: () => {
-        const caption = $('.messages_upload_popup_caption_input', layer).value.trim();
+        const caption = $('.messages_upload_popup_caption_input', popup.el).value.trim();
         MessagesFormController.onMediaSend(files, sendAsPhoto, caption);
-        popup.close();
+        popup.hide();
       }
     });
 
